@@ -18,27 +18,27 @@ headers = {
     "user-agent": USER_AGENT.random,
 }
 df_price_one = (
-    pd.read_excel("one.xlsx", converters={"article": str})
+    pd.read_excel("source/one.xlsx", converters={"article": str})
     .set_index("article")
     .to_dict("index")
 )
 df_price_two = (
-    pd.read_excel("two.xlsx", converters={"article": str})
+    pd.read_excel("source/two.xlsx", converters={"article": str})
     .set_index("article")
     .to_dict("index")
 )
 df_price_three = (
-    pd.read_excel("three.xlsx", converters={"article": str})
+    pd.read_excel("source/three.xlsx", converters={"article": str})
     .set_index("article")
     .to_dict("index")
 )
 sample = (
-    pd.read_excel("abc.xlsx", converters={"article": str})
+    pd.read_excel("source/abc.xlsx", converters={"article": str})
     .set_index("article")
     .to_dict("index")
 )
 not_in_sale = (
-    pd.read_excel("not_in_sale.xlsx", converters={"article": str})
+    pd.read_excel("source/not_in_sale.xlsx", converters={"article": str})
     .set_index("article")
     .to_dict("index")
 )

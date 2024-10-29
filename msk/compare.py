@@ -79,7 +79,7 @@ async def reparse_error(session, past_day_result, to_del):
 async def get_compare():
     tasks = []
     to_del = []
-    df_past_day_result = pd.read_excel(f'{os.path.dirname(os.path.realpath(__file__))}/msk_new_stock.xlsx',
+    df_past_day_result = pd.read_excel(f'{os.path.dirname(os.path.realpath(__file__))}/compare/msk_new_stock.xlsx',
                                     converters={"article": str})
 
     df_past_day_result.drop_duplicates(subset="article", keep='first', inplace=True)
@@ -96,11 +96,11 @@ async def get_compare():
     df = pd.DataFrame().from_dict(past_day_result, 'index')
     df.index.name = "article"
     df.index = df.index.astype(str)
-    file_stock = f'{abs_path}/msk_new_stock.xlsx'
+    file_stock = f'{abs_path}/compare/msk_new_stock.xlsx'
     df.to_excel(file_stock)
 
     del_df = pd.DataFrame({"article": to_del})
-    file_del = f'{abs_path}/msk_del.xlsx'
+    file_del = f'{abs_path}/compare/msk_del.xlsx'
     del_df.to_excel(file_del, index=False)
 
     logger.info('Start sending files')

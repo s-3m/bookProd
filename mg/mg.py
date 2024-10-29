@@ -19,11 +19,11 @@ headers = {
     "user-agent": USER_AGENT.random
 }
 
-df_price_one = pd.read_excel("one.xlsx", converters={"article": str}).set_index("article").to_dict('index')
-df_price_two = pd.read_excel("two.xlsx", converters={"article": str}).set_index("article").to_dict('index')
-df_price_three = pd.read_excel("three.xlsx", converters={"article": str}).set_index("article").to_dict('index')
-sample = pd.read_excel("abc.xlsx", converters={"article": str}).set_index("article").to_dict('index')
-not_in_sale = pd.read_excel("not_in_sale.xlsx", converters={"article": str}).set_index("article").to_dict('index')
+df_price_one = pd.read_excel("source/one.xlsx", converters={"article": str}).set_index("article").to_dict('index')
+df_price_two = pd.read_excel("source/two.xlsx", converters={"article": str}).set_index("article").to_dict('index')
+df_price_three = pd.read_excel("source/three.xlsx", converters={"article": str}).set_index("article").to_dict('index')
+sample = pd.read_excel("source/abc.xlsx", converters={"article": str}).set_index("article").to_dict('index')
+not_in_sale = pd.read_excel("source/not_in_sale.xlsx", converters={"article": str}).set_index("article").to_dict('index')
 
 result = []
 id_to_add = []
@@ -150,29 +150,29 @@ def main():
     logger.info("Finish parsing Gvardia")
     logger.info("Start to write to excel")
     df = pd.DataFrame(result)
-    df.to_excel('result.xlsx', index=False)
+    df.to_excel('result/result.xlsx', index=False)
 
     df_add = pd.DataFrame(id_to_add)
-    df_add.to_excel('add.xlsx', index=False)
+    df_add.to_excel('result/add.xlsx', index=False)
 
     df_del = pd.DataFrame(id_to_del)
-    df_del.to_excel('del.xlsx', index=False)
+    df_del.to_excel('result/del.xlsx', index=False)
 
     df_one = pd.DataFrame().from_dict(df_price_one, orient='index')
     df_one.index.name = "article"
-    df_one.to_excel('price_one.xlsx')
+    df_one.to_excel('result/price_one.xlsx')
 
     df_two = pd.DataFrame().from_dict(df_price_two, orient='index')
     df_two.index.name = "article"
-    df_two.to_excel('price_two.xlsx')
+    df_two.to_excel('result/price_two.xlsx')
 
     df_three = pd.DataFrame().from_dict(df_price_three, orient='index')
     df_three.index.name = "article"
-    df_three.to_excel('price_three.xlsx')
+    df_three.to_excel('result/price_three.xlsx')
 
     df_not_in_sale = pd.DataFrame().from_dict(not_in_sale, orient='index')
     df_not_in_sale.index.name = "article"
-    df_not_in_sale.to_excel('not_in_sale.xlsx')
+    df_not_in_sale.to_excel('result/not_in_sale.xlsx')
     logger.info("Finish to write to excel")
     logger.success("Gvardia pars success")
 
