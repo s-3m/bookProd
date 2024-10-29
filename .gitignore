@@ -1,0 +1,10 @@
+# created by virtualenv automatically
+.idea
+__pycache__
+Scripts
+Lib
+pyvenv.cfg
+.xlsx
+.env
+*.xlsx
+.venv
