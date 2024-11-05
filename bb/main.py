@@ -1,4 +1,8 @@
 import os.path
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import time
 import re
 import pandas.io.formats.excel
@@ -10,37 +14,23 @@ import asyncio
 import pandas as pd
 from loguru import logger
 
+from utils import filesdata_to_dict
+
 pd.io.formats.excel.ExcelFormatter.header_style = None
+
 BASE_URL = "https://bookbridge.ru"
+# BASE_LINUX_DIR = "/media/source/bb"
 USER_AGENT = UserAgent()
 headers = {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
     "user-agent": USER_AGENT.random,
 }
-df_price_one = (
-    pd.read_excel("source/one.xlsx", converters={"article": str})
-    .set_index("article")
-    .to_dict("index")
+df_price_one, df_price_two, df_price_three = filesdata_to_dict(
+    "../source/Букбридж/Букбридж_цены"
 )
-df_price_two = (
-    pd.read_excel("source/two.xlsx", converters={"article": str})
-    .set_index("article")
-    .to_dict("index")
-)
-df_price_three = (
-    pd.read_excel("source/three.xlsx", converters={"article": str})
-    .set_index("article")
-    .to_dict("index")
-)
-sample = (
-    pd.read_excel("source/abc.xlsx", converters={"article": str})
-    .set_index("article")
-    .to_dict("index")
-)
-not_in_sale = (
-    pd.read_excel("source/not_in_sale.xlsx", converters={"article": str})
-    .set_index("article")
-    .to_dict("index")
+sample = filesdata_to_dict("../source/Букбридж/Букбридж/В продаже", combined=True)
+not_in_sale = filesdata_to_dict(
+    "../source/Букбридж/Букбридж/Не в продаже", combined=True
 )
 
 count = 1

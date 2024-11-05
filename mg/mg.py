@@ -1,5 +1,8 @@
 import time
+import sys
+import os
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import pandas.io.formats.excel
 from bs4 import BeautifulSoup as bs
 from pprint import pprint
@@ -21,7 +24,7 @@ headers = {
 }
 
 df_price_one, df_price_two, df_price_three = filesdata_to_dict(
-    "../source\Гвардия\Гвардия цены — копия"
+    "../source/Гвардия/Гвардия_цены"
 )
 sample = filesdata_to_dict("../source/Гвардия/Гвардия/В продаже", combined=True)
 not_in_sale = filesdata_to_dict("../source/Гвардия/Гвардия/Не в продаже", combined=True)
