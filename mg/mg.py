@@ -17,6 +17,7 @@ from utils import filesdata_to_dict
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 
 BASE_URL = "https://www.dkmg.ru"
+BASE_LINUX_DIR = "/media/source/mg"
 USER_AGENT = UserAgent()
 headers = {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
@@ -24,10 +25,10 @@ headers = {
 }
 
 df_price_one, df_price_two, df_price_three = filesdata_to_dict(
-    "../source/Гвардия/Гвардия_цены"
+    f"{BASE_LINUX_DIR}/prices"
 )
-sample = filesdata_to_dict("../source/Гвардия/Гвардия/В продаже", combined=True)
-not_in_sale = filesdata_to_dict("../source/Гвардия/Гвардия/Не в продаже", combined=True)
+sample = filesdata_to_dict(f"{BASE_LINUX_DIR}/sale", combined=True)
+not_in_sale = filesdata_to_dict(f"{BASE_LINUX_DIR}/not_in_sale", combined=True)
 
 result = []
 id_to_add = []
