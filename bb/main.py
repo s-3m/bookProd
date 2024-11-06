@@ -19,19 +19,17 @@ from utils import filesdata_to_dict
 pd.io.formats.excel.ExcelFormatter.header_style = None
 
 BASE_URL = "https://bookbridge.ru"
-# BASE_LINUX_DIR = "/media/source/bb"
+BASE_LINUX_DIR = "/media/source/bb"
 USER_AGENT = UserAgent()
 headers = {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
     "user-agent": USER_AGENT.random,
 }
 df_price_one, df_price_two, df_price_three = filesdata_to_dict(
-    "../source/Букбридж/Букбридж_цены"
+    f"{BASE_LINUX_DIR}/prices"
 )
-sample = filesdata_to_dict("../source/Букбридж/Букбридж/В продаже", combined=True)
-not_in_sale = filesdata_to_dict(
-    "../source/Букбридж/Букбридж/Не в продаже", combined=True
-)
+sample = filesdata_to_dict(f"{BASE_LINUX_DIR}/sale", combined=True)
+not_in_sale = filesdata_to_dict(f"{BASE_LINUX_DIR}/not_in_sale", combined=True)
 
 count = 1
 empty_price_count = 1

@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import numpy as np
 
 
 def filesdata_to_dict(folder_path: str, combined=False) -> dict | list[dict]:
@@ -10,6 +11,7 @@ def filesdata_to_dict(folder_path: str, combined=False) -> dict | list[dict]:
                 df = pd.read_csv(
                     f"{dirName}/{file}", sep=";", converters={"article": str}
                 )[["Артикул"]]
+                df["on sale"]: str = np.nan
                 frame_list.append(df)
         result_frame = (
             pd.concat(frame_list).replace({"'": ""}, regex=True).drop_duplicates()
@@ -24,16 +26,10 @@ def filesdata_to_dict(folder_path: str, combined=False) -> dict | list[dict]:
                     sheet_name=1,
                     header=2,
                 )[["Артикул"]].drop_duplicates()
+                df["price"] = np.nan
                 df = df.where(df.notnull(), None)
                 ready_dict = df.set_index("Артикул").to_dict(orient="index")
                 if None in ready_dict:
                     del ready_dict[None]
                 frame_list.append(ready_dict)
         return frame_list
-
-
-# in_sale = filesdata_to_dict("source/Гвардия/Гвардия/В продаже", combined=True)
-# not_in_sale = filesdata_to_dict("source/Гвардия/Гвардия/Не в продаже", combined=True)
-#
-# a = filesdata_to_dict("source\Гвардия\Гвардия цены — копия")
-# print(a[0])
