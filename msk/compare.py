@@ -50,7 +50,7 @@ async def to_check_item(article, session, past_day_result, to_del):
             )
             need_data_dict = eval(a[:-1])["Products"][0]
             stock = need_data_dict["Stock"]
-            past_day_result[article] = {"Наличие": stock}
+            past_day_result[article] = {"in stock": stock}
 
         print(f"\r{count}", end="")
         count += 1
