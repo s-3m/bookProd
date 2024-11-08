@@ -40,12 +40,16 @@ id_to_add = []
 
 
 def to_write_file(filepath, temporary=False, final_result=False):
+    filepath = f"/home/roman/parser/bookProd/bb/result"
     if temporary:
         df = pd.DataFrame(result)
-        df.to_excel(f"{filepath}.xlsx", index=False)
+        df.to_excel(
+            f"/home/roman/parser/bookProd/bb/result/temporary/temp_result.xlsx",
+            index=False,
+        )
         return
     if not final_result:
-        filepath = filepath + "/temporary"
+        filepath = f"/home/roman/parser/bookProd/bb/result/temporary"
     df = pd.DataFrame(result)
     df.to_excel(f"{filepath}/all_result.xlsx", index=False)
 
