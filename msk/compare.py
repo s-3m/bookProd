@@ -13,6 +13,8 @@ from tg_sender import tg_send_files
 
 BASE_URL = "https://www.moscowbooks.ru/"
 USER_AGENT = UserAgent()
+PATH_TO_FILES = "/media/source/msk/every_day"
+
 headers = {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
     "user-agent": USER_AGENT.random,
@@ -56,7 +58,7 @@ async def to_check_item(article, session, past_day_result, to_del):
         count += 1
     except Exception as e:
         with open(
-            f"{os.path.dirname(os.path.realpath(__file__))}/just_compare_error.txt",
+            f"{PATH_TO_FILES}/just_compare_error.txt",
             "a+",
         ) as f:
             f.write(f"{link} ------ {e}\n")
@@ -65,7 +67,7 @@ async def to_check_item(article, session, past_day_result, to_del):
 async def reparse_error(session, past_day_result, to_del):
     logger.warning("Start reparse error")
     reparse_count = 0
-    error_file = f"{os.path.dirname(os.path.realpath(__file__))}/just_compare_error.txt"
+    error_file = f"{PATH_TO_FILES}/just_compare_error.txt"
     try:
         while True:
             if not os.path.exists(error_file) or reparse_count > 10:
@@ -88,10 +90,9 @@ async def reparse_error(session, past_day_result, to_del):
 
 
 async def get_compare():
-    tasks = []
     to_del = []
     df_past_day_result = pd.read_excel(
-        f"{os.path.dirname(os.path.realpath(__file__))}/compare/msk_new_stock.xlsx",
+        f"{PATH_TO_FILES}/msk_new_stock.xlsx",
         converters={"article": str},
     )
 
@@ -107,15 +108,14 @@ async def get_compare():
         await reparse_error(session, past_day_result, to_del)
 
     logger.info("Preparing files for sending")
-    abs_path = os.path.dirname(os.path.realpath(__file__))
     df = pd.DataFrame().from_dict(past_day_result, "index")
     df.index.name = "article"
     df.index = df.index.astype(str)
-    file_stock = f"{abs_path}/compare/msk_new_stock.xlsx"
+    file_stock = f"{PATH_TO_FILES}/msk_new_stock.xlsx"
     df.to_excel(file_stock)
 
     del_df = pd.DataFrame({"article": to_del})
-    file_del = f"{abs_path}/compare/msk_del.xlsx"
+    file_del = f"{PATH_TO_FILES}/msk_del.xlsx"
     del_df.to_excel(file_del, index=False)
 
     logger.info("Start sending files")

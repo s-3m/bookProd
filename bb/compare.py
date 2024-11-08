@@ -39,6 +39,8 @@ headers = {
 
 count = 1
 
+PATH_TO_FILES = "/media/source/bb/every_day"
+
 
 async def get_item_data(session, item, error_items, semaphore):
     async with semaphore:
@@ -64,12 +66,14 @@ async def get_item_data(session, item, error_items, semaphore):
             item["in_stock"] = "2"
             error_items.append(item)
             today = datetime.date.today().strftime("%d-%m-%Y")
-            with open("error.txt", "a+") as f:
+            with open(f"{PATH_TO_FILES}/error.txt", "a+") as f:
                 f.write(f"{today} --- {item['link']} --- {e}\n")
 
 
 async def get_gather_data():
-    df = pd.read_excel("compare/bb_new_stock_dev.xlsx", converters={"article": str})
+    df = pd.read_excel(
+        f"{PATH_TO_FILES}/bb_new_stock_dev.xlsx", converters={"article": str}
+    )
     df = df.where(df.notnull(), None)
     all_items_list = df.to_dict("records")
     error_items_list = []
@@ -118,14 +122,14 @@ async def get_gather_data():
     df_result = pd.DataFrame(all_items_list)
     df_result.drop_duplicates(keep="last", inplace=True, subset="article")
     df_result.loc[df_result["in_stock"] != "del"].to_excel(
-        f"{abs_path}/compare/bb_new_stock_dev.xlsx", index=False
+        f"{PATH_TO_FILES}/bb_new_stock_dev.xlsx", index=False
     )
     df_without_del = df_result.loc[df_result["in_stock"] != "del"][
         ["article", "in_stock"]
     ]
     df_del = df_result.loc[df_result["in_stock"] == "del"][["article"]]
-    del_path = f"{abs_path}/compare/bb_del.xlsx"
-    without_del_path = f"{abs_path}/compare/bb_new_stock.xlsx"
+    del_path = f"{PATH_TO_FILES}/bb_del.xlsx"
+    without_del_path = f"{PATH_TO_FILES}/bb_new_stock.xlsx"
     df_without_del.to_excel(without_del_path, index=False)
     df_del.to_excel(del_path, index=False)
 
@@ -150,4 +154,4 @@ def super_main():
 if __name__ == "__main__":
     start_time = time.time()
     super_main()
-    print(f'\n{time.time() - start_time}')
+    print(f"\n{time.time() - start_time}")
