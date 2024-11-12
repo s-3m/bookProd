@@ -1,24 +1,22 @@
+import re
 import time
 import sys
 import os
 
-from unicodedata import category
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import pandas.io.formats.excel
 from bs4 import BeautifulSoup as bs
-from pprint import pprint
-from fake_useragent import UserAgent
 import aiohttp
 import asyncio
 import pandas as pd
 from loguru import logger
-from utils import filesdata_to_dict
 
+from tg_notify_me import tg_send_msg
 
+pandas.io.formats.excel.ExcelFormatter.header_style = None
 DEBUG = True
 BASE_URL = "https://mdk-arbat.ru"
-
+BASE_LINUX_DIR = "/media/source/mdk"
 
 headers = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -39,124 +37,134 @@ headers = {
 }
 
 all_books = []
+count = 1
+
+book_error = 0
+category_error = 0
 
 
 async def get_item_data(session, semaphore, book):
-    async with semaphore:
-        async with session.get(f"{BASE_URL}{book}", headers=headers) as resp:
-            soup = bs(await resp.text(), "lxml")
-            # Название книги
-            try:
-                title = soup.find("h1").text
-            except:
-                title = "Нет названия"
+    global count
+    link = f"{BASE_URL}{book}"
+    try:
+        async with semaphore:
+            async with session.get(f"{BASE_URL}{book}", headers=headers) as resp:
+                await asyncio.sleep(3)
+                soup = bs(await resp.text(), "lxml")
+                # Название книги
+                try:
+                    title = soup.find("h1").text
+                except:
+                    title = "Нет названия"
 
-            # Фото
-            try:
-                photo = soup.find("figure").get("href")
-            except:
-                photo = "Нет фото"
+                # Артикул
+                try:
+                    article = link.split("/")[-1]
+                except:
+                    article = "Нет артикла"
 
-            # Авторы
-            try:
-                author_list = [
-                    i.text for i in soup.find_all("a", {"class": "itempage-author"})
-                ]
-                author = " ".join(author_list)
-            except:
-                author = "Нет автора"
+                # Фото
+                try:
+                    photo = soup.find("figure").get("href")
+                except:
+                    photo = "Нет фото"
 
-            # Цена
-            try:
-                price = soup.find("span", {"class": "itempage-price_inet"}).text[:-1]
-            except:
-                price = "Нет цены"
+                # Авторы
+                try:
+                    author_list = [
+                        i.text for i in soup.find_all("a", {"class": "itempage-author"})
+                    ]
+                    author = " ".join(author_list)
+                except:
+                    author = "Нет автора"
 
-            # Описание
-            try:
-                description = soup.find("p", {"class": "itempage-text"}).text
-            except:
-                description = "Нет описания"
+                # Цена
+                try:
+                    price = soup.find("span", {"class": "itempage-price_inet"}).text[
+                        :-1
+                    ]
+                except:
+                    price = "Нет цены"
 
-            # Наличие
-            try:
-                stock = soup.find("div", {"class": "tg-quantityholder"}).get(
-                    "data-maxqty"
-                )
-            except:
-                stock = "Кол-во не указано"
+                # Описание
+                try:
+                    description = soup.find("p", {"class": "itempage-text"}).text
+                except:
+                    description = "Нет описания"
 
-            book_data = {
-                "link": f"{BASE_URL}{book}",
-                "title": title,
-                "photo": photo,
-                "author": author,
-                "price": price,
-                "description": description,
-                "stock": stock,
-            }
-            # Характеристики
-            try:
-                all_char = soup.find("ul", class_="tg-productinfo").find_all("li")
-                for i in all_char:
-                    row = i.find_all("span")
-                    book_data[row[0].text] = row[1].text
-            except:
-                pass
+                # Наличие
+                try:
+                    stock = soup.find("div", {"class": "tg-quantityholder"}).get(
+                        "data-maxqty"
+                    )
+                except:
+                    stock = "Кол-во не указано"
 
-        all_books.append(book_data)
+                book_data = {
+                    "link": link,
+                    "title": title,
+                    "article": article,
+                    "photo": photo,
+                    "author": author,
+                    "price": price,
+                    "description": description,
+                    "stock": stock,
+                }
+                # Характеристики
+                try:
+                    all_char = soup.find("ul", class_="tg-productinfo").find_all("li")
+                    for i in all_char:
+                        row = i.find_all("span")
+                        book_data[row[0].text] = row[1].text
+                except:
+                    pass
+
+            print(f"\rDone - {count}", end="")
+            count += 1
+            all_books.append(book_data)
+    except (BaseException, Exception) as e:
+        with open(f"{BASE_LINUX_DIR}/full_pars/error.txt", "a+", encoding="utf-8") as f:
+            f.write(f"{link} ----- {e}\n")
+        global book_error
+        book_error += 1
 
 
 async def get_category_data(session, semaphore, category):
-
-    async with session.get(f"{BASE_URL}{category}", headers=headers) as resp:
-        soup = bs(await resp.text(), "lxml")
-        pagination = soup.find("nav", {"class": "tg-pagination"})
-        if pagination:
-            pagination = int(pagination.find_all("li")[-2].text)
-        else:
-            pagination = 1
-        for page in range(1, pagination + 1):
-            async with session.get(
-                f"{BASE_URL}{category}&pid={page}", headers=headers
-            ) as resp:
-                soup = bs(await resp.text(), "lxml")
-                all_books_on_page = [
-                    i.find("a").get("href")
-                    for i in soup.find_all("div", {"class": "tg-postbook"})
-                ]
-            for book in all_books_on_page:
-                await get_item_data(session, semaphore, book)
-
-
-async def take_all_category(
-    session, all_category, cat_list: list | None = None, base_padding=15
-):
-    if cat_list is None:
-        cat_list = []
-    for category in all_category:
+    try:
         async with session.get(f"{BASE_URL}{category}", headers=headers) as resp:
             soup = bs(await resp.text(), "lxml")
-            categories_li = [
-                i
-                for i in soup.find("div", class_="tg-widgetcontent").find_all("li")
-                if int(i.get("style").split(":")[1][:2]) > base_padding
-            ]
-            if categories_li:
-                new_categories = [li.find("a").get("href") for li in categories_li]
-                cat_list.extend(new_categories)
-                base_padding += 15
-                await take_all_category(session, new_categories, cat_list, base_padding)
+            pagination = soup.find("nav", {"class": "tg-pagination"})
+            if pagination:
+                pagination = int(pagination.find_all("li")[-2].text)
             else:
-                continue
+                pagination = 1
+            for page in range(1, pagination + 1):
+                async with session.get(
+                    f"{BASE_URL}{category}&pid={page}", headers=headers
+                ) as resp:
+                    soup = bs(await resp.text(), "lxml")
+                    all_books_on_page = [
+                        i.find("a").get("href")
+                        for i in soup.find_all("div", {"class": "tg-postbook"})
+                    ]
 
-    return cat_list
+                for book in all_books_on_page:
+                    await get_item_data(session, semaphore, book)
+    except (BaseException, Exception) as e:
+        with open(f"{BASE_LINUX_DIR}/category_error.txt", "a+", encoding="utf-8") as f:
+            f.write(f"{BASE_URL}{category} ----- {e}\n")
+        global category_error
+        category_error += 1
 
 
 async def get_gather_data():
+    logger.info("Начинаю сбор данных МДК")
     semaphore = asyncio.Semaphore(10)
     tasks = []
-    async with aiohttp.ClientSession(headers=headers) as session:
+    async with aiohttp.ClientSession(
+        headers=headers, connector=aiohttp.TCPConnector(ssl=False)
+    ) as session:
+        logger.info("Формирование списка категорий")
         async with session.get(f"{BASE_URL}/catalog?subj_id=51") as response:
             soup = bs(await response.text(), "lxml")
             all_categories = [
@@ -164,7 +172,8 @@ async def get_gather_data():
                 for i in soup.find("div", class_="tg-widgetcontent").find_all("a")
             ]
 
-            # additionally_category = await take_all_category(session, all_categories)
+            logger.info(f"Найдено {len(all_categories)} категорий")
+            logger.info(f"Начался сбор данных по категориям")
 
             for main_category in all_categories:
                 task = asyncio.create_task(
@@ -172,6 +181,10 @@ async def get_gather_data():
                 )
                 tasks.append(task)
             await asyncio.gather(*tasks)
+            pd.DataFrame(all_books).to_excel("mdk_all.xlsx", index=False)
+    global category_error
+    global book_error
+    await tg_send_msg("МДК", [category_error, book_error])
 
 
 if __name__ == "__main__":
