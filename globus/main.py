@@ -12,9 +12,8 @@ import asyncio
 import pandas as pd
 from loguru import logger
 
-from tg_notify_me import tg_send_msg
-
 pandas.io.formats.excel.ExcelFormatter.header_style = None
+logger.add("globus_error.log", format="{time} {level} {message}", level="ERROR")
 DEBUG = True
 BASE_URL = "https://www.biblio-globus.ru"
 BASE_LINUX_DIR = "/media/source/globus"
@@ -38,6 +37,8 @@ headers = {
 }
 
 all_books_result = []
+
+done_count = 0
 
 
 async def collect_all_menu(session, menu_item_link):
@@ -140,6 +141,9 @@ async def get_book_data(session, book_link):
         book_result.update(main_char)
 
         all_books_result.append(book_result)
+        global done_count
+        done_count += 1
+        print(f"\rDone - {done_count}", end="")
 
 
 async def get_page_data(session, category_link):
@@ -163,12 +167,14 @@ async def get_page_data(session, category_link):
                 max_page = int(max_page)
 
         for page in range(1, max_page + 1):
+            await asyncio.sleep(2)
             async with session.get(f"{page_link}?page={page}", headers=headers) as resp:
                 soup = bs(await resp.text(), "lxml")
                 row_products = soup.find("div", class_="row products")
                 all_books = row_products.find_all("div", class_="product")
                 all_books_on_page = [i.find("a").get("href") for i in all_books]
                 for book_link in all_books_on_page:
+                    await asyncio.sleep(2)
                     await get_book_data(session, book_link)
 
 
@@ -211,35 +217,48 @@ async def check_option(session, cat_link):
             await get_page_data(session, cat_link)
 
 
+@logger.catch
 async def get_gather_data():
+
     logger.info("Начинаю сбор данных БИБЛИО-ГЛОБУС")
-    semaphore = asyncio.Semaphore(30)
+    semaphore = asyncio.Semaphore(1)
     timeout = aiohttp.ClientTimeout(total=800)
     async with aiohttp.ClientSession(
         headers=headers, connector=aiohttp.TCPConnector(ssl=False), timeout=timeout
     ) as session:
         logger.info("Формирование списка категорий")
-        async with session.get(f"{BASE_URL}/catalog/index/4") as response:
-            soup = bs(await response.text(), "lxml")
-            li_menu = soup.find(
-                "ul", class_="nav nav-pills flex-column category-menu"
-            ).find_all("li", recursive=False)
-            main_menu_links = [i.find("a")["href"] for i in li_menu]
+        async with semaphore:
+            async with session.get(f"{BASE_URL}/catalog/index/4") as response:
+                soup = bs(await response.text(), "lxml")
+                li_menu = soup.find(
+                    "ul", class_="nav nav-pills flex-column category-menu"
+                ).find_all("li", recursive=False)
+                main_menu_links = [i.find("a")["href"] for i in li_menu]
 
-        all_links = []
+            all_links = []
 
-        tasks = [
-            asyncio.create_task(collect_all_menu(session, menu_item))
-            for menu_item in main_menu_links
-        ]
-        await asyncio.gather(*tasks)
-        for i in tasks:
-            all_links.extend(i.result())
+            tasks = [
+                asyncio.create_task(collect_all_menu(session, menu_item))
+                for menu_item in main_menu_links
+            ]
+            await asyncio.gather(*tasks)
+            logger.info("Список категорий сформирован")
 
-        for cat_link in all_links:
-            new_tasks = [asyncio.create_task(check_option(session, cat_link))]
+            for i in tasks:
+                all_links.extend(i.result())
 
-        await asyncio.gather(*new_tasks)
+            logger.info("Начинаю сбор основных данных")
+            print()
+
+            for cat_link in all_links[:3]:
+                new_tasks = [asyncio.create_task(check_option(session, cat_link))]
+
+            await asyncio.gather(*new_tasks)
+            logger.success("Сбор данных завершён")
+
+    logger.info("Начинаю запись данных в файл")
+    pd.DataFrame(all_books_result).to_excel("GLOBUS_test.xlsx", index=False)
+    logger.success("Данные успешно записаны")
 
 
 if __name__ == "__main__":
