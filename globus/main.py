@@ -2,6 +2,7 @@ import re
 import time
 import sys
 import os
+import traceback
 from urllib import parse
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -51,103 +52,106 @@ async def collect_all_menu(session, menu_item_link):
 
 async def get_book_data(session, book_link):
     link = f"{BASE_URL}{book_link}"
-    async with session.get(link, headers=headers) as resp:
-        soup = bs(await resp.text(), "lxml")
+    try:
+        async with session.get(link, headers=headers) as resp:
+            soup = bs(await resp.text(), "lxml")
 
-        try:
-            title = soup.find("h1").text.strip()
-        except:
-            title = "Нет названия"
+            try:
+                title = soup.find("h1").text.strip()
+            except:
+                title = "Нет названия"
 
-        # Автор
-        try:
-            author = soup.find("p", class_="goToDescription").text.strip()
-        except:
-            author = "Автор не указан"
+            # Автор
+            try:
+                author = soup.find("p", class_="goToDescription").text.strip()
+            except:
+                author = "Автор не указан"
 
-        # Описание
-        try:
-            description = soup.find("div", id="collapseExample").text.strip()
-        except:
-            description = "Нет описания"
+            # Описание
+            try:
+                description = soup.find("div", id="collapseExample").text.strip()
+            except:
+                description = "Нет описания"
 
-        # Цена
-        try:
-            price_div = soup.find("div", class_="price_box").find_all(
-                "span", class_="price_new"
-            )
-            price = price_div[0].text.strip().split("\xa0")[0]
-        except:
-            price = "цена не указана"
+            # Цена
+            try:
+                price_div = soup.find("div", class_="price_box").find_all(
+                    "span", class_="price_new"
+                )
+                price = price_div[0].text.strip().split("\xa0")[0]
+            except:
+                price = "цена не указана"
 
-        # Наличие
-        try:
-            stock = (
-                soup.find("div", class_="qtyInStock")
-                .find("span")
-                .text.strip()
-                .split(" ")[1]
-            )
-        except:
-            stock = "Не указано"
+            # Наличие
+            try:
+                stock = (
+                    soup.find("div", class_="qtyInStock")
+                    .find("span")
+                    .text.strip()
+                    .split(" ")[1]
+                )
+            except:
+                stock = "Не указано"
 
-        # Основные характеристики
-        try:
-            char_table = soup.find("table", class_="decor2")
-            all_row = char_table.find_all("tr")
-            main_char = {
-                i.find_all("td")[0].text.strip(): i.find_all("td")[1].text.strip()
-                for i in all_row
+            # Основные характеристики
+            try:
+                char_table = soup.find("table", class_="decor2")
+                all_row = char_table.find_all("tr")
+                main_char = {
+                    i.find_all("td")[0].text.strip(): i.find_all("td")[1].text.strip()
+                    for i in all_row
+                }
+            except:
+                main_char = {}
+
+            # Дополнительные характеристики
+            try:
+                add_char_table = soup.find("table", class_="decor")
+                all_add_row = add_char_table.find_all("td")
+                add_char = {
+                    i.text.split(": ")[0].strip(): i.text.split(": ")[1].strip()
+                    for i in all_add_row
+                }
+            except:
+                add_char = {}
+
+            # ФОТО
+            try:
+                photo = soup.find("a", attrs={"data-fancybox": "gallery"}).get("href")
+            except:
+                photo = "Нет фото"
+
+            # Гоавная категория
+            try:
+                category = soup.find_all("li", class_="breadcrumb-item")[-1].text.strip()
+            except:
+                category = "Категория не указана"
+
+            main_char.update(add_char)
+
+            book_result = {
+                "Ссылка": link,
+                "Название": title,
+                "Автор": author,
+                "Описание": description,
+                "Фото": photo,
+                "Цена": price,
+                "Наличие": stock,
+                "Категория": category,
             }
-        except:
-            main_char = {}
 
-        # Дополнительные характеристики
-        try:
-            add_char_table = soup.find("table", class_="decor")
-            all_add_row = add_char_table.find_all("td")
-            add_char = {
-                i.text.split(": ")[0].strip(): i.text.split(": ")[1].strip()
-                for i in all_add_row
-            }
-        except:
-            add_char = {}
+            book_result.update(main_char)
 
-        # ФОТО
-        try:
-            photo = soup.find("a", attrs={"data-fancybox": "gallery"}).get("href")
-        except:
-            photo = "Нет фото"
-
-        # Гоавная категория
-        try:
-            category = soup.find_all("li", class_="breadcrumb-item")[-1].text.strip()
-        except:
-            category = "Категория не указана"
-
-        main_char.update(add_char)
-
-        book_result = {
-            "Ссылка": link,
-            "Название": title,
-            "Автор": author,
-            "Описание": description,
-            "Фото": photo,
-            "Цена": price,
-            "Наличие": stock,
-            "Категория": category,
-        }
-
-        book_result.update(main_char)
-
-        all_books_result.append(book_result)
-        global done_count
-        done_count += 1
-        print(f"\rDone - {done_count}", end="")
-
+            all_books_result.append(book_result)
+            global done_count
+            done_count += 1
+            print(f"\rDone - {done_count}", end="")
+    except:
+        logger.error(f"Ошибка со страницей {book_link}")
 
 async def get_page_data(session, category_link):
     page_link = f"{BASE_URL}{category_link}"
+    cat_number = page_link.split("/")[-1].strip()
     async with session.get(page_link, headers=headers) as resp:
         soup = bs(await resp.text(), "lxml")
 
@@ -168,7 +172,7 @@ async def get_page_data(session, category_link):
 
         for page in range(1, max_page + 1):
             await asyncio.sleep(2)
-            async with session.get(f"{page_link}?page={page}", headers=headers) as resp:
+            async with session.get(f"{BASE_URL}/catalog/category?id={cat_number}&page={page}", headers=headers) as resp:
                 soup = bs(await resp.text(), "lxml")
                 row_products = soup.find("div", class_="row products")
                 all_books = row_products.find_all("div", class_="product")
@@ -221,7 +225,7 @@ async def check_option(session, cat_link):
 async def get_gather_data():
 
     logger.info("Начинаю сбор данных БИБЛИО-ГЛОБУС")
-    semaphore = asyncio.Semaphore(1)
+    semaphore = asyncio.Semaphore(8)
     timeout = aiohttp.ClientTimeout(total=800)
     async with aiohttp.ClientSession(
         headers=headers, connector=aiohttp.TCPConnector(ssl=False), timeout=timeout
@@ -250,7 +254,7 @@ async def get_gather_data():
             logger.info("Начинаю сбор основных данных")
             print()
 
-            for cat_link in all_links[:3]:
+            for cat_link in all_links[3:6]:
                 new_tasks = [asyncio.create_task(check_option(session, cat_link))]
 
             await asyncio.gather(*new_tasks)
