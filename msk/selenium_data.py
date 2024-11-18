@@ -4,19 +4,11 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
+import undetected_chromedriver as uc
 
 
 def get_book_data(link):
-    s = Service(
-        executable_path=f"{os.path.dirname(os.path.dirname(os.path.realpath(__file__)))}/chromedriver"
-    )
-    o = webdriver.ChromeOptions()
-    o.add_argument("--ignore-certificate-errors")
-    o.add_argument("--allow-running-insecure-content")
-    o.add_argument("--disable-blink-features=AutomationControlled")
-    o.add_argument("--headless")
-    o.add_argument("--no-sandbox")
-    driver = webdriver.Chrome(service=s, options=o)
+    driver = uc.Chrome(headless=True, use_subprocess=False)
 
     try:
         driver.get(link)
