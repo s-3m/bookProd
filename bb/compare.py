@@ -42,6 +42,7 @@ count = 1
 PATH_TO_FILES = "/media/source/bb/every_day"
 
 
+@logger.catch
 async def get_item_data(session, item, error_items, semaphore):
     async with semaphore:
         try:
@@ -139,6 +140,7 @@ async def get_gather_data():
 
 
 def main():
+    logger.add(f"{PATH_TO_FILES}/error.log", format="{time} {level} {message}", level="ERROR")
     logger.info("Start parsing BookBridge.ru")
     asyncio.run(get_gather_data())
 
