@@ -93,6 +93,7 @@ async def get_book_data(session, book_url):
             detail_dict = None
 
         book_result = {
+            "link": link,
             "title": title,
             "author": author,
             "category": category,
