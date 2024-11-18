@@ -222,7 +222,7 @@ async def get_price_data(item, session, semaphore_price):
                 div_stock = soup.find("div", class_="item-stock").text
                 if div_article != item_article or div_stock == "Нет в наличии":
                     continue
-                div_price_value = div.find("span", class_="price_value")
+                div_price_value = div.find_all("span", class_="price_value")[-1]
                 if div_price_value:
                     price_value: str = unicodedata.normalize(
                         "NFKD", div_price_value.text
