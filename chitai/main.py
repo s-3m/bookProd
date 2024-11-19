@@ -1,17 +1,14 @@
-import re
-import time
 import sys
 import os
-import traceback
-from urllib import parse
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import pandas.io.formats.excel
 from bs4 import BeautifulSoup as bs
 import aiohttp
 import asyncio
 import pandas as pd
 from loguru import logger
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from utils import check_danger_string
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 logger.add("chitai_error.log", format="{time} {level} {message}", level="ERROR")
@@ -49,6 +46,10 @@ async def get_book_data(session, book_url):
 
         try:
             title = soup.find("h1").text.strip()
+            title = await check_danger_string(title, "title")
+            if not title:
+                logger.warning(f"Delete DANGER book: {BASE_URL}{book_url}")
+                return
         except:
             title = "Нет названия"
 
@@ -64,6 +65,7 @@ async def get_book_data(session, book_url):
 
         try:
             description = soup.find("article", class_="detail-description__text").text.strip()
+            description = await check_danger_string(description, "description")
         except:
             description = "Нет описания"
 
@@ -113,18 +115,28 @@ async def get_book_data(session, book_url):
         print(f"\rDone - {done_count}", end="")
 
 
+page_to_stop = 4600
+
+
 async def get_page_data(session, semaphore, page_number):
+    global page_to_stop
     async with semaphore:
         async with session.get(f"{BASE_URL}/catalog/books-18030?page={page_number}&sortPreset=newness",
                                headers=headers) as response:
             soup = bs(await response.text(), "lxml")
             product_list = soup.find("div", class_="products-list")
             all_articles = product_list.find_all("article", class_="product-card product-card product")
+            stop_count = 0
             for article in all_articles:
                 buy_possibility = article.find("span", class_="action-button__text").text.strip()
                 book_link = article.find("a", class_="product-card__title")["href"].strip()
+                if buy_possibility == "Где купить?":
+                    stop_count += 1
                 if buy_possibility == "Купить":
                     await get_book_data(session, book_link)
+            if stop_count >= 48:
+                page_to_stop = page_number
+                logger.info(f"Stopped at page {page_number}")
 
 
 async def get_gather_data():
@@ -140,8 +152,9 @@ async def get_gather_data():
             logger.info(f"City - {parse_city}")
             max_pages = int(soup.find_all("a", class_="pagination__button")[-2].text)
             tasks = []
-            max_pages = 10    #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             for page in range(1, max_pages + 1):
+                if page > page_to_stop:
+                    break
                 await asyncio.sleep(3)
                 task = asyncio.create_task(get_page_data(session, semaphore, page))
                 tasks.append(task)
