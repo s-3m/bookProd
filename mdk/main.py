@@ -6,6 +6,7 @@ import aiohttp
 import asyncio
 import pandas as pd
 from loguru import logger
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import check_danger_string
 
@@ -39,6 +40,7 @@ count = 1
 book_error = 0
 category_error = 0
 
+logger.add("mdk_error.log", format="{time} {level} {message}", level="ERROR")
 
 async def get_item_data(session, semaphore, book):
     global count
@@ -80,13 +82,17 @@ async def get_item_data(session, semaphore, book):
 
                 # Цена
                 try:
-                    price = soup.find("span", {"class": "itempage-price_inet"}).text[:-1]
+                    price = soup.find("span", {"class": "itempage-price_inet"}).text[
+                        :-1
+                    ]
                 except:
                     price = "Нет цены"
 
                 # Описание
                 try:
-                    description = soup.find("p", {"class": "itempage-text"}).text.strip()
+                    description = soup.find(
+                        "p", {"class": "itempage-text"}
+                    ).text.strip()
                     description = await check_danger_string(description, "description")
                 except:
                     description = "Нет описания"
@@ -155,7 +161,7 @@ async def get_category_data(session, semaphore, category):
         global category_error
         category_error += 1
 
-
+@logger.catch
 async def get_gather_data():
     logger.info("Начинаю сбор данных МДК")
     semaphore = asyncio.Semaphore(10)
@@ -183,7 +189,6 @@ async def get_gather_data():
             pd.DataFrame(all_books).to_excel("mdk_all.xlsx", index=False)
     global category_error
     global book_error
-    await tg_send_msg("МДК", [category_error, book_error])
 
 
 if __name__ == "__main__":
