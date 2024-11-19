@@ -37,7 +37,7 @@ def filesdata_to_dict(folder_path: str, combined=False) -> dict | list[dict]:
         return frame_list
 
 
-DF_danger_string = pd.read_excel("danger_string.xlsx")
+DF_danger_string = pd.read_excel(f"{os.path.abspath(os.path.dirname(__file__))}/danger_string.xlsx")
 in_title = DF_danger_string[DF_danger_string.columns[0]].dropna().to_list()
 in_description = DF_danger_string[DF_danger_string.columns[1]].dropna().to_list()
 hard_delete = DF_danger_string[DF_danger_string.columns[2]].dropna().to_list()
