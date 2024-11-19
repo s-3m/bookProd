@@ -1,17 +1,14 @@
-import re
-import time
 import sys
 import os
-import traceback
 from urllib import parse
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import pandas.io.formats.excel
 from bs4 import BeautifulSoup as bs
 import aiohttp
 import asyncio
 import pandas as pd
 from loguru import logger
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from utils import check_danger_string
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 logger.add("globus_error.log", format="{time} {level} {message}", level="ERROR")
@@ -58,6 +55,10 @@ async def get_book_data(session, book_link):
 
             try:
                 title = soup.find("h1").text.strip()
+                title = await check_danger_string(title, "title")
+                if not title:
+                    logger.warning(f"Delete DANGER book: {BASE_URL}{book_link}")
+                    return
             except:
                 title = "Нет названия"
 
@@ -70,6 +71,7 @@ async def get_book_data(session, book_link):
             # Описание
             try:
                 description = soup.find("div", id="collapseExample").text.strip()
+                description = await check_danger_string(description, "description")
             except:
                 description = "Нет описания"
 

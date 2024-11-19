@@ -78,7 +78,7 @@ async def get_gather_data():
     df = df.where(df.notnull(), None)
     all_items_list = df.to_dict("records")
     error_items_list = []
-    semaphore = asyncio.Semaphore(5)
+    semaphore = asyncio.Semaphore(10)
     tasks = []
     async with aiohttp.ClientSession(
         connector=aiohttp.TCPConnector(ssl=False, limit=50, limit_per_host=10),

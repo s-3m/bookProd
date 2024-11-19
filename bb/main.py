@@ -1,8 +1,6 @@
 import os.path
 import sys
 import os
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import time
 import re
 import pandas.io.formats.excel
@@ -13,8 +11,9 @@ import aiohttp
 import asyncio
 import pandas as pd
 from loguru import logger
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from utils import filesdata_to_dict, check_danger_string
 
-from utils import filesdata_to_dict
 
 pd.io.formats.excel.ExcelFormatter.header_style = None
 
@@ -105,6 +104,9 @@ async def get_item_data(item, session, main_category=None):
 
         try:
             title = soup.find("h1").text
+            title = await check_danger_string(title, "title")
+            if not title:
+                return
             res_dict["title"] = title.strip()
         except:
             title = "Нет названия"
@@ -155,6 +157,7 @@ async def get_item_data(item, session, main_category=None):
                 .find(class_="content")
                 .text.strip()
             )
+            desc = await check_danger_string(desc, "description")
             res_dict["description"] = desc
         except:
             res_dict["description"] = "Нет описания"
