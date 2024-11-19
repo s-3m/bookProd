@@ -15,7 +15,6 @@ from loguru import logger
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import filesdata_to_dict, check_danger_string
 
-
 pd.io.formats.excel.ExcelFormatter.header_style = None
 
 BASE_URL = "https://bookbridge.ru"
@@ -28,6 +27,7 @@ headers = {
 df_price_one, df_price_two, df_price_three = filesdata_to_dict(
     f"{BASE_LINUX_DIR}/prices"
 )
+logger.add("bb_error.log", format="{time} {level} {message}", level="ERROR")
 sample = filesdata_to_dict(f"{BASE_LINUX_DIR}/sale", combined=True)
 not_in_sale = filesdata_to_dict(f"{BASE_LINUX_DIR}/not_in_sale", combined=True)
 
@@ -39,7 +39,7 @@ id_to_del = []
 id_to_add = []
 
 
-def to_write_file(filepath, temporary=False, final_result=False):
+def to_write_file(temporary=False, final_result=False):
     filepath = f"/home/roman/parser/bookProd/bb/result"
     if temporary:
         df = pd.DataFrame(result)
@@ -196,9 +196,7 @@ async def get_item_data(item, session, main_category=None):
             id_to_del.append({"article": article + ".0"})
 
         if count % 50 == 0:
-            to_write_file(
-                filepath="result/temporary/temporary_result.xlsx", temporary=True
-            )
+            to_write_file(temporary=True)
 
         print(f"\rDone - {count}", end="")
         count = count + 1
@@ -283,8 +281,8 @@ async def get_gather_data():
     all_need_links = []
     logger.info("Start to collect data")
     async with aiohttp.ClientSession(
-        connector=aiohttp.TCPConnector(ssl=False, limit=50, limit_per_host=10),
-        trust_env=True,
+            connector=aiohttp.TCPConnector(ssl=False, limit=50, limit_per_host=10),
+            trust_env=True,
     ) as session:
         response = await session.get(f"{BASE_URL}/catalog", headers=headers)
         response_text = await response.text()
@@ -319,7 +317,7 @@ async def get_gather_data():
 
                 try:
                     async with session.get(
-                        f"{BASE_URL}{link}?PAGEN_1={page}", headers=headers
+                            f"{BASE_URL}{link}?PAGEN_1={page}", headers=headers
                     ) as response:
                         await asyncio.sleep(10)
                         soup = bs(await response.text(), "html.parser")
@@ -338,13 +336,43 @@ async def get_gather_data():
 
         await asyncio.gather(*tasks)
         await asyncio.sleep(10)
+
         print()  # empty print for break string after count
         logger.success("Main data was collected")
-        to_write_file("result")
+        to_write_file()
         logger.success("The main data was written to files")
 
-        logger.warning("Start reparse error")
+        # Собираем страницы с ошибками
+        try:
+            if os.path.exists("page_error.txt"):
+                with open("page_error.txt", encoding="utf-8") as file:
+                    all_row = file.readlines()
+                page_tuple = [
+                    f"{i.split(" --- ")[0]}?PAGEN_1={i.split(" --- ")[1]}" for i in all_row
+                ]
 
+                logger.warning(f"Find page error - {len(page_tuple)}")
+                page_error_tasks = []
+                for i in page_tuple:
+                    async with session.get(f"{i}", headers=headers) as response:
+                        await asyncio.sleep(10)
+                        soup = bs(await response.text(), "lxml")
+                        page_items = soup.find_all("div", class_="item-title")
+                        items = [item.find("a")["href"] for item in page_items]
+                        main_category = soup.find("h1").text.strip()
+                        for item in items:
+                            task = asyncio.create_task(get_item_data(item, session, main_category))
+                            page_error_tasks.append(task)
+                await asyncio.gather(*page_error_tasks)
+
+                to_write_file()
+                logger.info("Pages error data was collected")
+        except:
+            logger.error("Error in reparse pages errors")
+
+        logger.warning("Start reparse items errors")
+
+        # Собираем ошибки по отдельным книгам
         reparse_tasks = []
         reparse_count = 0
         while os.path.exists("error_log.txt") and reparse_count < 7:
@@ -361,7 +389,7 @@ async def get_gather_data():
             reparse_count += 1
             await asyncio.gather(*reparse_tasks)
 
-        to_write_file(filepath="result", final_result=True)
+        to_write_file(final_result=True)
 
         logger.info("Start check empty price field")
         await check_empty_price(session)
@@ -369,6 +397,7 @@ async def get_gather_data():
         logger.success("All done successfully!!!")
 
 
+@logger.catch
 def main():
     asyncio.run(get_gather_data())
 
