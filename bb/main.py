@@ -11,6 +11,7 @@ import aiohttp
 import asyncio
 import pandas as pd
 from loguru import logger
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import filesdata_to_dict, check_danger_string
 
@@ -98,9 +99,11 @@ async def get_item_data(item, session, main_category=None):
                     soup = bs(await response.text(), "html.parser")
 
         if not main_category:
-            main_category = soup.find_all(
-                "span", class_="breadcrumbs__item-name font_xs"
-            )[1].text.strip()
+            main_category = (
+                soup.find_all("meta", attrs={"itemprop": "category"})[0]
+                .get("content")
+                .split("/")[1]
+            )
 
         try:
             title = soup.find("h1").text
