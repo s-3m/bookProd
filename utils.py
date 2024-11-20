@@ -5,7 +5,7 @@ import numpy as np
 from typing import Literal
 
 
-def filesdata_to_dict(folder_path: str, combined=False) -> dict | list[dict]:
+def filesdata_to_dict(folder_path: str, combined=False) -> dict:
     frame_list = []
     if combined:
         for dirName, subdirList, fileList in os.walk(folder_path):
@@ -20,6 +20,7 @@ def filesdata_to_dict(folder_path: str, combined=False) -> dict | list[dict]:
         )
         return result_frame.set_index("Артикул").to_dict(orient="index")
     else:
+        df_dict = {}
         for dirName, subdirList, fileList in os.walk(folder_path):
             for file in fileList:
                 df = pd.read_excel(
@@ -33,8 +34,8 @@ def filesdata_to_dict(folder_path: str, combined=False) -> dict | list[dict]:
                 ready_dict = df.set_index("Артикул").to_dict(orient="index")
                 if None in ready_dict:
                     del ready_dict[None]
-                frame_list.append(ready_dict)
-        return frame_list
+                df_dict[file[-6]] = ready_dict
+        return df_dict
 
 
 DF_danger_string = pd.read_excel(

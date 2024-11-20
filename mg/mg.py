@@ -9,6 +9,7 @@ import aiohttp
 import asyncio
 import pandas as pd
 from loguru import logger
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import filesdata_to_dict, check_danger_string
 
@@ -23,9 +24,12 @@ headers = {
     "user-agent": USER_AGENT.random,
 }
 
-df_price_one, df_price_two, df_price_three = filesdata_to_dict(
-    f"{BASE_LINUX_DIR}/prices"
-)
+prices = filesdata_to_dict(f"{BASE_LINUX_DIR}/prices")
+
+df_price_one = prices["1"]
+df_price_two = prices["2"]
+df_price_three = prices["3"]
+
 sample = filesdata_to_dict(f"{BASE_LINUX_DIR}/sale", combined=True)
 not_in_sale = filesdata_to_dict(f"{BASE_LINUX_DIR}/not_in_sale", combined=True)
 

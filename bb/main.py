@@ -24,9 +24,13 @@ headers = {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
     "user-agent": USER_AGENT.random,
 }
-df_price_one, df_price_two, df_price_three = filesdata_to_dict(
-    f"{BASE_LINUX_DIR}/prices"
-)
+
+prices = filesdata_to_dict(f"{BASE_LINUX_DIR}/prices")
+
+df_price_one = prices["1"]
+df_price_two = prices["2"]
+df_price_three = prices["3"]
+
 logger.add("bb_error.log", format="{time} {level} {message}", level="ERROR")
 sample = filesdata_to_dict(f"{BASE_LINUX_DIR}/sale", combined=True)
 not_in_sale = filesdata_to_dict(f"{BASE_LINUX_DIR}/not_in_sale", combined=True)
@@ -281,8 +285,8 @@ async def get_gather_data():
     all_need_links = []
     logger.info("Start to collect data")
     async with aiohttp.ClientSession(
-            connector=aiohttp.TCPConnector(ssl=False, limit=50, limit_per_host=10),
-            trust_env=True,
+        connector=aiohttp.TCPConnector(ssl=False, limit=50, limit_per_host=10),
+        trust_env=True,
     ) as session:
         response = await session.get(f"{BASE_URL}/catalog", headers=headers)
         response_text = await response.text()
@@ -317,7 +321,7 @@ async def get_gather_data():
 
                 try:
                     async with session.get(
-                            f"{BASE_URL}{link}?PAGEN_1={page}", headers=headers
+                        f"{BASE_URL}{link}?PAGEN_1={page}", headers=headers
                     ) as response:
                         await asyncio.sleep(10)
                         soup = bs(await response.text(), "html.parser")
@@ -348,7 +352,8 @@ async def get_gather_data():
                 with open("page_error.txt", encoding="utf-8") as file:
                     all_row = file.readlines()
                 page_tuple = [
-                    f"{i.split(" --- ")[0]}?PAGEN_1={i.split(" --- ")[1]}" for i in all_row
+                    f"{i.split(" --- ")[0]}?PAGEN_1={i.split(" --- ")[1]}"
+                    for i in all_row
                 ]
 
                 logger.warning(f"Find page error - {len(page_tuple)}")
@@ -361,7 +366,9 @@ async def get_gather_data():
                         items = [item.find("a")["href"] for item in page_items]
                         main_category = soup.find("h1").text.strip()
                         for item in items:
-                            task = asyncio.create_task(get_item_data(item, session, main_category))
+                            task = asyncio.create_task(
+                                get_item_data(item, session, main_category)
+                            )
                             page_error_tasks.append(task)
                 await asyncio.gather(*page_error_tasks)
 
