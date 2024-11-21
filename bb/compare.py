@@ -78,7 +78,7 @@ async def get_gather_data():
     df = df.where(df.notnull(), None)
     all_items_list = df.to_dict("records")
     error_items_list = []
-    semaphore = asyncio.Semaphore(10)
+    semaphore = asyncio.Semaphore(7)
     tasks = []
     async with aiohttp.ClientSession(
         connector=aiohttp.TCPConnector(ssl=False, limit=50, limit_per_host=10),
@@ -140,7 +140,9 @@ async def get_gather_data():
 
 
 def main():
-    logger.add(f"{PATH_TO_FILES}/error.log", format="{time} {level} {message}", level="ERROR")
+    logger.add(
+        f"{PATH_TO_FILES}/error.log", format="{time} {level} {message}", level="ERROR"
+    )
     logger.info("Start parsing BookBridge.ru")
     asyncio.run(get_gather_data())
 
