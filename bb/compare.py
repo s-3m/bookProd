@@ -42,28 +42,46 @@ count = 1
 PATH_TO_FILES = "/media/source/bb/every_day"
 
 
+async def fetch_request(session, url):
+    for _ in range(20):
+        async with session.get(url, headers=headers) as response:
+            await asyncio.sleep(5)
+            if response.status == 200:
+                return await response.json(content_type=None)
+            elif response.status == 404:
+                return "del"
+    return None
+
+
 @logger.catch
 async def get_item_data(session, item, error_items, semaphore):
     async with semaphore:
         try:
-            async with session.get(item["link"], headers=headers) as resp:
-                await asyncio.sleep(3)
-                response = await resp.json(content_type=None)
-                dynamic_block = response.get("dynamicBlocks")
-                if not dynamic_block:
-                    item["in_stock"] = "del"
-                    return
-                page_text = dynamic_block[10]["CONTENT"].strip()
-                soup = bs(page_text, "html.parser")
-                quantity_element = soup.find("span", class_="plus dark-color")
-                stock_quantity = "del"
-                if quantity_element:
-                    stock_quantity = quantity_element.get("data-max")
-                global count
-                print(f"\r{count}", end="")
-                count += 1
+            response = await fetch_request(session, item["link"])
+            if response == "del":
+                item["in_stock"] = "del"
+                return
+            dynamic_block = response.get("dynamicBlocks")
+            page_text = dynamic_block[10]["CONTENT"].strip()
+            soup = bs(page_text, "html.parser")
+            quantity_element = soup.find("span", class_="plus dark-color")
+            stock_quantity = "del"
+            if quantity_element:
+                stock_quantity = quantity_element.get("data-max")
+                if not stock_quantity:
+                    stock_quantity = soup.find("div", class_="quantity_block")
+                    if stock_quantity:
+                        stock_quantity = (
+                            stock_quantity.find("span").text.strip().split("\n")[0]
+                        )
+                    else:
+                        stock_quantity = "2"
+            global count
+            print(f"\r{count}", end="")
+            count += 1
             item["in_stock"] = stock_quantity
         except Exception as e:
+            logger.exception(item["link"])
             item["in_stock"] = "2"
             error_items.append(item)
             today = datetime.date.today().strftime("%d-%m-%Y")
@@ -78,7 +96,7 @@ async def get_gather_data():
     df = df.where(df.notnull(), None)
     all_items_list = df.to_dict("records")
     error_items_list = []
-    semaphore = asyncio.Semaphore(7)
+    semaphore = asyncio.Semaphore(8)
     tasks = []
     async with aiohttp.ClientSession(
         connector=aiohttp.TCPConnector(ssl=False, limit=50, limit_per_host=10),
@@ -119,7 +137,6 @@ async def get_gather_data():
 
     await asyncio.sleep(30)
     logger.info("preparing files for sending")
-    abs_path = os.path.abspath(os.path.dirname(__file__))
     df_result = pd.DataFrame(all_items_list)
     df_result.drop_duplicates(keep="last", inplace=True, subset="article")
     df_result.loc[df_result["in_stock"] != "del"].to_excel(
