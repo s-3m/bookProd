@@ -18,6 +18,11 @@ pandas.io.formats.excel.ExcelFormatter.header_style = None
 
 BASE_URL = "https://www.dkmg.ru"
 BASE_LINUX_DIR = "/media/source/mg"
+logger.add(
+    f"{BASE_LINUX_DIR}/result/error.log",
+    format="{time} {level} {message}",
+    level="ERROR",
+)
 USER_AGENT = UserAgent()
 headers = {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
@@ -41,6 +46,7 @@ semaphore = asyncio.Semaphore(20)
 
 
 async def get_item_data(session, link, main_category):
+    link = f"{BASE_URL}{link}"
     global semaphore
     try:
         item_data = {}
@@ -128,8 +134,9 @@ async def get_item_data(session, link, main_category):
                 df_price_three[isbn + ".0"]["price"] = price
             result.append(item_data)
     except Exception as e:
-        with open("error.txt", "a+", encoding="utf-8") as f:
-            f.write(f"{BASE_URL}{link} ----- {e}\n")
+        logger.exception(link)
+        with open(f"{BASE_LINUX_DIR}/result/error.txt", "a+", encoding="utf-8") as f:
+            f.write(f"{link} ----- {e}\n")
 
 
 async def get_gather_data():
@@ -174,7 +181,7 @@ async def get_gather_data():
                         )
                         tasks.append(task)
             except Exception as e:
-                with open("cat_error.txt", "a+") as f:
+                with open(f"{BASE_LINUX_DIR}/result/cat_error.txt", "a+") as f:
                     f.write(f"{BASE_URL}{cat_link} ----- {e}\n")
                     continue
         await asyncio.gather(*tasks)
@@ -186,29 +193,29 @@ def main():
     logger.info("Finish parsing Gvardia")
     logger.info("Start to write to excel")
     df = pd.DataFrame(result)
-    df.to_excel("result/result.xlsx", index=False)
+    df.to_excel(f"{BASE_LINUX_DIR}/result/result.xlsx", index=False)
 
     df_add = pd.DataFrame(id_to_add)
-    df_add.to_excel("result/add.xlsx", index=False)
+    df_add.to_excel(f"{BASE_LINUX_DIR}/result/add.xlsx", index=False)
 
     df_del = pd.DataFrame(id_to_del)
-    df_del.to_excel("result/del.xlsx", index=False)
+    df_del.to_excel(f"{BASE_LINUX_DIR}/result/del.xlsx", index=False)
 
     df_one = pd.DataFrame().from_dict(df_price_one, orient="index")
     df_one.index.name = "article"
-    df_one.to_excel("result/price_one.xlsx")
+    df_one.to_excel(f"{BASE_LINUX_DIR}/result/price_one.xlsx")
 
     df_two = pd.DataFrame().from_dict(df_price_two, orient="index")
     df_two.index.name = "article"
-    df_two.to_excel("result/price_two.xlsx")
+    df_two.to_excel(f"{BASE_LINUX_DIR}/result/price_two.xlsx")
 
     df_three = pd.DataFrame().from_dict(df_price_three, orient="index")
     df_three.index.name = "article"
-    df_three.to_excel("result/price_three.xlsx")
+    df_three.to_excel(f"{BASE_LINUX_DIR}/result/price_three.xlsx")
 
     df_not_in_sale = pd.DataFrame().from_dict(not_in_sale, orient="index")
     df_not_in_sale.index.name = "article"
-    df_not_in_sale.to_excel("result/not_in_sale.xlsx")
+    df_not_in_sale.to_excel(f"{BASE_LINUX_DIR}/result/not_in_sale.xlsx")
     logger.info("Finish to write to excel")
     logger.success("Gvardia pars success")
 
