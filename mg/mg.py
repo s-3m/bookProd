@@ -11,7 +11,7 @@ import pandas as pd
 from loguru import logger
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from utils import filesdata_to_dict, check_danger_string
+from utils import filesdata_to_dict, check_danger_string, fetch_request
 
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
@@ -45,88 +45,88 @@ async def get_item_data(session, link, main_category):
     try:
         item_data = {}
         async with semaphore:
-            async with session.get(BASE_URL + link, headers=headers) as response:
-                soup = bs(await response.text(), "lxml")
-                item_data["category"] = main_category
+            response = await fetch_request(session, link, headers)
+            soup = bs(response, "lxml")
+            item_data["category"] = main_category
+            try:
+                title = soup.find("h1").text.strip()
+                title = await check_danger_string(title, "title")
+                if not title:
+                    return
+                item_data["title"] = title
+            except:
+                item_data["title"] = "Нет названия"
+            try:
+                options = soup.find("div", class_="item_basket_cont").find_all("tr")
+                for option in options:
+                    item_data[option.find_all("td")[0].text.strip()] = (
+                        option.find_all("td")[1].text.strip()
+                    )
+                    if option.find_all("td")[0].text.strip() == "ISBN:":
+                        isbn = option.find_all("td")[1].text.strip()
                 try:
-                    title = soup.find("h1").text.strip()
-                    title = await check_danger_string(title, "title")
-                    if not title:
-                        return
-                    item_data["title"] = title
-                except:
-                    item_data["title"] = "Нет названия"
-                try:
-                    options = soup.find("div", class_="item_basket_cont").find_all("tr")
-                    for option in options:
+                    additional_options = soup.find(
+                        "div", class_="additional_information"
+                    ).find_all("tr")
+                    for option in additional_options:
                         item_data[option.find_all("td")[0].text.strip()] = (
                             option.find_all("td")[1].text.strip()
                         )
-                        if option.find_all("td")[0].text.strip() == "ISBN:":
-                            isbn = option.find_all("td")[1].text.strip()
-                    try:
-                        additional_options = soup.find(
-                            "div", class_="additional_information"
-                        ).find_all("tr")
-                        for option in additional_options:
-                            item_data[option.find_all("td")[0].text.strip()] = (
-                                option.find_all("td")[1].text.strip()
-                            )
-                    except:
-                        pass
                 except:
-                    item_data["Характеристика"] = "Характиристики не указаны"
-                try:
-                    info = soup.find("div", class_="content_sm_2").find("h4")
-                    if info.text.strip() == "Аннотация":
-                        info = info.find_next().text.strip()
-                    else:
-                        info = "Описание отсутствует"
-                    info = await check_danger_string(info, "description")
-                    item_data["description"] = info
-                except:
-                    item_data["description"] = "Описание отсутствует"
-                try:
-                    price = (
-                        soup.find_all("div", class_="product_item_price")[1]
-                        .text.strip()
-                        .split(".")[0]
-                    )
-                    item_data["price"] = price
-                except:
-                    item_data["price"] = "Цена не указана"
-
-                item_id = soup.find("div", class_="wish_list_btn_box").find(
-                    "a", class_="btn_desirable2 to_wishlist"
+                    pass
+            except:
+                item_data["Характеристика"] = "Характиристики не указаны"
+            try:
+                info = soup.find("div", class_="content_sm_2").find("h4")
+                if info.text.strip() == "Аннотация":
+                    info = info.find_next().text.strip()
+                else:
+                    info = "Описание отсутствует"
+                info = await check_danger_string(info, "description")
+                item_data["description"] = info
+            except:
+                item_data["description"] = "Описание отсутствует"
+            try:
+                price = (
+                    soup.find_all("div", class_="product_item_price")[1]
+                    .text.strip()
+                    .split(".")[0]
                 )
-                if item_id:
-                    item_id = item_id["data-tovar"]
-                    item_data["id"] = item_id
-                try:
-                    quantity = soup.find("div", class_="wish_list_poz").text.strip()
-                    item_data["quantity"] = quantity
-                except:
-                    item_data["quantity"] = "Наличие не указано"
-                try:
-                    photo = soup.find("a", class_="highslide")["href"]
-                    item_data["photo"] = BASE_URL + photo
-                except:
-                    item_data["photo"] = "Нет изображения"
+                item_data["price"] = price
+            except:
+                item_data["price"] = "Цена не указана"
 
-                if isbn + ".0" in not_in_sale:
-                    not_in_sale[isbn + ".0"]["on sale"] = "да"
-                if isbn + ".0" not in sample and quantity == "есть в наличии":
-                    id_to_add.append(item_data)
-                if isbn + ".0" in sample and quantity != "есть в наличии":
-                    id_to_del.append({"article": f"{isbn}.0"})
+            item_id = soup.find("div", class_="wish_list_btn_box").find(
+                "a", class_="btn_desirable2 to_wishlist"
+            )
+            if item_id:
+                item_id = item_id["data-tovar"]
+                item_data["id"] = item_id
+            try:
+                quantity = soup.find("div", class_="wish_list_poz").text.strip()
+                item_data["quantity"] = quantity
+            except:
+                item_data["quantity"] = "Наличие не указано"
+            try:
+                photo = soup.find("a", class_="highslide")["href"]
+                item_data["photo"] = BASE_URL + photo
+            except:
+                item_data["photo"] = "Нет изображения"
 
-                if isbn + ".0" in df_price_one:
-                    df_price_one[isbn + ".0"]["price"] = price
-                if isbn + ".0" in df_price_two:
-                    df_price_two[isbn + ".0"]["price"] = price
-                if isbn + ".0" in df_price_three:
-                    df_price_three[isbn + ".0"]["price"] = price
-                result.append(item_data)
+            if isbn + ".0" in not_in_sale:
+                not_in_sale[isbn + ".0"]["on sale"] = "да"
+            if isbn + ".0" not in sample and quantity == "есть в наличии":
+                id_to_add.append(item_data)
+            if isbn + ".0" in sample and quantity != "есть в наличии":
+                id_to_del.append({"article": f"{isbn}.0"})
+
+            if isbn + ".0" in df_price_one:
+                df_price_one[isbn + ".0"]["price"] = price
+            if isbn + ".0" in df_price_two:
+                df_price_two[isbn + ".0"]["price"] = price
+            if isbn + ".0" in df_price_three:
+                df_price_three[isbn + ".0"]["price"] = price
+            result.append(item_data)
     except Exception as e:
         with open("error.txt", "a+", encoding="utf-8") as f:
             f.write(f"{BASE_URL}{link} ----- {e}\n")

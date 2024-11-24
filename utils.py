@@ -63,3 +63,13 @@ async def check_danger_string(
                     base_string = base_string.replace(i, "")
 
     return base_string
+
+
+async def fetch_request(session, url, headers: dict):
+    for _ in range(20):
+        async with session.get(url, headers=headers) as resp:
+            await asyncio.sleep(4)
+            if resp.status == 200:
+                return await resp.text()
+            else:
+                return None
