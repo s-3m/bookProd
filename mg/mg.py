@@ -59,9 +59,9 @@ async def get_item_data(session, link, main_category):
             try:
                 options = soup.find("div", class_="item_basket_cont").find_all("tr")
                 for option in options:
-                    item_data[option.find_all("td")[0].text.strip()] = (
-                        option.find_all("td")[1].text.strip()
-                    )
+                    item_data[option.find_all("td")[0].text.strip()] = option.find_all(
+                        "td"
+                    )[1].text.strip()
                     if option.find_all("td")[0].text.strip() == "ISBN:":
                         isbn = option.find_all("td")[1].text.strip()
                 try:
