@@ -11,9 +11,9 @@ def filesdata_to_dict(folder_path: str, combined=False) -> dict:
         for dirName, subdirList, fileList in os.walk(folder_path):
             for file in fileList:
                 df = pd.read_csv(
-                    f"{dirName}/{file}", sep=";", converters={"article": str}
+                    f"{dirName}/{file}", sep=";", converters={"Артикул": str}
                 )[["Артикул"]]
-                df["on sale"]: str = np.nan
+                df["on sale"]: str = ""
                 frame_list.append(df)
         result_frame = (
             pd.concat(frame_list).replace({"'": ""}, regex=True).drop_duplicates()
@@ -25,11 +25,12 @@ def filesdata_to_dict(folder_path: str, combined=False) -> dict:
             for file in fileList:
                 df = pd.read_excel(
                     f"{dirName}/{file}",
-                    converters={"article": str},
+                    converters={"Артикул": str},
                     sheet_name=1,
                     header=2,
                 )[["Артикул"]].drop_duplicates()
-                df["price"] = np.nan
+                df["price"] = ""
+
                 df = df.where(df.notnull(), None)
                 ready_dict = df.set_index("Артикул").to_dict(orient="index")
                 if None in ready_dict:
