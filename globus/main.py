@@ -173,6 +173,7 @@ async def get_book_data(session, book_link):
 
             book_result.update(main_char)
             article = main_char["Артикул"] + ".0"
+            book_result["Артикул"] = article
             for d in [df_price_one, df_price_two, df_price_three]:
                 if article in d and item_status:
                     d[article]["price"] = price
@@ -181,10 +182,8 @@ async def get_book_data(session, book_link):
             if article in not_in_sale and item_status:
                 not_in_sale[article]["on sale"] = "да"
             if article not in sample and item_status:
-                book_result["Артикул"] = article
                 id_to_add.append(book_result)
             if article in sample and not item_status:
-                book_result["Артикул"] = article
                 id_to_del.append({"article": article})
 
             all_books_result.append(book_result)
