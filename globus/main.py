@@ -330,15 +330,12 @@ async def get_gather_data():
         logger.success("Сбор данных завершён")
 
     logger.info("Начинаю запись данных в файл")
-    pd.DataFrame(all_books_result).to_excel(
-        f"{BASE_LINUX_DIR}/result/GLOBUS_all.xlsx", index=False
-    )
-    pd.DataFrame(id_to_add).to_excel(
-        f"{BASE_LINUX_DIR}/result/GLOBUS_add.xlsx", index=False
-    )
-    pd.DataFrame(id_to_del).to_excel(
-        f"{BASE_LINUX_DIR}/result/GLOBUS_del.xlsx", index=False
-    )
+    all_result_df = pd.DataFrame(all_books_result).drop_duplicates(subset="Артикул")
+    all_result_df.to_excel(f"{BASE_LINUX_DIR}/result/GLOBUS_all.xlsx", index=False)
+    df_add = pd.DataFrame(id_to_add).drop_duplicates(subset="Артикул")
+    df_add.to_excel(f"{BASE_LINUX_DIR}/result/GLOBUS_add.xlsx", index=False)
+    df_del = pd.DataFrame(id_to_del).drop_duplicates()
+    df_del.to_excel(f"{BASE_LINUX_DIR}/result/GLOBUS_del.xlsx", index=False)
 
     df_not_in_sale = pd.DataFrame().from_dict(not_in_sale, orient="index")
     df_not_in_sale.index.name = "article"
