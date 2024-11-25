@@ -287,7 +287,7 @@ async def collect_all_menu(session, menu_item_link):
         soup = bs(await resp.text(), "lxml")
         big_items = soup.find("ul", id="catalogue").find_all("a")
         all_sub_cat = ["/catalog/index/" + i.get("href") for i in big_items]
-    return all_sub_cat[:1]
+    return all_sub_cat
 
 
 @logger.catch
@@ -309,7 +309,7 @@ async def get_gather_data():
 
         tasks = [
             asyncio.create_task(collect_all_menu(session, menu_item))
-            for menu_item in main_menu_links[:1]
+            for menu_item in main_menu_links[2:4]
         ]
         await asyncio.gather(*tasks)
         logger.info(f"Список категорий сформирован")
@@ -321,8 +321,11 @@ async def get_gather_data():
         logger.info("Начинаю сбор основных данных")
         print()
 
-        for cat_link in all_links:
-            new_tasks = [asyncio.create_task(check_option(session, cat_link))]
+        # for cat_link in all_links:
+        new_tasks = [
+            asyncio.create_task(check_option(session, cat_link))
+            for cat_link in all_links
+        ]
 
         await asyncio.gather(*new_tasks)
         logger.success("Сбор данных завершён")
