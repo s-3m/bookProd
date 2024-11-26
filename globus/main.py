@@ -54,6 +54,7 @@ sample = filesdata_to_dict(f"{BASE_LINUX_DIR}/sale", combined=True)
 not_in_sale = filesdata_to_dict(f"{BASE_LINUX_DIR}/not_in_sale", combined=True)
 
 all_books_result = []
+unique_books_articles = set()
 id_to_del = []
 id_to_add = []
 
@@ -174,6 +175,7 @@ async def get_book_data(session, book_link):
             book_result.update(main_char)
             article = main_char["Артикул"] + ".0"
             book_result["Артикул"] = article
+            unique_books_articles.add(article)
             for d in [df_price_one, df_price_two, df_price_three]:
                 if article in d and item_status:
                     d[article]["price"] = price
@@ -328,6 +330,11 @@ async def get_gather_data():
 
         await asyncio.gather(*new_tasks)
         logger.success("Сбор данных завершён")
+
+    # create del file
+    for i in sample:
+        if i not in unique_books_articles:
+            id_to_del.append({"article": i})
 
     logger.info("Начинаю запись данных в файл")
     all_result_df = pd.DataFrame(all_books_result).drop_duplicates(subset="Артикул")
