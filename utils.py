@@ -5,7 +5,7 @@ import numpy as np
 from typing import Literal
 
 
-def filesdata_to_dict(folder_path: str, combined=False) -> dict:
+def filesdata_to_dict(folder_path: str, combined=False, return_df=False) -> dict | None:
     frame_list = []
     if combined:
         for dirName, subdirList, fileList in os.walk(folder_path):
@@ -15,10 +15,18 @@ def filesdata_to_dict(folder_path: str, combined=False) -> dict:
                 )[["Артикул"]]
                 df["on sale"]: str = ""
                 frame_list.append(df)
-        result_frame = (
-            pd.concat(frame_list).replace({"'": ""}, regex=True).drop_duplicates()
-        )
-        return result_frame.set_index("Артикул").to_dict(orient="index")
+        try:
+            result_frame = (
+                pd.concat(frame_list).replace({"'": ""}, regex=True).drop_duplicates()
+            )
+            return (
+                result_frame
+                if return_df
+                else result_frame.set_index("Артикул").to_dict(orient="index")
+            )
+        except ValueError:
+            return None
+
     else:
         df_dict = {}
         for dirName, subdirList, fileList in os.walk(folder_path):

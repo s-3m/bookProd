@@ -310,7 +310,7 @@ async def get_gather_data():
 
         tasks = [
             asyncio.create_task(collect_all_menu(session, menu_item))
-            for menu_item in main_menu_links
+            for menu_item in main_menu_links[:-1]
         ]
         await asyncio.gather(*tasks)
         logger.info(f"Список категорий сформирован")
