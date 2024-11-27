@@ -1,20 +1,17 @@
 import os
 import sys
-import time
-import datetime
 from dotenv import load_dotenv
 import schedule
 from loguru import logger
 import pandas.io.formats.excel
 from bs4 import BeautifulSoup as bs
-from fake_useragent import UserAgent
 import aiohttp
 import asyncio
 import pandas as pd
 from tg_sender import tg_send_files
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from utils import check_danger_string, filesdata_to_dict, fetch_request
+from utils import filesdata_to_dict, fetch_request
 
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
@@ -37,7 +34,7 @@ headers = {
     "sec-ch-ua-platform": '"Windows"',
 }
 
-DEBUG = True
+DEBUG = False
 BASE_URL = "https://www.biblio-globus.ru"
 BASE_LINUX_DIR = "/media/source/globus/every_day" if not DEBUG else "source/every_day"
 logger.add(
@@ -63,6 +60,9 @@ if df1 is not None:
 
     sample = pd.merge(df1[["Артикул"]], df2, on="Артикул", how="left")
     sample.columns = ["article", "link"]
+    sale_files = os.listdir(f"{path_to_sample}/sale")
+    for i in sale_files:
+        os.remove(f"{path_to_sample}/sale/{i}")
 else:
     sample = pd.read_excel(
         f"{BASE_LINUX_DIR}/globus_new_stock.xlsx",
@@ -129,11 +129,23 @@ def main():
     df_del.to_excel(del_path, index=False)
 
     df_without_del = df_result.loc[df_result["stock"] != "del"]
-    new_stock_path = f"{BASE_LINUX_DIR}/__globus_new_stock.xlsx"
+    new_stock_path = f"{BASE_LINUX_DIR}/globus_new_stock.xlsx"
     df_without_del.to_excel(new_stock_path, index=False)
-    logger.success("Finish art write to excel")
+
+    logger.success("Finish write to excel")
+
+    tg_send_files([new_stock_path, del_path], "Biblio-globus")
+
     logger.success("Script was finished successfully")
 
 
+def super_main():
+    load_dotenv("../.env")
+    schedule.every().day.at("21:00").do(main)
+
+    while True:
+        schedule.run_pending()
+
+
 if __name__ == "__main__":
-    main()
+    super_main()
