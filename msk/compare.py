@@ -15,8 +15,8 @@ BASE_URL = "https://www.moscowbooks.ru/"
 USER_AGENT = UserAgent()
 PATH_TO_FILES = "/media/source/msk/every_day"
 logger.add(
-        f"{PATH_TO_FILES}/error.log", format="{time} {level} {message}", level="ERROR"
-    )
+    f"{PATH_TO_FILES}/error.log", format="{time} {level} {message}", level="ERROR"
+)
 headers = {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
     "user-agent": USER_AGENT.random,

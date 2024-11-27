@@ -59,8 +59,8 @@ async def get_item_data(session, item, semaphore, sample, reparse=False):
 async def get_gather_data(semaphore, sample):
     tasks = []
     async with aiohttp.ClientSession(
-            connector=aiohttp.TCPConnector(ssl=False, limit_per_host=10, limit=50),
-            timeout=aiohttp.ClientTimeout(total=1200),
+        connector=aiohttp.TCPConnector(ssl=False, limit_per_host=10, limit=50),
+        timeout=aiohttp.ClientTimeout(total=1200),
     ) as session:
         for item in sample:
             task = asyncio.create_task(get_item_data(session, item, semaphore, sample))
