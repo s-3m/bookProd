@@ -213,7 +213,7 @@ async def get_item_data(item, session, main_category=None):
     except Exception as e:
         logger.exception(f"ERROR with --- {link}")
         if item.strip():
-            with open("error_log.txt", "a+", encoding="utf-8") as file:
+            with open(f"{BASE_LINUX_DIR}/error_log.txt", "a+", encoding="utf-8") as file:
                 file.write(f"{item} --- {e}\n")
         pass
 
@@ -342,6 +342,7 @@ async def get_gather_data():
                 except Exception as e:
                     with open("page_error.txt", "a+", encoding="utf-8") as file:
                         file.write(f"{link} --- {page} --- {e}\n")
+                    continue
 
         await asyncio.gather(*tasks)
         await asyncio.sleep(10)
