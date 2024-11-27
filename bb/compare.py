@@ -38,8 +38,8 @@ headers = {
 }
 
 count = 1
-
-PATH_TO_FILES = "/media/source/bb/every_day"
+DEBUG = False
+PATH_TO_FILES = "/media/source/bb/every_day" if not DEBUG else "compare"
 
 
 async def fetch_request(session, url):
@@ -62,7 +62,7 @@ async def get_item_data(session, item, error_items, semaphore):
                 item["in_stock"] = "del"
                 return
             dynamic_block = response.get("dynamicBlocks")
-            page_text = dynamic_block[10]["CONTENT"].strip()
+            page_text = dynamic_block[14]["CONTENT"].strip()
             soup = bs(page_text, "html.parser")
             quantity_element = soup.find("span", class_="plus dark-color")
             stock_quantity = "del"
