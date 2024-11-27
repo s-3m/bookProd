@@ -37,7 +37,7 @@ headers = {
     "sec-ch-ua-platform": '"Windows"',
 }
 
-DEBUG = False
+DEBUG = True
 BASE_URL = "https://www.biblio-globus.ru"
 BASE_LINUX_DIR = "/media/source/globus/every_day" if not DEBUG else "source/every_day"
 logger.add(
@@ -52,9 +52,22 @@ logger.add(
     serialize=True,
 )
 semaphore = asyncio.Semaphore(20)
-sample = pd.read_excel(
-    f"{BASE_LINUX_DIR}/globus_new_stock.xlsx", converters={"article": str, "link": str}
-)
+
+path_to_sample = os.path.join(BASE_LINUX_DIR, "..")
+df1 = filesdata_to_dict(f"{path_to_sample}/sale", combined=True, return_df=True)
+if df1 is not None:
+    df2 = pd.read_excel(
+        f"{path_to_sample}/result/GLOBUS_all.xlsx",
+        converters={"Артикул": str, "Ссылка": str},
+    )[["Артикул", "Ссылка"]]
+
+    sample = pd.merge(df1[["Артикул"]], df2, on="Артикул", how="left")
+    sample.columns = ["article", "link"]
+else:
+    sample = pd.read_excel(
+        f"{BASE_LINUX_DIR}/globus_new_stock.xlsx",
+        converters={"article": str, "link": str},
+    )
 sample["stock"] = ""
 sample = sample.where(sample.notnull(), None)
 sample = sample.to_dict("records")
