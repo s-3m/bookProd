@@ -213,9 +213,7 @@ async def get_item_data(item, session, main_category=None):
     except Exception as e:
         logger.exception(f"ERROR with --- {link}")
         if item.strip():
-            with open(
-                f"{BASE_LINUX_DIR}/error.txt", "a+", encoding="utf-8"
-            ) as file:
+            with open(f"{BASE_LINUX_DIR}/error.txt", "a+", encoding="utf-8") as file:
                 file.write(f"{item} --- {e}\n")
         pass
 
@@ -253,19 +251,22 @@ async def check_empty_price(session):
 
     empty_price_tasks = []
     df_empty_price_one = pd.read_excel(
-        f"{BASE_LINUX_DIR}/result/price_one.xlsx", converters={"article": str, "price": str}
+        f"{BASE_LINUX_DIR}/result/price_one.xlsx",
+        converters={"article": str, "price": str},
     )
     df_empty_price_one = df_empty_price_one.where(df_empty_price_one.notnull(), None)
     price_one = df_empty_price_one.to_dict(orient="records")
 
     df_empty_price_two = pd.read_excel(
-        f"{BASE_LINUX_DIR}/result/price_two.xlsx", converters={"article": str, "price": str}
+        f"{BASE_LINUX_DIR}/result/price_two.xlsx",
+        converters={"article": str, "price": str},
     )
     df_empty_price_two = df_empty_price_two.where(df_empty_price_two.notnull(), None)
     price_two = df_empty_price_two.to_dict(orient="records")
 
     df_empty_price_three = pd.read_excel(
-        f"{BASE_LINUX_DIR}/result/price_three.xlsx", converters={"article": str, "price": str}
+        f"{BASE_LINUX_DIR}/result/price_three.xlsx",
+        converters={"article": str, "price": str},
     )
     df_empty_price_three = df_empty_price_three.where(
         df_empty_price_three.notnull(), None
@@ -283,9 +284,15 @@ async def check_empty_price(session):
     print()
     logger.info(f"Start wright files")
 
-    pd.DataFrame(price_one).to_excel(f"{BASE_LINUX_DIR}/result/price_one.xlsx", index=False)
-    pd.DataFrame(price_two).to_excel(f"{BASE_LINUX_DIR}/result/price_two.xlsx", index=False)
-    pd.DataFrame(price_three).to_excel(f"{BASE_LINUX_DIR}/result/price_three.xlsx", index=False)
+    pd.DataFrame(price_one).to_excel(
+        f"{BASE_LINUX_DIR}/result/price_one.xlsx", index=False
+    )
+    pd.DataFrame(price_two).to_excel(
+        f"{BASE_LINUX_DIR}/result/price_two.xlsx", index=False
+    )
+    pd.DataFrame(price_three).to_excel(
+        f"{BASE_LINUX_DIR}/result/price_three.xlsx", index=False
+    )
 
 
 async def get_gather_data():
@@ -342,7 +349,9 @@ async def get_gather_data():
                         )
                         tasks.append(task)
                 except Exception as e:
-                    with open(f"{BASE_LINUX_DIR}/page_error.txt", "a+", encoding="utf-8") as file:
+                    with open(
+                        f"{BASE_LINUX_DIR}/page_error.txt", "a+", encoding="utf-8"
+                    ) as file:
                         file.write(f"{link} --- {page} --- {e}\n")
                     continue
 
