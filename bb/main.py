@@ -13,7 +13,7 @@ import pandas as pd
 from loguru import logger
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from utils import filesdata_to_dict, check_danger_string
+from utils import filesdata_to_dict, check_danger_string, fetch_request
 
 pd.io.formats.excel.ExcelFormatter.header_style = None
 
@@ -31,7 +31,9 @@ df_price_one = prices["1"]
 df_price_two = prices["2"]
 df_price_three = prices["3"]
 
-logger.add("bb_error.log", format="{time} {level} {message}", level="ERROR")
+logger.add(
+    f"{BASE_LINUX_DIR}/bb_error.log", format="{time} {level} {message}", level="ERROR"
+)
 sample = filesdata_to_dict(f"{BASE_LINUX_DIR}/sale", combined=True)
 not_in_sale = filesdata_to_dict(f"{BASE_LINUX_DIR}/not_in_sale", combined=True)
 
@@ -44,16 +46,16 @@ id_to_add = []
 
 
 def to_write_file(temporary=False, final_result=False):
-    filepath = f"/home/roman/parser/bookProd/bb/result"
+    filepath = f"{BASE_LINUX_DIR}/result"
     if temporary:
         df = pd.DataFrame(result)
         df.to_excel(
-            f"/home/roman/parser/bookProd/bb/result/temporary/temp_result.xlsx",
+            f"{BASE_LINUX_DIR}/result/temporary/temp_result.xlsx",
             index=False,
         )
         return
     if not final_result:
-        filepath = f"/home/roman/parser/bookProd/bb/result/temporary"
+        filepath = f"{BASE_LINUX_DIR}/result/temporary"
     df = pd.DataFrame(result)
     df.to_excel(f"{filepath}/all_result.xlsx", index=False)
 
@@ -92,15 +94,17 @@ async def get_item_data(item, session, main_category=None):
     await asyncio.sleep(5)
     try:
         async with semaphore:
-            async with session.get(link, headers=headers) as response:
-                await asyncio.sleep(10)
-                soup = bs(await response.text(), "lxml")
-
-            if soup.find("h1").text.strip() == "Service Temporarily Unavailable":
-                await asyncio.sleep(500)
-                async with session.get(link, headers=headers) as response:
-                    await asyncio.sleep(5)
-                    soup = bs(await response.text(), "html.parser")
+            response = await fetch_request(session, link, headers=headers)
+            # async with session.get(link, headers=headers) as response:
+            #     await asyncio.sleep(10)
+            #     soup = bs(await response.text(), "lxml")
+            #
+            # if soup.find("h1").text.strip() == "Service Temporarily Unavailable":
+            #     await asyncio.sleep(500)
+            #     async with session.get(link, headers=headers) as response:
+            #         await asyncio.sleep(5)
+            #         soup = bs(await response.text(), "html.parser")
+            soup = bs(response, "lxml")
 
         if not main_category:
             main_category = (
@@ -207,6 +211,7 @@ async def get_item_data(item, session, main_category=None):
         result.append(res_dict)
 
     except Exception as e:
+        logger.exception(f"ERROR with --- {link}")
         if item.strip():
             with open("error_log.txt", "a+", encoding="utf-8") as file:
                 file.write(f"{item} --- {e}\n")
