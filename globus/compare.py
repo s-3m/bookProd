@@ -8,9 +8,9 @@ from bs4 import BeautifulSoup as bs
 import aiohttp
 import asyncio
 import pandas as pd
-from tg_sender import tg_send_files
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from tg_sender import tg_send_files
 from utils import filesdata_to_dict, fetch_request
 
 
