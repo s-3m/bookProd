@@ -62,7 +62,11 @@ async def get_item_data(session, item, error_items, semaphore):
                 item["in_stock"] = "del"
                 return
             dynamic_block = response.get("dynamicBlocks")
-            page_text = dynamic_block[14]["CONTENT"].strip()
+            for i in dynamic_block:
+                if i["ID"] == "bxdynamic_qepX1R":
+                    dynamic_index = dynamic_block.index(i)
+                    break
+            page_text = dynamic_block[dynamic_index]["CONTENT"].strip()
             soup = bs(page_text, "html.parser")
             quantity_element = soup.find("span", class_="plus dark-color")
             stock_quantity = "del"
