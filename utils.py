@@ -74,11 +74,10 @@ async def check_danger_string(
     return base_string
 
 
-async def fetch_request(session, url, headers: dict):
+async def fetch_request(session, url, headers: dict, sleep=4):
     for _ in range(20):
         async with session.get(url, headers=headers) as resp:
-            await asyncio.sleep(4)
+            await asyncio.sleep(sleep)
             if resp.status == 200:
                 return await resp.text()
-            else:
-                return None
+    return None

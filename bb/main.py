@@ -16,9 +16,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import filesdata_to_dict, check_danger_string, fetch_request
 
 pd.io.formats.excel.ExcelFormatter.header_style = None
-
+DEBUG = True
 BASE_URL = "https://bookbridge.ru"
-BASE_LINUX_DIR = "/media/source/bb"
+BASE_LINUX_DIR = "/media/source/bb" if not DEBUG else "source"
 USER_AGENT = UserAgent()
 headers = {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
@@ -91,10 +91,10 @@ async def get_item_data(item, session, main_category=None):
     res_dict = {}
     link = f"{BASE_URL}{item}"
     res_dict["link"] = link
-    await asyncio.sleep(5)
+    await asyncio.sleep(3)
     try:
         async with semaphore:
-            response = await fetch_request(session, link, headers=headers)
+            response = await fetch_request(session, link, headers=headers, sleep=10)
             # async with session.get(link, headers=headers) as response:
             #     await asyncio.sleep(10)
             #     soup = bs(await response.text(), "lxml")
