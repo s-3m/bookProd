@@ -19,7 +19,7 @@ pandas.io.formats.excel.ExcelFormatter.header_style = None
 BASE_URL = "https://www.dkmg.ru"
 BASE_LINUX_DIR = "/media/source/mg"
 logger.add(
-    f"{BASE_LINUX_DIR}/result/error.log",
+    f"{BASE_LINUX_DIR}/error.log",
     format="{time} {level} {message}",
     level="ERROR",
 )
@@ -135,7 +135,7 @@ async def get_item_data(session, link, main_category):
             result.append(item_data)
     except Exception as e:
         logger.exception(link)
-        with open(f"{BASE_LINUX_DIR}/result/error.txt", "a+", encoding="utf-8") as f:
+        with open(f"{BASE_LINUX_DIR}/error.txt", "a+", encoding="utf-8") as f:
             f.write(f"{link} ----- {e}\n")
 
 
@@ -181,7 +181,7 @@ async def get_gather_data():
                         )
                         tasks.append(task)
             except Exception as e:
-                with open(f"{BASE_LINUX_DIR}/result/cat_error.txt", "a+") as f:
+                with open(f"{BASE_LINUX_DIR}/cat_error.txt", "a+") as f:
                     f.write(f"{BASE_URL}{cat_link} ----- {e}\n")
                     continue
         await asyncio.gather(*tasks)

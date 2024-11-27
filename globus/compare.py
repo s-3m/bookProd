@@ -38,12 +38,12 @@ DEBUG = False
 BASE_URL = "https://www.biblio-globus.ru"
 BASE_LINUX_DIR = "/media/source/globus/every_day" if not DEBUG else "source/every_day"
 logger.add(
-    f"{BASE_LINUX_DIR}/log/globus_error.log",
+    f"{BASE_LINUX_DIR}/log/error.log",
     format="{time} {level} {message}",
     level="ERROR",
 )
 logger.add(
-    f"{BASE_LINUX_DIR}/log/globus_error_serialize.json",
+    f"{BASE_LINUX_DIR}/log/error_serialize.json",
     format="{time} {level} {message}",
     level="ERROR",
     serialize=True,
@@ -94,7 +94,7 @@ async def get_main_data(session, item):
             item["stock"] = stock
         except Exception as e:
             logger.exception(f"ERROR - {item['link']}")
-            with open(f"{BASE_LINUX_DIR}/globus_error.txt", "a") as f:
+            with open(f"{BASE_LINUX_DIR}/error.txt", "a") as f:
                 f.write(f"{item['link']} --- {e}\n")
         finally:
             global count

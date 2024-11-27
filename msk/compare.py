@@ -14,7 +14,9 @@ from tg_sender import tg_send_files
 BASE_URL = "https://www.moscowbooks.ru/"
 USER_AGENT = UserAgent()
 PATH_TO_FILES = "/media/source/msk/every_day"
-
+logger.add(
+        f"{PATH_TO_FILES}/error.log", format="{time} {level} {message}", level="ERROR"
+    )
 headers = {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
     "user-agent": USER_AGENT.random,
@@ -57,8 +59,9 @@ async def to_check_item(article, session, past_day_result, to_del):
         print(f"\r{count}", end="")
         count += 1
     except Exception as e:
+        logger.exception(f"ERROR with {link}")
         with open(
-            f"{PATH_TO_FILES}/just_compare_error.txt",
+            f"{PATH_TO_FILES}/error.txt",
             "a+",
         ) as f:
             f.write(f"{link} ------ {e}\n")
@@ -67,7 +70,7 @@ async def to_check_item(article, session, past_day_result, to_del):
 async def reparse_error(session, past_day_result, to_del):
     logger.warning("Start reparse error")
     reparse_count = 0
-    error_file = f"{PATH_TO_FILES}/just_compare_error.txt"
+    error_file = f"{PATH_TO_FILES}/error.txt"
     try:
         while True:
             if not os.path.exists(error_file) or reparse_count > 10:

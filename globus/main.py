@@ -17,12 +17,12 @@ DEBUG = False
 BASE_URL = "https://www.biblio-globus.ru"
 BASE_LINUX_DIR = "/media/source/globus" if not DEBUG else "source"
 logger.add(
-    f"{BASE_LINUX_DIR}/result/globus_error.log",
+    f"{BASE_LINUX_DIR}/error.log",
     format="{time} {level} {message}",
     level="ERROR",
 )
 logger.add(
-    f"{BASE_LINUX_DIR}/result/globus_error_serialize.json",
+    f"{BASE_LINUX_DIR}/error_serialize.json",
     format="{time} {level} {message}",
     level="ERROR",
     serialize=True,
@@ -194,7 +194,7 @@ async def get_book_data(session, book_link):
             print(f"\rDone - {done_count}", end="")
         except Exception as e:
             logger.exception(f"Ошибка со страницей {book_link}")
-            with open(f"{BASE_LINUX_DIR}/result/error.txt", "a+") as f:
+            with open(f"{BASE_LINUX_DIR}/error.txt", "a+") as f:
                 f.write(f"{book_link} --- {e}\n")
 
 
@@ -339,8 +339,10 @@ async def get_gather_data():
     logger.info("Начинаю запись данных в файл")
     all_result_df = pd.DataFrame(all_books_result).drop_duplicates(subset="Артикул")
     all_result_df.to_excel(f"{BASE_LINUX_DIR}/result/GLOBUS_all.xlsx", index=False)
+
     df_add = pd.DataFrame(id_to_add).drop_duplicates(subset="Артикул")
     df_add.to_excel(f"{BASE_LINUX_DIR}/result/GLOBUS_add.xlsx", index=False)
+
     df_del = pd.DataFrame(id_to_del).drop_duplicates()
     df_del.to_excel(f"{BASE_LINUX_DIR}/result/GLOBUS_del.xlsx", index=False)
 
