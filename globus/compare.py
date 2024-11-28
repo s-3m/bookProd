@@ -47,7 +47,7 @@ logger.add(
     level="ERROR",
     serialize=True,
 )
-semaphore = asyncio.Semaphore(20)
+
 
 path_to_sample = os.path.join(BASE_LINUX_DIR, "..")
 
@@ -79,7 +79,7 @@ def give_me_sample():
 count = 1
 
 
-async def get_main_data(session, item):
+async def get_main_data(session, item, semaphore):
     async with semaphore:
         try:
             response = await fetch_request(session, item["link"], headers)
@@ -107,6 +107,7 @@ async def get_main_data(session, item):
 
 
 async def get_gather_data(sample):
+    semaphore = asyncio.Semaphore(20)
     logger.info("Start collect data")
     print()
     tasks = []
@@ -115,10 +116,12 @@ async def get_gather_data(sample):
             if not i["link"]:
                 i["stock"] = "del"
             else:
-                task = asyncio.create_task(get_main_data(session, i))
+                task = asyncio.create_task(get_main_data(session, i, semaphore))
                 tasks.append(task)
         await asyncio.gather(*tasks)
     print()
+    global count
+    count = 1
     logger.success("Finish collect data")
 
 
@@ -139,7 +142,7 @@ def main():
 
     logger.success("Finish write to excel")
 
-    tg_send_files([new_stock_path, del_path], "Biblio-globus")
+    asyncio.run(tg_send_files([new_stock_path, del_path], "Biblio-globus"))
 
     logger.success("Script was finished successfully")
 
