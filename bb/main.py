@@ -32,7 +32,9 @@ df_price_two = prices["2"]
 df_price_three = prices["3"]
 
 logger.add(
-    f"{BASE_LINUX_DIR}/bb_error.log", format="{time} {level} {message}", level="ERROR"
+    f"{BASE_LINUX_DIR}/bb_error.log",
+    format="{time} {level} {message}",
+    level="ERROR",
 )
 sample = filesdata_to_dict(f"{BASE_LINUX_DIR}/sale", combined=True)
 not_in_sale = filesdata_to_dict(f"{BASE_LINUX_DIR}/not_in_sale", combined=True)
@@ -82,7 +84,7 @@ def to_write_file(temporary=False, final_result=False):
     df_del.to_excel(f"{filepath}/del.xlsx", index=False)
 
 
-semaphore = asyncio.Semaphore(10)
+semaphore = asyncio.Semaphore(8)
 
 
 async def get_item_data(item, session, main_category=None):
@@ -211,7 +213,7 @@ async def get_item_data(item, session, main_category=None):
         result.append(res_dict)
 
     except Exception as e:
-        logger.exception(f"ERROR with --- {link}")
+        logger.exception(f"\n{'-' * 50}\nERROR with --- {link}\n{'-' * 50}")
         if item.strip():
             with open(f"{BASE_LINUX_DIR}/error.txt", "a+", encoding="utf-8") as file:
                 file.write(f"{item} --- {e}\n")
@@ -301,6 +303,7 @@ async def get_gather_data():
     async with aiohttp.ClientSession(
         connector=aiohttp.TCPConnector(ssl=False, limit=50, limit_per_host=10),
         trust_env=True,
+        timeout=aiohttp.ClientTimeout(total=600),
     ) as session:
         response = await session.get(f"{BASE_URL}/catalog", headers=headers)
         response_text = await response.text()
@@ -334,20 +337,26 @@ async def get_gather_data():
                 await asyncio.sleep(5)
 
                 try:
-                    async with session.get(
-                        f"{BASE_URL}{link}?PAGEN_1={page}", headers=headers
-                    ) as response:
-                        await asyncio.sleep(10)
-                        soup = bs(await response.text(), "html.parser")
-                        page_items = soup.find_all("div", class_="item-title")
-                        items = [item.find("a")["href"] for item in page_items]
-                        main_category = soup.find("h1").text.strip()
+                    for _ in range(20):
+                        async with session.get(
+                            f"{BASE_URL}{link}?PAGEN_1={page}",
+                            headers=headers,
+                        ) as response:
+                            await asyncio.sleep(10)
+                            if response.status == 200:
+                                soup = bs(await response.text(), "html.parser")
+                                page_items = soup.find_all("div", class_="item-title")
+                                items = [item.find("a")["href"] for item in page_items]
+                                main_category = soup.find("h1").text.strip()
 
-                    for item in items:
-                        task = asyncio.create_task(
-                            get_item_data(item, session, main_category)
-                        )
-                        tasks.append(task)
+                                for item in items:
+                                    task = asyncio.create_task(
+                                        get_item_data(item, session, main_category)
+                                    )
+                                    tasks.append(task)
+                                break
+                            else:
+                                await asyncio.sleep(10)
                 except Exception as e:
                     with open(
                         f"{BASE_LINUX_DIR}/page_error.txt", "a+", encoding="utf-8"
