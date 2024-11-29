@@ -10,7 +10,12 @@ import pandas as pd
 from loguru import logger
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from utils import check_danger_string, filesdata_to_dict, fetch_request
+from utils import (
+    check_danger_string,
+    filesdata_to_dict,
+    fetch_request,
+    write_result_files,
+)
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 DEBUG = False
@@ -337,31 +342,17 @@ async def get_gather_data():
             id_to_del.append({"article": i})
 
     logger.info("Начинаю запись данных в файл")
-    all_result_df = pd.DataFrame(all_books_result).drop_duplicates(subset="Артикул")
-    all_result_df.to_excel(f"{BASE_LINUX_DIR}/result/GLOBUS_all.xlsx", index=False)
-
-    df_add = pd.DataFrame(id_to_add).drop_duplicates(subset="Артикул")
-    df_add.to_excel(f"{BASE_LINUX_DIR}/result/GLOBUS_add.xlsx", index=False)
-
-    df_del = pd.DataFrame(id_to_del).drop_duplicates()
-    df_del.to_excel(f"{BASE_LINUX_DIR}/result/GLOBUS_del.xlsx", index=False)
-
-    df_not_in_sale = pd.DataFrame().from_dict(not_in_sale, orient="index")
-    df_not_in_sale.index.name = "article"
-    df_not_in_sale.to_excel(f"{BASE_LINUX_DIR}/result/not_in_sale.xlsx")
-
-    df_one = pd.DataFrame().from_dict(df_price_one, orient="index")
-    df_one.index.name = "article"
-    df_one.to_excel(f"{BASE_LINUX_DIR}/result/GLOBUS_price_one.xlsx")
-
-    df_two = pd.DataFrame().from_dict(df_price_two, orient="index")
-    df_two.index.name = "article"
-    df_two.to_excel(f"{BASE_LINUX_DIR}/result/GLOBUS_price_two.xlsx")
-
-    df_three = pd.DataFrame().from_dict(df_price_three, orient="index")
-    df_three.index.name = "article"
-    df_three.to_excel(f"{BASE_LINUX_DIR}/result/GLOBUS_price_three.xlsx")
-
+    write_result_files(
+        base_dir=BASE_LINUX_DIR,
+        prefix="globus",
+        all_books_result=all_books_result,
+        id_to_add=id_to_add,
+        id_to_del=id_to_del,
+        not_in_sale=not_in_sale,
+        df_price_one=df_price_one,
+        df_price_two=df_price_two,
+        df_price_three=df_price_three,
+    )
     logger.success("Данные записаны в файлы")
 
 
