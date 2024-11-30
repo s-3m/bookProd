@@ -387,9 +387,9 @@ async def get_gather_data():
                 logger.warning(f"Find page error - {len(page_tuple)}")
                 page_error_tasks = []
                 for i in page_tuple:
-                    async with session.get(f"{i}", headers=headers) as response:
-                        await asyncio.sleep(10)
-                        soup = bs(await response.text(), "lxml")
+                    try:
+                        response = await fetch_request(session, i, headers, sleep=10)
+                        soup = bs(response, "lxml")
                         page_items = soup.find_all("div", class_="item-title")
                         items = [item.find("a")["href"] for item in page_items]
                         main_category = soup.find("h1").text.strip()
@@ -398,12 +398,14 @@ async def get_gather_data():
                                 get_item_data(item, session, main_category)
                             )
                             page_error_tasks.append(task)
+                    except Exception as e:
+                        logger.exception(f"EXCEPTION in {i}")
                 await asyncio.gather(*page_error_tasks)
 
                 to_write_file()
                 logger.info("Pages error data was collected")
         except:
-            logger.error("Error in reparse pages errors")
+            logger.exception("Error in reparse pages errors")
 
         logger.warning("Start reparse items errors")
 
