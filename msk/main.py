@@ -65,11 +65,10 @@ async def get_item_data(session, item: str):
         article = "Нет артикула"
 
     try:
-        # async with session.get(link, headers=headers) as resp:
         resp = await fetch_request(session, link, headers)
         if resp == "404":
-            if article in sample:
-                id_to_del.append({"article": article})
+            if article + ".0" in sample:
+                id_to_del.append({"article": article + ".0"})
                 return
         soup = bs(resp, "lxml")
         age_control = soup.find("input", id="age_verification_form_mode")
@@ -153,7 +152,7 @@ async def get_item_data(session, item: str):
 
         book_dict = {
             "link": link,
-            "article": article,
+            "article": article + ".0",
             "title": title,
             "author": author,
             "description": description,
@@ -168,14 +167,14 @@ async def get_item_data(session, item: str):
         item_status = soup.find("div", class_="book__buy")
         for d in [df_price_one, df_price_two, df_price_three]:
             if article_for_check in d and item_status is not None:
-                d[article]["price"] = price
+                d[article_for_check]["price"] = price
 
-        if article_for_check in not_in_sale and item_status:
-            not_in_sale[article]["on sale"] = "да"
-        if article not in sample and item_status:
+        if article_for_check in not_in_sale and item_status is not None:
+            not_in_sale[article_for_check]["on sale"] = "да"
+        if article_for_check not in sample and item_status is not None:
             id_to_add.append(book_dict)
-        if article in sample and item_status is None:
-            id_to_del.append({"article": article})
+        if article_for_check in sample and item_status is None:
+            id_to_del.append({"article": article_for_check})
 
         result.append(book_dict)
         print(f"\rDone - {count}", end="")

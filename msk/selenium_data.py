@@ -48,3 +48,7 @@ def get_book_data(link):
         driver.quit()
 
     return page_source
+
+
+if __name__ == "__main__":
+    get_book_data("https://www.moscowbooks.ru/book/1152308/")
