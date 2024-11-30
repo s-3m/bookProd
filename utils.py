@@ -81,6 +81,8 @@ async def fetch_request(session, url, headers: dict, sleep=4):
                 await asyncio.sleep(sleep)
                 if resp.status == 200:
                     return await resp.text()
+                elif resp.status == 404:
+                    return "404"
         except TimeoutError:
             continue
     return None

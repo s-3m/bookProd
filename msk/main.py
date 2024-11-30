@@ -1,11 +1,9 @@
 import os
 import sys
-import time
 from fake_useragent import UserAgent
 from bs4 import BeautifulSoup as bs
 import aiohttp
 import asyncio
-import pandas as pd
 from selenium_data import get_book_data
 from loguru import logger
 import pandas.io.formats.excel
@@ -20,8 +18,8 @@ from utils import (
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 
-DEBUG = False
-BASE_URL = "https://www.moscowbooks.ru/"
+DEBUG = True
+BASE_URL = "https://www.moscowbooks.ru"
 USER_AGENT = UserAgent()
 BASE_LINUX_DIR = "/media/source/msk" if not DEBUG else "source"
 semaphore = asyncio.Semaphore(10)
@@ -56,13 +54,24 @@ sample = filesdata_to_dict(f"{BASE_LINUX_DIR}/sale", combined=True)
 not_in_sale = filesdata_to_dict(f"{BASE_LINUX_DIR}/not_in_sale", combined=True)
 
 
-async def get_item_data(session, item):
+async def get_item_data(session, item: str):
     global count
-    link = BASE_URL + item
+    link = item if item.startswith("https") else BASE_URL + item
+
+    # Article
+    try:
+        article = link.split("/")[-2]
+    except:
+        article = "Нет артикула"
+
     try:
         # async with session.get(link, headers=headers) as resp:
         resp = await fetch_request(session, link, headers)
-        soup = bs(await resp.text(), "lxml")
+        if resp == "404":
+            if article in sample:
+                id_to_del.append({"article": article})
+                return
+        soup = bs(resp, "lxml")
         age_control = soup.find("input", id="age_verification_form_mode")
         script_index = 1
         if age_control:
@@ -71,11 +80,6 @@ async def get_item_data(session, item):
             soup = bs(closed_page, "lxml")
             script_index = 5
 
-        # Article
-        try:
-            article = link.split("/")[-1]
-        except:
-            article = "Нет артикула"
         # Book title
         try:
             title = soup.find("h1").text.strip()
@@ -179,15 +183,15 @@ async def get_item_data(session, item):
     except Exception as e:
         item_error.append(link)
         logger.exception(f"Exception in book - {link}")
-        with open("error.txt", "a+") as file:
+        with open(f"{BASE_LINUX_DIR}/error.txt", "a+") as file:
             file.write(f"{link} ---> {e}\n")
 
 
 async def get_page_data(session, page_link, tasks):
     async with semaphore:
         try:
-            page_response = await fetch_request(session, page_link, headers)
-            page_html = await page_response.text()
+            page_html = await fetch_request(session, page_link, headers)
+            # page_html = await page_response.text()
             soup = bs(page_html, "lxml")
             all_books_on_page = soup.find_all("div", class_="catalog__item")
             all_items = [book.find("a")["href"] for book in all_books_on_page]
@@ -197,7 +201,7 @@ async def get_page_data(session, page_link, tasks):
         except Exception as e:
             page_error.append(page_link)
             logger.exception(f"Exception on page {page_link} - {e}")
-            with open("page_error.txt", "a+") as file:
+            with open(f"{BASE_LINUX_DIR}/page_error.txt", "a+") as file:
                 file.write(f"{page_link} + - + {e}")
 
 
@@ -213,6 +217,7 @@ async def get_gather_data():
         max_pagination = soup.find("ul", class_="pager__list").find_all("li")[-2].text
         tasks = []
         logger.info(f"Page find - {max_pagination}")
+        # max_pagination = 30
         for page in range(1, int(max_pagination) + 1):
             page_link = f"{BASE_URL}/books/?page={page}"
             await get_page_data(session, page_link, tasks)
