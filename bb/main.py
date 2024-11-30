@@ -225,9 +225,9 @@ async def get_price_data(item, session, semaphore_price):
     item_article = item["article"][:-2]
     url = f"{BASE_URL}/catalog/?q={item_article}"
     async with semaphore_price:
-        async with session.get(url, headers=headers) as resp:
-            await asyncio.sleep(5)
-            soup = bs(await resp.text(), "html.parser")
+        try:
+            response = await fetch_request(session, url, headers, sleep=10)
+            soup = bs(response, "html.parser")
             div_list = soup.find_all("div", class_="inner_wrap TYPE_1")
 
             for div in div_list:
@@ -246,6 +246,8 @@ async def get_price_data(item, session, semaphore_price):
 
             print(f"\r{empty_price_count}", end="")
             empty_price_count += 1
+        except Exception as e:
+            logger.exception(f"Exception in reparse price")
 
 
 async def check_empty_price(session):
