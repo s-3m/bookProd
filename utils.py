@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import numpy as np
 from typing import Literal
+import aiohttp
 
 
 def filesdata_to_dict(folder_path: str, combined=False, return_df=False) -> dict | None:
@@ -84,6 +85,8 @@ async def fetch_request(session, url, headers: dict, sleep=4):
                 elif resp.status == 404:
                     return "404"
         except TimeoutError:
+            continue
+        except aiohttp.client_exceptions.ClientConnectorError:
             continue
     return None
 
