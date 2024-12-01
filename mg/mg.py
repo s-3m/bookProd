@@ -152,9 +152,10 @@ async def get_gather_data():
 
         for cat_link in cat_list:
             try:
-                response = await session.get(BASE_URL + cat_link, headers=headers)
-                response_text = await response.text()
-                soup = bs(response_text, "lxml")
+                url = BASE_URL + cat_link
+                # response = await session.get(BASE_URL + cat_link, headers=headers)
+                response = await fetch_request(session, url, headers)
+                soup = bs(response, "lxml")
                 pagin_max = int(
                     soup.find("div", class_="navitem")
                     .find_all("a")[-2]["href"]
@@ -167,12 +168,12 @@ async def get_gather_data():
                     logger.info(
                         f"----------------стр - {page_numb} из {pagin_max}-----------"
                     )
-                    response = await session.get(
-                        f"{BASE_URL}{cat_link}?page={page_numb}&orderNew=asc"
-                    )
-                    await asyncio.sleep(5)
-                    response_text = await response.text()
-                    soup = bs(response_text, "lxml")
+                    # response = await session.get(
+                    #     f"{BASE_URL}{cat_link}?page={page_numb}&orderNew=asc"
+                    # )
+                    page_url = f"{BASE_URL}{cat_link}?page={page_numb}&orderNew=asc"
+                    response = await fetch_request(session, page_url, headers)
+                    soup = bs(response, "lxml")
                     items_on_page = soup.find_all("div", class_="product_img")
                     items_links = [item.find("a")["href"] for item in items_on_page]
                     for link in items_links:
