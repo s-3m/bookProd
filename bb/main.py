@@ -146,7 +146,9 @@ async def get_item_data(item, session, main_category=None):
             res_dict["article"] = article
 
         try:
-            photo_link = soup.find(class_="product-detail-gallery__picture")["data-src"]
+            photo_link = soup.find(
+                class_="detail-gallery-big-slider-main__ratio-inner"
+            ).find("img")["src"]
             photo_path = BASE_URL + photo_link
             res_dict["photo"] = photo_path
         except:
@@ -199,7 +201,7 @@ async def get_item_data(item, session, main_category=None):
 
         if article + ".0" in not_in_sale and quantity != "Нет в наличии":
             not_in_sale[article + ".0"]["on sale"] = "Да"
-        if article + ".0" not in sample and quantity != "Нет в наличии":
+        elif article + ".0" not in sample and quantity != "Нет в наличии":
             res_dict["article"] = article + ".0"
             id_to_add.append(res_dict)
         elif article + ".0" in sample and quantity == "Нет в наличии":
