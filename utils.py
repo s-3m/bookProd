@@ -98,9 +98,7 @@ def write_result_files(
     id_to_add: list,
     id_to_del: list,
     not_in_sale: dict,
-    df_price_one: dict,
-    df_price_two: dict,
-    df_price_three: dict,
+    prices: dict[str, dict],
 ):
     all_result_df = pd.DataFrame(all_books_result).drop_duplicates(subset="Артикул")
     all_result_df.to_excel(f"{base_dir}/result/{prefix}_all.xlsx", index=False)
@@ -115,14 +113,9 @@ def write_result_files(
     df_not_in_sale.index.name = "article"
     df_not_in_sale.to_excel(f"{base_dir}/result/{prefix}_not_in_sale.xlsx")
 
-    df_one = pd.DataFrame().from_dict(df_price_one, orient="index")
-    df_one.index.name = "article"
-    df_one.to_excel(f"{base_dir}/result/{prefix}_price_one.xlsx")
-
-    df_two = pd.DataFrame().from_dict(df_price_two, orient="index")
-    df_two.index.name = "article"
-    df_two.to_excel(f"{base_dir}/result/{prefix}_price_two.xlsx")
-
-    df_three = pd.DataFrame().from_dict(df_price_three, orient="index")
-    df_three.index.name = "article"
-    df_three.to_excel(f"{base_dir}/result/{prefix}_price_three.xlsx")
+    for price_item in prices:
+        df_result = pd.DataFrame().from_dict(prices[price_item], orient="index")
+        df_result.index.name = "article"
+        df_result.to_excel(
+            f"{base_dir}/result/{prefix}_price_{price_item}.xlsx", index=True
+        )

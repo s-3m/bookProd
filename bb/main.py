@@ -16,7 +16,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import filesdata_to_dict, check_danger_string, fetch_request
 
 pd.io.formats.excel.ExcelFormatter.header_style = None
-DEBUG = False
+DEBUG = True
 BASE_URL = "https://bookbridge.ru"
 BASE_LINUX_DIR = "/media/source/bb" if not DEBUG else "source"
 USER_AGENT = UserAgent()
@@ -27,9 +27,9 @@ headers = {
 
 prices = filesdata_to_dict(f"{BASE_LINUX_DIR}/prices")
 
-df_price_one = prices["1"]
-df_price_two = prices["2"]
-df_price_three = prices["3"]
+# df_price_one = prices["1"]
+# df_price_two = prices["2"]
+# df_price_three = prices["3"]
 
 logger.add(
     f"{BASE_LINUX_DIR}/bb_error.log",
@@ -61,17 +61,10 @@ def to_write_file(temporary=False, final_result=False):
     df = pd.DataFrame(result)
     df.to_excel(f"{filepath}/all_result.xlsx", index=False)
 
-    df_one = pd.DataFrame().from_dict(df_price_one, orient="index")
-    df_one.index.name = "article"
-    df_one.to_excel(f"{filepath}/price_one.xlsx", index=True)
-
-    df_two = pd.DataFrame().from_dict(df_price_two, orient="index")
-    df_two.index.name = "article"
-    df_two.to_excel(f"{filepath}/price_two.xlsx")
-
-    df_three = pd.DataFrame().from_dict(df_price_three, orient="index")
-    df_three.index.name = "article"
-    df_three.to_excel(f"{filepath}/price_three.xlsx")
+    for price_item in prices:
+        df_result = pd.DataFrame().from_dict(prices[price_item], orient="index")
+        df_result.index.name = "article"
+        df_result.to_excel(f"{filepath}/price_{price_item}.xlsx", index=True)
 
     df_not_in_sale = pd.DataFrame().from_dict(not_in_sale, orient="index")
     df_not_in_sale.index.name = "article"
@@ -194,10 +187,9 @@ async def get_item_data(item, session, main_category=None):
             except:
                 pass
 
-        for d in [df_price_one, df_price_two, df_price_three]:
-            if article + ".0" in d:
-                d[article + ".0"]["price"] = price
-                break
+        for d in prices:
+            if article + ".0" in prices[d] and quantity != "Нет в наличии":
+                prices[d][article + ".0"]["price"] = price
 
         if article + ".0" in not_in_sale and quantity != "Нет в наличии":
             not_in_sale[article + ".0"]["on sale"] = "Да"

@@ -52,9 +52,7 @@ headers = {
 }
 
 prices = filesdata_to_dict(f"{BASE_LINUX_DIR}/prices")
-df_price_one = prices["1"]
-df_price_two = prices["2"]
-df_price_three = prices["3"]
+
 sample = filesdata_to_dict(f"{BASE_LINUX_DIR}/sale", combined=True)
 not_in_sale = filesdata_to_dict(f"{BASE_LINUX_DIR}/not_in_sale", combined=True)
 
@@ -181,10 +179,10 @@ async def get_book_data(session, book_link):
             article = main_char["Артикул"] + ".0"
             book_result["Артикул"] = article
             unique_books_articles.add(article)
-            for d in [df_price_one, df_price_two, df_price_three]:
-                if article in d and item_status:
-                    d[article]["price"] = price
-                    break
+
+            for d in prices:
+                if article in prices[d] and item_status:
+                    prices[d][article]["price"] = price
 
             if article in not_in_sale and item_status:
                 not_in_sale[article]["on sale"] = "да"
@@ -349,9 +347,7 @@ async def get_gather_data():
         id_to_add=id_to_add,
         id_to_del=id_to_del,
         not_in_sale=not_in_sale,
-        df_price_one=df_price_one,
-        df_price_two=df_price_two,
-        df_price_three=df_price_three,
+        prices=prices,
     )
     logger.success("Данные записаны в файлы")
 

@@ -47,9 +47,6 @@ id_to_add = []
 id_to_del = []
 
 prices = filesdata_to_dict(f"{BASE_LINUX_DIR}/prices")
-df_price_one = prices["1"]
-df_price_two = prices["2"]
-df_price_three = prices["3"]
 sample = filesdata_to_dict(f"{BASE_LINUX_DIR}/sale", combined=True)
 not_in_sale = filesdata_to_dict(f"{BASE_LINUX_DIR}/not_in_sale", combined=True)
 
@@ -165,9 +162,10 @@ async def get_item_data(session, item: str):
 
         article_for_check = article + ".0"
         item_status = soup.find("div", class_="book__buy")
-        for d in [df_price_one, df_price_two, df_price_three]:
-            if article_for_check in d and item_status is not None:
-                d[article_for_check]["price"] = price
+
+        for d in prices:
+            if article_for_check in prices[d] and item_status is not None:
+                prices[d][article_for_check]["price"] = price
 
         if article_for_check in not_in_sale and item_status is not None:
             not_in_sale[article_for_check]["on sale"] = "да"
@@ -254,9 +252,7 @@ def main():
         id_to_add=id_to_add,
         id_to_del=id_to_del,
         not_in_sale=not_in_sale,
-        df_price_one=df_price_one,
-        df_price_two=df_price_two,
-        df_price_three=df_price_three,
+        prices=prices,
     )
     logger.success("Data was wrote in file successfully")
 

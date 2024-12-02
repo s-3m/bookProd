@@ -7,12 +7,15 @@ from pprint import pprint
 from fake_useragent import UserAgent
 import aiohttp
 import asyncio
-import pandas as pd
 from loguru import logger
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from utils import filesdata_to_dict, check_danger_string, fetch_request
-
+from utils import (
+    filesdata_to_dict,
+    check_danger_string,
+    fetch_request,
+    write_result_files,
+)
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 
@@ -30,10 +33,6 @@ headers = {
 }
 
 prices = filesdata_to_dict(f"{BASE_LINUX_DIR}/prices")
-
-df_price_one = prices["1"]
-df_price_two = prices["2"]
-df_price_three = prices["3"]
 
 sample = filesdata_to_dict(f"{BASE_LINUX_DIR}/sale", combined=True)
 not_in_sale = filesdata_to_dict(f"{BASE_LINUX_DIR}/not_in_sale", combined=True)
@@ -126,12 +125,10 @@ async def get_item_data(session, link, main_category):
             elif isbn + ".0" in sample and quantity != "есть в наличии":
                 id_to_del.append({"article": f"{isbn}.0"})
 
-            if isbn + ".0" in df_price_one:
-                df_price_one[isbn + ".0"]["price"] = price
-            if isbn + ".0" in df_price_two:
-                df_price_two[isbn + ".0"]["price"] = price
-            if isbn + ".0" in df_price_three:
-                df_price_three[isbn + ".0"]["price"] = price
+            for d in prices:
+                if isbn + ".0" in prices[d] and quantity == "есть в наличии":
+                    prices[d][isbn + ".0"]["price"] = price
+
             result.append(item_data)
     except Exception as e:
         logger.exception(link)
@@ -193,30 +190,17 @@ def main():
     asyncio.run(get_gather_data())
     logger.info("Finish parsing Gvardia")
     logger.info("Start to write to excel")
-    df = pd.DataFrame(result)
-    df.to_excel(f"{BASE_LINUX_DIR}/result/result.xlsx", index=False)
 
-    df_add = pd.DataFrame(id_to_add)
-    df_add.to_excel(f"{BASE_LINUX_DIR}/result/add.xlsx", index=False)
+    write_result_files(
+        base_dir=BASE_LINUX_DIR,
+        prefix="mg",
+        all_books_result=result,
+        id_to_add=id_to_add,
+        id_to_del=id_to_del,
+        not_in_sale=not_in_sale,
+        prices=prices,
+    )
 
-    df_del = pd.DataFrame(id_to_del)
-    df_del.to_excel(f"{BASE_LINUX_DIR}/result/del.xlsx", index=False)
-
-    df_one = pd.DataFrame().from_dict(df_price_one, orient="index")
-    df_one.index.name = "article"
-    df_one.to_excel(f"{BASE_LINUX_DIR}/result/price_one.xlsx")
-
-    df_two = pd.DataFrame().from_dict(df_price_two, orient="index")
-    df_two.index.name = "article"
-    df_two.to_excel(f"{BASE_LINUX_DIR}/result/price_two.xlsx")
-
-    df_three = pd.DataFrame().from_dict(df_price_three, orient="index")
-    df_three.index.name = "article"
-    df_three.to_excel(f"{BASE_LINUX_DIR}/result/price_three.xlsx")
-
-    df_not_in_sale = pd.DataFrame().from_dict(not_in_sale, orient="index")
-    df_not_in_sale.index.name = "article"
-    df_not_in_sale.to_excel(f"{BASE_LINUX_DIR}/result/not_in_sale.xlsx")
     logger.info("Finish to write to excel")
     logger.success("Gvardia pars success")
 
