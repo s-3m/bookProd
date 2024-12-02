@@ -119,3 +119,29 @@ def write_result_files(
         df_result.to_excel(
             f"{base_dir}/result/{prefix}_price_{price_item}.xlsx", index=True
         )
+
+
+def give_me_sample(base_dir: str, prefix: str) -> list[dict]:
+    path_to_sample = os.path.join(base_dir, "..")
+    df1 = filesdata_to_dict(f"{path_to_sample}/sale", combined=True, return_df=True)
+
+    if df1 is not None:
+        df2 = pd.read_excel(
+            f"{path_to_sample}/result/{prefix}_all.xlsx",
+            converters={"Артикул": str, "Ссылка": str},
+        )[["Артикул", "Ссылка"]]
+
+        sample = pd.merge(df1[["Артикул"]], df2, on="Артикул", how="left")
+        sample.columns = ["article", "link"]
+        sale_files = os.listdir(f"{path_to_sample}/sale")
+        for i in sale_files:
+            os.remove(f"{path_to_sample}/sale/{i}")
+    else:
+        sample = pd.read_excel(
+            f"{base_dir}/{prefix}_new_stock.xlsx",
+            converters={"article": str, "link": str},
+        )
+    sample["stock"] = ""
+    sample = sample.where(sample.notnull(), None)
+    sample = sample.to_dict("records")
+    return sample
