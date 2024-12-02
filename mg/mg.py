@@ -121,9 +121,9 @@ async def get_item_data(session, link, main_category):
 
             if isbn + ".0" in not_in_sale:
                 not_in_sale[isbn + ".0"]["on sale"] = "да"
-            if isbn + ".0" not in sample and quantity == "есть в наличии":
+            elif isbn + ".0" not in sample and quantity == "есть в наличии":
                 id_to_add.append(item_data)
-            if isbn + ".0" in sample and quantity != "есть в наличии":
+            elif isbn + ".0" in sample and quantity != "есть в наличии":
                 id_to_del.append({"article": f"{isbn}.0"})
 
             if isbn + ".0" in df_price_one:

@@ -188,9 +188,9 @@ async def get_book_data(session, book_link):
 
             if article in not_in_sale and item_status:
                 not_in_sale[article]["on sale"] = "да"
-            if article not in sample and item_status:
+            elif article not in sample and item_status:
                 id_to_add.append(book_result)
-            if article in sample and not item_status:
+            elif article in sample and not item_status:
                 id_to_del.append({"article": article})
 
             all_books_result.append(book_result)
