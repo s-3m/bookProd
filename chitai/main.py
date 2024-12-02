@@ -115,22 +115,22 @@ async def get_book_data(session, book_url: str):
             }
         except:
             detail_dict = None
-
+        article = detail_dict["ID товара"] + ".0"
         book_result = {
-            "link": link,
-            "title": title,
-            "author": author,
-            "category": category,
-            "description": description,
-            "photo": photo,
-            "price": price,
-            "stock": stock,
+            "Артикул": article,
+            "Ссылка": link,
+            "Название": title,
+            "Автор": author,
+            "Категория": category,
+            "Описание": description,
+            "Фото": photo,
+            "Цена": price,
+            "Наличие": stock,
         }
 
         if detail_dict:
             book_result.update(detail_dict)
 
-        article = detail_dict["ISBN"] + ".0"
         for d in prices:
             if article in prices[d] and stock:
                 prices[d][article]["price"] = price

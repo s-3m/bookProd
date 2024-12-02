@@ -11,7 +11,7 @@ import pandas as pd
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files
-from utils import filesdata_to_dict, fetch_request, give_me_sample
+from utils import fetch_request, give_me_sample
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 
@@ -50,8 +50,10 @@ logger.add(
 
 count = 1
 
+semaphore = asyncio.Semaphore(20)
 
-async def get_main_data(session, item, semaphore):
+
+async def get_main_data(session, item):
     async with semaphore:
         try:
             response = await fetch_request(session, item["link"], headers)
@@ -79,7 +81,6 @@ async def get_main_data(session, item, semaphore):
 
 
 async def get_gather_data(sample):
-    semaphore = asyncio.Semaphore(20)
     logger.info("Start collect data")
     print()
     tasks = []
@@ -88,7 +89,7 @@ async def get_gather_data(sample):
             if not i["link"]:
                 i["stock"] = "del"
             else:
-                task = asyncio.create_task(get_main_data(session, i, semaphore))
+                task = asyncio.create_task(get_main_data(session, i))
                 tasks.append(task)
         await asyncio.gather(*tasks)
     print()
@@ -128,4 +129,5 @@ def super_main():
 
 
 if __name__ == "__main__":
-    super_main()
+    main()
+    # super_main()
