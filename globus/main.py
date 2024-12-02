@@ -6,7 +6,6 @@ import pandas.io.formats.excel
 from bs4 import BeautifulSoup as bs
 import aiohttp
 import asyncio
-import pandas as pd
 from loguru import logger
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
