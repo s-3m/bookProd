@@ -11,7 +11,7 @@ import pandas as pd
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files
-from utils import filesdata_to_dict, fetch_request
+from utils import filesdata_to_dict, fetch_request, give_me_sample
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 
@@ -47,34 +47,6 @@ logger.add(
     level="ERROR",
     serialize=True,
 )
-
-
-path_to_sample = os.path.join(BASE_LINUX_DIR, "..")
-
-
-def give_me_sample():
-    df1 = filesdata_to_dict(f"{path_to_sample}/sale", combined=True, return_df=True)
-    if df1 is not None:
-        df2 = pd.read_excel(
-            f"{path_to_sample}/result/GLOBUS_all.xlsx",
-            converters={"Артикул": str, "Ссылка": str},
-        )[["Артикул", "Ссылка"]]
-
-        sample = pd.merge(df1[["Артикул"]], df2, on="Артикул", how="left")
-        sample.columns = ["article", "link"]
-        sale_files = os.listdir(f"{path_to_sample}/sale")
-        for i in sale_files:
-            os.remove(f"{path_to_sample}/sale/{i}")
-    else:
-        sample = pd.read_excel(
-            f"{BASE_LINUX_DIR}/globus_new_stock.xlsx",
-            converters={"article": str, "link": str},
-        )
-    sample["stock"] = ""
-    sample = sample.where(sample.notnull(), None)
-    sample = sample.to_dict("records")
-    return sample
-
 
 count = 1
 
@@ -126,7 +98,7 @@ async def get_gather_data(sample):
 
 
 def main():
-    sample = give_me_sample()
+    sample = give_me_sample(base_dir=BASE_LINUX_DIR, prefix="globus")
     asyncio.run(get_gather_data(sample))
 
     logger.info("Start write to excel")
