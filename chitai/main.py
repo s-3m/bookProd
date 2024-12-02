@@ -98,7 +98,16 @@ async def get_book_data(session, book_url: str):
             price = "Цена не указана"
 
         try:
-            stock = soup.find("div", class_="offer-availability-status").text.strip()
+            stock_status = soup.find("div", class_="offer-availability-status").text.strip()
+        except:
+            stock_status = None
+
+        try:
+            stock = soup.find(
+                "link", attrs={"itemprop": "availability", "href": "InStock"}
+            )
+            if stock:
+                stock = stock.next.strip()
         except:
             stock = None
 
@@ -132,14 +141,14 @@ async def get_book_data(session, book_url: str):
             book_result.update(detail_dict)
 
         for d in prices:
-            if article in prices[d] and stock:
+            if article in prices[d] and stock_status:
                 prices[d][article]["price"] = price
 
-        if article in not_in_sale and stock:
+        if article in not_in_sale and stock_status:
             not_in_sale[article]["on sale"] = "да"
-        elif article not in sample and stock:
+        elif article not in sample and stock_status:
             id_to_add.append(book_result)
-        elif article in sample and stock is None:
+        elif article in sample and stock_status is None:
             id_to_del.append({"article": article})
 
         all_books_result.append(book_result)
