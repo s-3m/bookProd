@@ -98,7 +98,9 @@ async def get_book_data(session, book_url: str):
             price = "Цена не указана"
 
         try:
-            stock_status = soup.find("div", class_="offer-availability-status").text.strip()
+            stock_status = soup.find(
+                "div", class_="offer-availability-status"
+            ).text.strip()
         except:
             stock_status = None
 
