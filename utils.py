@@ -1,5 +1,6 @@
 import asyncio
 import os
+import re
 import pandas as pd
 import numpy as np
 from typing import Literal
@@ -32,6 +33,8 @@ def filesdata_to_dict(folder_path: str, combined=False, return_df=False) -> dict
         df_dict = {}
         for dirName, subdirList, fileList in os.walk(folder_path):
             for file in fileList:
+                template = r"\d+"
+                price_number = re.search(template, file).group()
                 df = pd.read_excel(
                     f"{dirName}/{file}",
                     converters={"Артикул": str},
@@ -44,7 +47,7 @@ def filesdata_to_dict(folder_path: str, combined=False, return_df=False) -> dict
                 ready_dict = df.set_index("Артикул").to_dict(orient="index")
                 if None in ready_dict:
                     del ready_dict[None]
-                df_dict[file[-6]] = ready_dict
+                df_dict[price_number] = ready_dict
         return df_dict
 
 

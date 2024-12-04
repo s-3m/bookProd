@@ -18,9 +18,9 @@ from utils import (
 )
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
-
+DEBUG = False
 BASE_URL = "https://www.dkmg.ru"
-BASE_LINUX_DIR = "/media/source/mg"
+BASE_LINUX_DIR = "/media/source/mg" if not DEBUG else "source"
 logger.add(
     f"{BASE_LINUX_DIR}/error.log",
     format="{time} {level} {message}",
