@@ -62,7 +62,7 @@ id_to_add = []
 
 done_count = 0
 
-semaphore_ = asyncio.Semaphore(15)
+semaphore_ = asyncio.Semaphore(20)
 
 
 async def get_book_data(session, book_link):
@@ -203,93 +203,94 @@ async def get_book_data(session, book_link):
 async def get_page_data(session, category_link):
     page_link = f"{BASE_URL}{category_link}"
     cat_number = page_link.split("/")[-1].strip()
-    async with session.get(page_link, headers=headers) as resp:
-        soup = bs(await resp.text(), "lxml")
+    resp = await fetch_request(session, page_link, headers=headers)
+    soup = bs(resp, "lxml")
 
+    row_products = soup.find("div", class_="row products")
+    if not row_products:
+        return
+    pagination = soup.find("ul", class_="pagination")
+    max_page = 1
+    if pagination:
+        if pagination.find_all("li"):
+            max_page_element = pagination.find_all("a", class_="page-link")[-1].get(
+                "href"
+            )
+            max_page = parse.parse_qs(parse.urlsplit(max_page_element).query).get(
+                "page"
+            )[0]
+            max_page = int(max_page)
+
+    for page in range(1, max_page + 1):
+        await asyncio.sleep(2)
+        page_resp = await fetch_request(
+            session,
+            f"{BASE_URL}/catalog/category?id={cat_number}&page={page}",
+            headers=headers,
+        )
+        soup = bs(page_resp, "lxml")
         row_products = soup.find("div", class_="row products")
-        if not row_products:
-            return
-        pagination = soup.find("ul", class_="pagination")
-        max_page = 1
-        if pagination:
-            if pagination.find_all("li"):
-                max_page_element = pagination.find_all("a", class_="page-link")[-1].get(
-                    "href"
-                )
-                max_page = parse.parse_qs(parse.urlsplit(max_page_element).query).get(
-                    "page"
-                )[0]
-                max_page = int(max_page)
-
-        for page in range(1, max_page + 1):
-            await asyncio.sleep(2)
-            async with session.get(
-                f"{BASE_URL}/catalog/category?id={cat_number}&page={page}",
-                headers=headers,
-            ) as resp:
-                soup = bs(await resp.text(), "lxml")
-                row_products = soup.find("div", class_="row products")
-                all_books = row_products.find_all("div", recursive=False)
-                all_books_on_page = [
-                    i.find("a").get("href")
-                    for i in all_books
-                    if i.find("span", class_="price_item_title")
-                ]
-                # for book_link in all_books_on_page:
-                # await asyncio.sleep(2)
-                if all_books_on_page:
-                    tasks_ = [
-                        asyncio.create_task(get_book_data(session, book_link))
-                        for book_link in all_books_on_page
-                    ]
-                    await asyncio.gather(*tasks_)
-                else:
-                    break
+        all_books = row_products.find_all("div", recursive=False)
+        all_books_on_page = [
+            i.find("a").get("href")
+            for i in all_books
+            if i.find("span", class_="price_item_title")
+        ]
+        # for book_link in all_books_on_page:
+        # await asyncio.sleep(2)
+        if all_books_on_page:
+            tasks_ = [
+                asyncio.create_task(get_book_data(session, book_link))
+                for book_link in all_books_on_page
+            ]
+            await asyncio.gather(*tasks_)
+        else:
+            break
 
 
 async def checker(session, cat_link):
-    async with session.get(f"{BASE_URL}{cat_link}", headers=headers) as resp:
-        soup = bs(await resp.text(), "lxml")
-        main_option = soup.find("div", class_="row products")
+    resp = await fetch_request(session, f"{BASE_URL}{cat_link}", headers=headers)
+    soup = bs(resp, "lxml")
+    main_option = soup.find("div", class_="row products")
     return True if main_option else False
 
 
 async def check_option(session, cat_link):
-    async with session.get(f"{BASE_URL}{cat_link}", headers=headers) as resp:
-        soup = bs(await resp.text(), "lxml")
-        first_option = soup.find_all("a", class_="product-preview-title")
-        second_option = soup.find_all("ul", id="catalogue")
-        main_option = soup.find("div", class_="row products")
+    resp = await fetch_request(session, f"{BASE_URL}{cat_link}", headers=headers)
+    soup = bs(resp, "lxml")
+    first_option = soup.find_all("a", class_="product-preview-title")
+    second_option = soup.find_all("ul", id="catalogue")
+    main_option = soup.find("div", class_="row products")
 
-        if first_option:
-            all_links = [i.get("href") for i in first_option]
-            for first_option_link in all_links:
-                if await checker(session, first_option_link):
-                    await get_page_data(session, first_option_link)
-                else:
-                    await check_option(session, first_option_link)
+    if first_option:
+        all_links = [i.get("href") for i in first_option]
+        for first_option_link in all_links:
+            if await checker(session, first_option_link):
+                await get_page_data(session, first_option_link)
+            else:
+                await check_option(session, first_option_link)
 
-        if second_option:
-            all_second_links = []
-            for ul in second_option:
-                all_a = ["/catalog/index/" + i.get("href") for i in ul.find_all("a")]
-                all_second_links.extend(all_a)
+    if second_option:
+        all_second_links = []
+        for ul in second_option:
+            all_a = ["/catalog/index/" + i.get("href") for i in ul.find_all("a")]
+            all_second_links.extend(all_a)
 
-            for second_option_link in all_second_links:
-                if await checker(session, second_option_link):
-                    await get_page_data(session, second_option_link)
-                else:
-                    await check_option(session, second_option_link)
+        for second_option_link in all_second_links:
+            if await checker(session, second_option_link):
+                await get_page_data(session, second_option_link)
+            else:
+                await check_option(session, second_option_link)
 
-        if main_option:
-            await get_page_data(session, cat_link)
+    if main_option:
+        await get_page_data(session, cat_link)
 
 
 async def collect_all_menu(session, menu_item_link):
-    async with session.get(f"{BASE_URL}{menu_item_link}", headers=headers) as resp:
-        soup = bs(await resp.text(), "lxml")
-        big_items = soup.find("ul", id="catalogue").find_all("a")
-        all_sub_cat = ["/catalog/index/" + i.get("href") for i in big_items]
+    resp = await fetch_request(session, f"{BASE_URL}{menu_item_link}", headers=headers)
+    soup = bs(resp, "lxml")
+    big_items = soup.find("ul", id="catalogue").find_all("a")
+    all_sub_cat = ["/catalog/index/" + i.get("href") for i in big_items]
     return all_sub_cat
 
 
