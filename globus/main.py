@@ -20,6 +20,7 @@ pandas.io.formats.excel.ExcelFormatter.header_style = None
 DEBUG = False
 BASE_URL = "https://www.biblio-globus.ru"
 BASE_LINUX_DIR = "/media/source/globus" if not DEBUG else "source"
+PROXY = "http://4XRUpQ:cKCEtZ@46.161.45.111:9374"
 logger.add(
     f"{BASE_LINUX_DIR}/error.log",
     format="{time} {level} {message}",
@@ -223,29 +224,36 @@ async def get_page_data(session, category_link):
 
     for page in range(1, max_page + 1):
         await asyncio.sleep(2)
-        page_resp = await fetch_request(
-            session,
-            f"{BASE_URL}/catalog/category?id={cat_number}&page={page}",
-            headers=headers,
-        )
-        soup = bs(page_resp, "lxml")
-        row_products = soup.find("div", class_="row products")
-        all_books = row_products.find_all("div", recursive=False)
-        all_books_on_page = [
-            i.find("a").get("href")
-            for i in all_books
-            if i.find("span", class_="price_item_title")
-        ]
-        # for book_link in all_books_on_page:
-        # await asyncio.sleep(2)
-        if all_books_on_page:
-            tasks_ = [
-                asyncio.create_task(get_book_data(session, book_link))
-                for book_link in all_books_on_page
+        page_url = f"{BASE_URL}/catalog/category?id={cat_number}&page={page}"
+        try:
+            page_resp = await fetch_request(
+                session,
+                page_url,
+                headers=headers,
+            )
+            soup = bs(page_resp, "lxml")
+            row_products = soup.find("div", class_="row products")
+            all_books = row_products.find_all("div", recursive=False)
+            all_books_on_page = [
+                i.find("a").get("href")
+                for i in all_books
+                if i.find("span", class_="price_item_title")
             ]
-            await asyncio.gather(*tasks_)
-        else:
-            break
+            # for book_link in all_books_on_page:
+            # await asyncio.sleep(2)
+            if all_books_on_page:
+                tasks_ = [
+                    asyncio.create_task(get_book_data(session, book_link))
+                    for book_link in all_books_on_page
+                ]
+                await asyncio.gather(*tasks_)
+            else:
+                break
+        except Exception as e:
+            logger.exception(f"Page error - {page_url}")
+            with open(f"{BASE_LINUX_DIR}/page_error.txt", "a+") as f:
+                f.write(f"{page_url} --- {e}\n")
+
 
 
 async def checker(session, cat_link):
@@ -301,12 +309,14 @@ async def get_gather_data():
     async with aiohttp.ClientSession(headers=headers, timeout=timeout) as session:
         logger.info("Формирование списка категорий")
         # async with semaphore:
-        async with session.get(f"{BASE_URL}/catalog/index/4") as response:
-            soup = bs(await response.text(), "lxml")
-            li_menu = soup.find(
-                "ul", class_="nav nav-pills flex-column category-menu"
-            ).find_all("li", recursive=False)
-            main_menu_links = [i.find("a")["href"] for i in li_menu]
+        response = await fetch_request(
+            session, f"{BASE_URL}/catalog/index/4", headers=headers
+        )
+        soup = bs(response, "lxml")
+        li_menu = soup.find(
+            "ul", class_="nav nav-pills flex-column category-menu"
+        ).find_all("li", recursive=False)
+        main_menu_links = [i.find("a")["href"] for i in li_menu]
 
         all_links = []
 

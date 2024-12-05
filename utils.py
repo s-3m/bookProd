@@ -78,10 +78,13 @@ async def check_danger_string(
     return base_string
 
 
+proxy = "http://4XRUpQ:cKCEtZ@46.161.45.111:9374"
+
+
 async def fetch_request(session, url, headers: dict, sleep=4):
     for _ in range(20):
         try:
-            async with session.get(url, headers=headers) as resp:
+            async with session.get(url, headers=headers, proxy=proxy) as resp:
                 await asyncio.sleep(sleep)
                 if resp.status == 200:
                     return await resp.text()
