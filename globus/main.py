@@ -62,7 +62,7 @@ id_to_add = []
 
 done_count = 0
 
-semaphore_ = asyncio.Semaphore(20)
+semaphore_ = asyncio.Semaphore(15)
 
 
 async def get_book_data(session, book_link):
@@ -229,7 +229,7 @@ async def get_page_data(session, category_link):
             ) as resp:
                 soup = bs(await resp.text(), "lxml")
                 row_products = soup.find("div", class_="row products")
-                all_books = row_products.find_all("div", class_="product")
+                all_books = row_products.find_all("div", recursive=False)
                 all_books_on_page = [
                     i.find("a").get("href")
                     for i in all_books
@@ -296,7 +296,6 @@ async def collect_all_menu(session, menu_item_link):
 @logger.catch
 async def get_gather_data():
     logger.info("Начинаю сбор данных БИБЛИО-ГЛОБУС")
-    semaphore = asyncio.Semaphore(8)
     timeout = aiohttp.ClientTimeout(total=800)
     async with aiohttp.ClientSession(headers=headers, timeout=timeout) as session:
         logger.info("Формирование списка категорий")
@@ -320,9 +319,8 @@ async def get_gather_data():
         for i in tasks:
             all_links.extend(i.result())
 
-        logger.info(all_links)
+        logger.info(f"Найдено {len(all_links)} категорий")
         logger.info("Начинаю сбор основных данных")
-        print()
 
         # for cat_link in all_links:
         new_tasks = [
