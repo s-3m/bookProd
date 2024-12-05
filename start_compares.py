@@ -3,12 +3,22 @@ from msk.compare import main as msk_main
 from globus.compare import main as globus_main
 import schedule
 from dotenv import load_dotenv
+from loguru import logger
 
 
 def main():
-    globus_main()
-    mg_main()
-    msk_main()
+    try:
+        globus_main()
+    except Exception as e:
+        logger.exception(f"Exception in globus")
+    try:
+        mg_main()
+    except Exception as e:
+        logger.exception(f"Exception in mg")
+    try:
+        msk_main()
+    except Exception as e:
+        logger.exception(f"Exception in msk")
 
 
 def super_main():
