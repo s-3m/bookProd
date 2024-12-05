@@ -157,12 +157,7 @@ async def get_book_data(session, book_link):
             main_char.update(add_char)
 
             # Item status
-            item_status = (
-                True
-                if soup.find("p", class_="item-status").text.strip().lower()
-                == "в наличии"
-                else False
-            )
+            item_status = True if soup.find("p", class_="item-status") else False
 
             book_result = {
                 "Ссылка": link,
@@ -253,7 +248,6 @@ async def get_page_data(session, category_link):
             logger.exception(f"Page error - {page_url}")
             with open(f"{BASE_LINUX_DIR}/page_error.txt", "a+") as f:
                 f.write(f"{page_url} --- {e}\n")
-
 
 
 async def checker(session, cat_link):
