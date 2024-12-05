@@ -50,10 +50,8 @@ logger.add(
 
 count = 1
 
-semaphore = asyncio.Semaphore(20)
 
-
-async def get_main_data(session, item):
+async def get_main_data(session, item, semaphore):
     async with semaphore:
         try:
             response = await fetch_request(session, item["link"], headers)
@@ -84,12 +82,13 @@ async def get_gather_data(sample):
     logger.info("Start collect data")
     print()
     tasks = []
+    semaphore = asyncio.Semaphore(20)
     async with aiohttp.ClientSession(headers=headers) as session:
         for i in sample:
             if not i["link"]:
                 i["stock"] = "del"
             else:
-                task = asyncio.create_task(get_main_data(session, i))
+                task = asyncio.create_task(get_main_data(session, i, semaphore))
                 tasks.append(task)
         await asyncio.gather(*tasks)
     print()
