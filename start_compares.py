@@ -7,10 +7,11 @@ from loguru import logger
 
 
 def main():
-    try:
-        globus_main()
-    except Exception as e:
-        logger.exception(f"Exception in globus")
+    load_dotenv("./.env")
+    # try:
+    #     globus_main()
+    # except Exception as e:
+    #     logger.exception(f"Exception in globus")
     try:
         mg_main()
     except Exception as e:
@@ -22,7 +23,6 @@ def main():
 
 
 def super_main():
-    load_dotenv()
     schedule.every().day.at("21:00").do(main)
 
     while True:
