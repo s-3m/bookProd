@@ -16,7 +16,7 @@ from utils import (
 )
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
-DEBUG = True
+DEBUG = False
 BASE_URL = "https://mdk-arbat.ru"
 BASE_LINUX_DIR = "/media/source/mdk" if not DEBUG else "source"
 
