@@ -100,6 +100,7 @@ async def get_gather_data(semaphore, sample):
 
 def main():
     logger.info("Start MG parsing")
+    sample = give_me_sample(BASE_LINUX_DIR, prefix="mg", without_merge=True)
 
     semaphore = asyncio.Semaphore(5)
     asyncio.run(get_gather_data(semaphore, sample))
