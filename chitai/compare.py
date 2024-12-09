@@ -145,4 +145,4 @@ def super_main():
 
 
 if __name__ == "__main__":
-    main()
+    super_main()
