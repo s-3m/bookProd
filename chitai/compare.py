@@ -11,7 +11,7 @@ import pandas as pd
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files
-from utils import filesdata_to_dict, fetch_request, give_me_sample
+from utils import fetch_request, give_me_sample
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 
@@ -136,5 +136,13 @@ def main():
     logger.success("Script was finished successfully")
 
 
+def super_main():
+    load_dotenv("../.env")
+    schedule.every().day.at("19:00").do(main)
+
+    while True:
+        schedule.run_pending()
+
+
 if __name__ == "__main__":
-    main()
+    super_main()
