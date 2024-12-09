@@ -9,6 +9,7 @@ import asyncio
 import pandas as pd
 from tg_sender import tg_send_files
 from loguru import logger
+from utils import fetch_request, give_me_sample
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 
@@ -20,40 +21,48 @@ headers = {
 }
 
 count = 1
-
-PATH_TO_FILES = "/media/source/mg/every_day"
+DEBUG = True
+BASE_LINUX_DIR = "/media/source/mg/every_day" if not DEBUG else "source/every_day"
 logger.add(
-    f"{PATH_TO_FILES}/error.log", format="{time} {level} {message}", level="ERROR"
+    f"{BASE_LINUX_DIR}/error.log", format="{time} {level} {message}", level="ERROR"
 )
+error_items = []
 
 
 async def get_item_data(session, item, semaphore, sample, reparse=False):
     global count
-    item_id = item["id"]
-    if not item_id:
-        item["stock"] = "del"
-        return
-    url = f"{BASE_URL}/tovar/{item_id}"
+
+    url = f"https://www.dkmg.ru/catalog/search/?search_word={item["article"][:-2]}"
     try:
         async with semaphore:
-            await asyncio.sleep(0.5)
-            async with session.get(url, headers=headers) as response:
-                soup = bs(await response.text(), "lxml")
-                buy_btn = soup.find("a", class_="btn_red wish_list_btn add_to_cart")
-                if not buy_btn:
-                    item["stock"] = "del"
-                else:
-                    item["stock"] = "2"
+            search_response = await fetch_request(session, url, headers)
+            soup = bs(search_response, "lxml")
+            content = soup.find("div", {"id": "content"}).find("div", class_="item")
+            if content is None:
+                item["stock"] = "del"
+                return
 
-                if reparse:
-                    sample.append(item)
+            link = content.find("a").get("href")
+            full_url = f"{BASE_URL}{link}"
 
-                print(f"\rDone - {count}", end="")
-                # logger.info(f'\rDone - {count}\r', end='')
-                count += 1
+            response = await fetch_request(session, full_url, headers)
+            soup = bs(response, "lxml")
+            buy_btn = soup.find("a", class_="btn_red wish_list_btn add_to_cart")
+            if not buy_btn:
+                item["stock"] = "del"
+            else:
+                item["stock"] = "2"
+
+            if reparse:
+                sample.append(item)
+
+            print(f"\rDone - {count}", end="")
+            count += 1
     except Exception as e:
-        with open(f"{PATH_TO_FILES}/error.txt", "a+") as file:
-            file.write(f"{item_id} --- {item['article']} --- {e}\n")
+        error_items.append(item)
+        logger.exception(e)
+        with open(f"{BASE_LINUX_DIR}/error.txt", "a+") as file:
+            file.write(f"{item['article']} --- {e}\n")
 
 
 async def get_gather_data(semaphore, sample):
@@ -68,58 +77,45 @@ async def get_gather_data(semaphore, sample):
 
         await asyncio.gather(*tasks)
 
-        reparse_count = 0
-        while os.path.exists(f"{PATH_TO_FILES}/error.txt") and reparse_count < 10:
-            # print('\n------- Start reparse error ------')
+        if error_items:
             print()
             logger.info("\nStart reparse error")
-            reparse_count += 1
-            with open(f"{PATH_TO_FILES}/error.txt") as file:
-                id_list = [
-                    {"id": i.split(" --- ")[0], "article": i.split(" --- ")[1]}
-                    for i in file.readlines()
-                ]
-                print(f"--- Quantity error - {len(id_list)}")
-                os.remove(f"{PATH_TO_FILES}/error.txt")
-
-            reparse_tasks = []
-
-            for item in id_list:
-                task = asyncio.create_task(
+            print(f"--- Quantity error - {len(error_items)}")
+            errors_copy = error_items.copy()
+            error_items.clear()
+            reparse_tasks = [
+                asyncio.create_task(
                     get_item_data(session, item, semaphore, sample, reparse=True)
                 )
-                reparse_tasks.append(task)
+                for item in errors_copy
+            ]
 
             await asyncio.gather(*reparse_tasks)
+            sample.extend(errors_copy)
 
-            global count
-            count = 1
+        for i in sample:
+            if not i["stock"]:
+                i["stock"] = "del"
 
 
 def main():
-    # print('start\n')
     logger.info("Start MG parsing")
-    # dir_path = os.path.dirname(os.path.realpath(__file__))
-    df = pd.read_excel(
-        f"{PATH_TO_FILES}/gvardia_new_stock.xlsx", converters={"id": str}
-    )
-    df = df.where(df.notnull(), None)
-    sample = df.to_dict("records")
 
     semaphore = asyncio.Semaphore(5)
     asyncio.run(get_gather_data(semaphore, sample))
+
     df_result = pd.DataFrame(sample)
     df_result.drop_duplicates(inplace=True, keep="last", subset="article")
 
-    result_file = f"{PATH_TO_FILES}/all_result.xlsx"
+    result_file = f"{BASE_LINUX_DIR}/mg_all_result.xlsx"
     df_result.to_excel(result_file, index=False)
 
     df_del = df_result.loc[df_result["stock"] == "del"][["article"]]
-    del_file = f"{PATH_TO_FILES}/gvardia_del.xlsx"
+    del_file = f"{BASE_LINUX_DIR}/mg_del.xlsx"
     df_del.to_excel(del_file, index=False)
 
     df_without_del = df_result.loc[df_result["stock"] != "del"]
-    stock_file = f"{PATH_TO_FILES}/gvardia_new_stock.xlsx"
+    stock_file = f"{BASE_LINUX_DIR}/mg_new_stock.xlsx"
     df_without_del.to_excel(stock_file, index=False)
     global count
     count = 1
