@@ -105,7 +105,7 @@ async def get_gather_data(sample):
 
 def main():
     logger.info("Start script")
-    sample = give_me_sample(base_dir=BASE_LINUX_DIR, prefix="mdk")
+    sample = give_me_sample(base_dir=BASE_LINUX_DIR, prefix="mdk", without_merge=True)
     asyncio.run(get_gather_data(sample))
     logger.info("Start write files")
 
