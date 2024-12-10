@@ -127,7 +127,9 @@ def write_result_files(
         )
 
 
-def give_me_sample(base_dir: str, prefix: str, without_merge=False) -> list[dict]:
+def give_me_sample(
+    base_dir: str, prefix: str, without_merge=False, merge_obj="Ссылка"
+) -> list[dict]:
     path_to_sample = os.path.join(base_dir, "..")
     df1 = filesdata_to_dict(f"{path_to_sample}/sale", combined=True, return_df=True)
 
@@ -135,11 +137,11 @@ def give_me_sample(base_dir: str, prefix: str, without_merge=False) -> list[dict
         if not without_merge:
             df2 = pd.read_excel(
                 f"{path_to_sample}/result/{prefix}_all.xlsx",
-                converters={"Артикул": str, "Ссылка": str},
-            )[["Артикул", "Ссылка"]]
+                converters={"Артикул": str, merge_obj: str},
+            )[["Артикул", merge_obj]]
 
             sample = pd.merge(df1[["Артикул"]], df2, on="Артикул", how="left")
-            sample.columns = ["article", "link"]
+            sample.columns = ["article", merge_obj]
         else:
             sample = df1[["Артикул"]]
             sample.columns = ["article"]
