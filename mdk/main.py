@@ -1,3 +1,4 @@
+import json
 import sys
 import os
 import pandas.io.formats.excel
@@ -182,6 +183,11 @@ async def get_category_data(session, category: str):
     try:
         response = await fetch_request(session, cat_url, headers)
         soup = bs(response, "lxml")
+        is_data = soup.find("div", class_="tg-productgrid").find(
+            "div", class_="tg-postbook"
+        )
+        if not is_data:
+            return
         pagination = soup.find("nav", {"class": "tg-pagination"})
         if pagination:
             pagination = int(pagination.find_all("li")[-2].text)
@@ -196,6 +202,12 @@ async def get_category_data(session, category: str):
         category_error.append(cat_url)
 
 
+def get_all_catalogs():
+    with open("all_catalog.json") as file:
+        cat_list = json.load(file)
+    return cat_list
+
+
 @logger.catch
 async def get_gather_data():
     logger.info("Начинаю сбор данных МДК")
@@ -203,21 +215,16 @@ async def get_gather_data():
     async with aiohttp.ClientSession(
         headers=headers, connector=aiohttp.TCPConnector(ssl=False)
     ) as session:
+
         logger.info("Формирование списка категорий")
-        async with session.get(f"{BASE_URL}/catalog?subj_id=51") as response:
-            soup = bs(await response.text(), "lxml")
-            all_categories = [
-                i.get("href")
-                for i in soup.find("div", class_="tg-widgetcontent").find_all("a")
-            ]
+        all_categories = get_all_catalogs()
+        logger.info(f"Найдено {len(all_categories)} категорий")
+        logger.info(f"Начался сбор данных по категориям")
 
-            logger.info(f"Найдено {len(all_categories)} категорий")
-            logger.info(f"Начался сбор данных по категориям")
-
-            for main_category in all_categories:
-                task = asyncio.create_task(get_category_data(session, main_category))
-                tasks.append(task)
-            await asyncio.gather(*tasks)
+        for main_category in all_categories:
+            task = asyncio.create_task(get_category_data(session, main_category))
+            tasks.append(task)
+        await asyncio.gather(*tasks)
 
         logger.info(f"Main data was collected")
         logger.warning(
