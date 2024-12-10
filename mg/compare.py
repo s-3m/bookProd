@@ -32,19 +32,19 @@ error_items = []
 async def get_item_data(session, item, semaphore, sample, reparse=False):
     global count
 
-    url = f"https://www.dkmg.ru/catalog/search/?search_word={item["article"][:-2]}"
     try:
         async with semaphore:
-            search_response = await fetch_request(session, url, headers)
-            soup = bs(search_response, "lxml")
-            content = soup.find("div", {"id": "content"}).find("div", class_="item")
-            if content is None:
-                item["stock"] = "del"
-                return
+            if not item["id"]:
+                search_url = f"https://www.dkmg.ru/catalog/search/?search_word={item["article"][:-2]}"
+                search_response = await fetch_request(session, search_url, headers)
+                soup = bs(search_response, "lxml")
+                content = soup.find("div", {"id": "content"}).find("div", class_="item")
+                if content is None:
+                    item["stock"] = "del"
+                    return
+                item["id"] = content.find("a").get("href").split("/")[-1].strip()
 
-            link = content.find("a").get("href")
-            full_url = f"{BASE_URL}{link}"
-
+            full_url = f"{BASE_URL}/tovar/{item["id"]}"
             response = await fetch_request(session, full_url, headers)
             soup = bs(response, "lxml")
             buy_btn = soup.find("a", class_="btn_red wish_list_btn add_to_cart")
@@ -100,7 +100,7 @@ async def get_gather_data(semaphore, sample):
 
 def main():
     logger.info("Start MG parsing")
-    sample = give_me_sample(BASE_LINUX_DIR, prefix="mg", without_merge=True)
+    sample = give_me_sample(BASE_LINUX_DIR, prefix="mg", merge_obj="id")
 
     semaphore = asyncio.Semaphore(5)
     asyncio.run(get_gather_data(semaphore, sample))
@@ -135,6 +135,7 @@ def super_main():
 
 if __name__ == "__main__":
     start_time = time.time()
-    super_main()
+    main()
+    # super_main()
     print()
     print(time.time() - start_time)
