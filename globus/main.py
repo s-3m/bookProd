@@ -17,7 +17,7 @@ from utils import (
 )
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
-DEBUG = False
+DEBUG = True if sys.platform.startswith("win") else False
 BASE_URL = "https://www.biblio-globus.ru"
 BASE_LINUX_DIR = "/media/source/globus" if not DEBUG else "source"
 PROXY = "http://4XRUpQ:cKCEtZ@46.161.45.111:9374"

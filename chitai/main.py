@@ -17,7 +17,7 @@ from utils import (
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 logger.add("chitai_error.log", format="{time} {level} {message}", level="ERROR")
-DEBUG = False
+DEBUG = True if sys.platform.startswith("win") else False
 BASE_URL = "https://www.chitai-gorod.ru"
 BASE_LINUX_DIR = "/media/source/chitai" if not DEBUG else "source"
 semaphore = asyncio.Semaphore(10)

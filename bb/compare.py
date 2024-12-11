@@ -11,6 +11,7 @@ import aiohttp
 import asyncio
 import pandas as pd
 from tg_sender import tg_send_files
+import sys
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 
@@ -38,7 +39,7 @@ headers = {
 }
 
 count = 1
-DEBUG = False
+DEBUG = True if sys.platform.startswith("win") else False
 PATH_TO_FILES = "/media/source/bb/every_day" if not DEBUG else "compare"
 
 

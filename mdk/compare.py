@@ -33,7 +33,7 @@ headers = {
     "sec-ch-ua-platform": '"Windows"',
 }
 
-DEBUG = True
+DEBUG = True if sys.platform.startswith("win") else False
 BASE_URL = "https://mdk-arbat.ru"
 BASE_LINUX_DIR = "/media/source/mdk/every_day" if not DEBUG else "source/every_day"
 

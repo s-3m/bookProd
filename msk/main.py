@@ -18,7 +18,7 @@ from utils import (
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 
-DEBUG = True
+DEBUG = True if sys.platform.startswith("win") else False
 BASE_URL = "https://www.moscowbooks.ru"
 USER_AGENT = UserAgent()
 BASE_LINUX_DIR = "/media/source/msk" if not DEBUG else "source"

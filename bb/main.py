@@ -16,7 +16,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import filesdata_to_dict, check_danger_string, fetch_request
 
 pd.io.formats.excel.ExcelFormatter.header_style = None
-DEBUG = False
+DEBUG = True if sys.platform.startswith("win") else False
 BASE_URL = "https://bookbridge.ru"
 BASE_LINUX_DIR = "/media/source/bb" if not DEBUG else "source"
 USER_AGENT = UserAgent()

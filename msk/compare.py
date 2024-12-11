@@ -1,4 +1,5 @@
 import asyncio
+import sys
 import os
 from loguru import logger
 import aiohttp
@@ -11,6 +12,8 @@ import time
 from selenium_data import get_book_data
 from tg_sender import tg_send_files
 
+
+DEBUG = True if sys.platform.startswith("win") else False
 BASE_URL = "https://www.moscowbooks.ru/"
 USER_AGENT = UserAgent()
 PATH_TO_FILES = "/media/source/msk/every_day"

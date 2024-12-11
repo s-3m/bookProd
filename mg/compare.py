@@ -1,4 +1,4 @@
-import os.path
+import sys
 import time
 import schedule
 import pandas.io.formats.excel
@@ -21,7 +21,7 @@ headers = {
 }
 
 count = 1
-DEBUG = True
+DEBUG = True if sys.platform.startswith("win") else False
 BASE_LINUX_DIR = "/media/source/mg/every_day" if not DEBUG else "source/every_day"
 logger.add(
     f"{BASE_LINUX_DIR}/error.log", format="{time} {level} {message}", level="ERROR"

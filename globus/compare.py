@@ -33,7 +33,7 @@ headers = {
     "sec-ch-ua-platform": '"Windows"',
 }
 
-DEBUG = False
+DEBUG = True if sys.platform.startswith("win") else False
 BASE_URL = "https://www.biblio-globus.ru"
 BASE_LINUX_DIR = "/media/source/globus/every_day" if not DEBUG else "source/every_day"
 logger.add(

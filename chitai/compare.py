@@ -32,7 +32,7 @@ headers = {
     "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 YaBrowser/24.10.0.0 Safari/537.36",
 }
 
-DEBUG = True
+DEBUG = True if sys.platform.startswith("win") else False
 BASE_URL = "https://www.chitai-gorod.ru"
 BASE_LINUX_DIR = "/media/source/chitai/every_day" if not DEBUG else "source/every_day"
 logger.add(
