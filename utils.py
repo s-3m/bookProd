@@ -151,7 +151,7 @@ def give_me_sample(
     else:
         sample = pd.read_excel(
             f"{base_dir}/{prefix}_new_stock.xlsx",
-            converters={"article": str, "link": str},
+            converters={"article": str, "link": str, merge_obj: str},
         )
     sample["stock"] = ""
     sample = sample.where(sample.notnull(), None)
