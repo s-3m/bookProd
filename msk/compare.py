@@ -71,6 +71,7 @@ async def to_check_item(article, session, past_day_result, to_del):
 
 
 async def reparse_error(session, past_day_result, to_del):
+    print() # empty print for clear info visualization
     logger.warning("Start reparse error")
     reparse_count = 0
     error_file = f"{PATH_TO_FILES}/error.txt"
@@ -112,7 +113,8 @@ async def get_compare():
         for article in article_list:
             await to_check_item(article, session, past_day_result, to_del)
         await reparse_error(session, past_day_result, to_del)
-
+    global count
+    count = 1
     logger.info("Preparing files for sending")
     df = pd.DataFrame().from_dict(past_day_result, "index")
     df.index.name = "article"
