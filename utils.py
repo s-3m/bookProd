@@ -132,6 +132,7 @@ def give_me_sample(
 ) -> list[dict]:
     path_to_sample = os.path.join(base_dir, "..")
     df1 = filesdata_to_dict(f"{path_to_sample}/sale", combined=True, return_df=True)
+    merge_obj_translate = "link" if merge_obj == "Ссылка" else merge_obj
 
     if df1 is not None:
         if not without_merge:
@@ -141,7 +142,7 @@ def give_me_sample(
             )[["Артикул", merge_obj]]
 
             sample = pd.merge(df1[["Артикул"]], df2, on="Артикул", how="left")
-            sample.columns = ["article", merge_obj]
+            sample.columns = ["article", merge_obj_translate]
         else:
             sample = df1[["Артикул"]]
             sample.columns = ["article"]

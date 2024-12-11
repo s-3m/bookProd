@@ -71,7 +71,7 @@ async def to_check_item(article, session, past_day_result, to_del):
 
 
 async def reparse_error(session, past_day_result, to_del):
-    print() # empty print for clear info visualization
+    print()  # empty print for clear info visualization
     logger.warning("Start reparse error")
     reparse_count = 0
     error_file = f"{PATH_TO_FILES}/error.txt"

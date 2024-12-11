@@ -13,6 +13,9 @@ import pandas as pd
 from tg_sender import tg_send_files
 import sys
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from utils import give_me_sample
+
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 
 BASE_URL = "https://bookbridge.ru"
@@ -40,7 +43,7 @@ headers = {
 
 count = 1
 DEBUG = True if sys.platform.startswith("win") else False
-PATH_TO_FILES = "/media/source/bb/every_day" if not DEBUG else "compare"
+PATH_TO_FILES = "/media/source/bb/every_day" if not DEBUG else "source/every_day"
 
 
 async def fetch_request(session, url):
@@ -95,19 +98,16 @@ async def get_item_data(session, item, error_items, semaphore):
 
 
 async def get_gather_data():
-    df = pd.read_excel(
-        f"{PATH_TO_FILES}/bb_new_stock_dev.xlsx", converters={"article": str}
-    )
-    df = df.where(df.notnull(), None)
-    all_items_list = df.to_dict("records")
+    sample = give_me_sample(base_dir=PATH_TO_FILES, prefix="bb")
+
     error_items_list = []
-    semaphore = asyncio.Semaphore(8)
+    semaphore = asyncio.Semaphore(10)
     tasks = []
     async with aiohttp.ClientSession(
         connector=aiohttp.TCPConnector(ssl=False, limit=50, limit_per_host=10),
         trust_env=True,
     ) as session:
-        for item in all_items_list:
+        for item in sample:
             if not item["link"]:
                 item["in_stock"] = "del"
                 continue
@@ -133,7 +133,7 @@ async def get_gather_data():
                 )
                 error_tasks.append(task)
             await asyncio.gather(*error_tasks)
-            all_items_list.extend(new_items_list)
+            sample.extend(new_items_list)
 
     print()
     logger.success("Finished parser successfully")
@@ -142,14 +142,10 @@ async def get_gather_data():
 
     await asyncio.sleep(30)
     logger.info("preparing files for sending")
-    df_result = pd.DataFrame(all_items_list)
+    df_result = pd.DataFrame(sample)
     df_result.drop_duplicates(keep="last", inplace=True, subset="article")
-    df_result.loc[df_result["in_stock"] != "del"].to_excel(
-        f"{PATH_TO_FILES}/bb_new_stock_dev.xlsx", index=False
-    )
-    df_without_del = df_result.loc[df_result["in_stock"] != "del"][
-        ["article", "in_stock"]
-    ]
+
+    df_without_del = df_result.loc[df_result["in_stock"] != "del"]
     df_del = df_result.loc[df_result["in_stock"] == "del"][["article"]]
     del_path = f"{PATH_TO_FILES}/bb_del.xlsx"
     without_del_path = f"{PATH_TO_FILES}/bb_new_stock.xlsx"

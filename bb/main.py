@@ -59,7 +59,7 @@ def to_write_file(temporary=False, final_result=False):
     if not final_result:
         filepath = f"{BASE_LINUX_DIR}/result/temporary"
     df = pd.DataFrame(result)
-    df.to_excel(f"{filepath}/all_result.xlsx", index=False)
+    df.to_excel(f"{filepath}/bb_all.xlsx", index=False)
 
     for price_item in prices:
         df_result = pd.DataFrame().from_dict(prices[price_item], orient="index")
@@ -85,7 +85,7 @@ async def get_item_data(item, session, main_category=None):
     global semaphore
     res_dict = {}
     link = f"{BASE_URL}{item}"
-    res_dict["link"] = link
+    res_dict["Ссылка"] = link
     await asyncio.sleep(3)
     try:
         async with semaphore:
@@ -133,10 +133,10 @@ async def get_item_data(item, session, main_category=None):
             article = (
                 soup.find("div", class_="article").find_all("span")[1].text.strip()
             )
-            res_dict["article"] = article + ".0"
+            res_dict["Артикул"] = article + ".0"
         except:
             article = "Нет артикула"
-            res_dict["article"] = article
+            res_dict["Артикул"] = article
 
         try:
             photo_link = soup.find(
@@ -194,7 +194,7 @@ async def get_item_data(item, session, main_category=None):
         if article + ".0" in not_in_sale and quantity != "Нет в наличии":
             not_in_sale[article + ".0"]["on sale"] = "Да"
         elif article + ".0" not in sample and quantity != "Нет в наличии":
-            res_dict["article"] = article + ".0"
+            res_dict["Артикул"] = article + ".0"
             id_to_add.append(res_dict)
         elif article + ".0" in sample and quantity == "Нет в наличии":
             id_to_del.append({"article": article + ".0"})
