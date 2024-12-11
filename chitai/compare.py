@@ -11,7 +11,7 @@ import pandas as pd
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files
-from utils import fetch_request, give_me_sample
+from utils import fetch_request, give_me_sample, proxy
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 
@@ -32,7 +32,7 @@ headers = {
     "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 YaBrowser/24.10.0.0 Safari/537.36",
 }
 
-DEBUG = False
+DEBUG = True
 BASE_URL = "https://www.chitai-gorod.ru"
 BASE_LINUX_DIR = "/media/source/chitai/every_day" if not DEBUG else "source/every_day"
 logger.add(
@@ -77,6 +77,37 @@ async def get_main_data(session, book_item):
             count += 1
 
 
+async def get_auth_token(session):
+    async with session.get(
+        "https://www.chitai-gorod.ru",
+        headers=headers,
+    ) as resp:
+        ddd = resp.cookies
+        acc_token = (
+            str(ddd["access-token"])
+            .split("access-token=")[1]
+            .split(";")[0]
+            .replace("%20", " ")
+        )
+        print(acc_token)
+        headers["Authorization"] = acc_token
+
+
+async def get_link_from_ajax(session, article):
+    params = {
+        "phrase": article[:-2],
+        "include": "products",
+    }
+    async with session.get(
+        "https://web-gate.chitai-gorod.ru/api/v2/search/search-phrase-suggests",
+        headers=headers,
+        params=params,
+    ) as resp:
+        response = await resp.json()
+        link = response["included"][0]["attributes"]["url"]
+        return link
+
+
 async def get_gather_data(sample):
     logger.info("Start collect data")
     print()
@@ -88,10 +119,15 @@ async def get_gather_data(sample):
         timeout=timeout,
         trust_env=True,
     ) as session:
+        await get_auth_token(session)
         for i in sample:
-            if not i["link"]:
+            try:
+                if not i["link"]:
+                    i_link = await get_link_from_ajax(session, i["article"])
+                    i["link"] = f"{BASE_URL}/{i_link}"
+            except Exception as e:
                 i["stock"] = "del"
-            else:
+            if i["link"]:
                 task = asyncio.create_task(get_main_data(session, i))
                 tasks.append(task)
         await asyncio.gather(*tasks)
