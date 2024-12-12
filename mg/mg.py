@@ -36,12 +36,12 @@ prices = filesdata_to_dict(f"{BASE_LINUX_DIR}/prices")
 
 sample = filesdata_to_dict(f"{BASE_LINUX_DIR}/sale", combined=True)
 not_in_sale = filesdata_to_dict(f"{BASE_LINUX_DIR}/not_in_sale", combined=True)
+del_article: set = set(sample.keys())
 
 result = []
 id_to_add = []
-id_to_del = []
 
-semaphore = asyncio.Semaphore(20)
+semaphore = asyncio.Semaphore(15)
 
 
 async def get_item_data(session, link, main_category):
@@ -122,8 +122,8 @@ async def get_item_data(session, link, main_category):
                 not_in_sale[isbn + ".0"]["on sale"] = "да"
             elif isbn + ".0" not in sample and quantity == "есть в наличии":
                 id_to_add.append(item_data)
-            elif isbn + ".0" in sample and quantity != "есть в наличии":
-                id_to_del.append({"article": f"{isbn}.0"})
+            elif isbn + ".0" in sample and quantity == "есть в наличии":
+                del_article.remove(isbn + ".0")
 
             for d in prices:
                 if isbn + ".0" in prices[d] and quantity == "есть в наличии":
@@ -196,7 +196,7 @@ def main():
         prefix="mg",
         all_books_result=result,
         id_to_add=id_to_add,
-        id_to_del=id_to_del,
+        id_to_del=del_article,
         not_in_sale=not_in_sale,
         prices=prices,
     )

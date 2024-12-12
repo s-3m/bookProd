@@ -102,7 +102,7 @@ def write_result_files(
     prefix: str,
     all_books_result,
     id_to_add: list,
-    id_to_del: list,
+    id_to_del: list | set,
     not_in_sale: dict,
     prices: dict[str, dict],
 ):
@@ -113,6 +113,7 @@ def write_result_files(
     df_add.to_excel(f"{base_dir}/result/{prefix}_add.xlsx", index=False)
 
     df_del = pd.DataFrame(id_to_del).drop_duplicates()
+    df_del.columns = ["Артикул"]
     df_del.to_excel(f"{base_dir}/result/{prefix}_del.xlsx", index=False)
 
     df_not_in_sale = pd.DataFrame().from_dict(not_in_sale, orient="index")
