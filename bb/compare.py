@@ -63,7 +63,7 @@ async def get_item_data(session, item, error_items, semaphore):
         try:
             response = await fetch_request(session, item["link"])
             if response == "del":
-                item["in_stock"] = "del"
+                item["stock"] = "del"
                 return
             dynamic_block = response.get("dynamicBlocks")
             for i in dynamic_block:
@@ -87,10 +87,10 @@ async def get_item_data(session, item, error_items, semaphore):
             global count
             print(f"\r{count}", end="")
             count += 1
-            item["in_stock"] = stock_quantity
+            item["stock"] = stock_quantity
         except Exception as e:
             logger.exception(item["link"])
-            item["in_stock"] = "2"
+            item["stock"] = "2"
             error_items.append(item)
             today = datetime.date.today().strftime("%d-%m-%Y")
             with open(f"{PATH_TO_FILES}/error.txt", "a+") as f:
@@ -109,7 +109,7 @@ async def get_gather_data():
     ) as session:
         for item in sample:
             if not item["link"]:
-                item["in_stock"] = "del"
+                item["stock"] = "del"
                 continue
             task = asyncio.create_task(
                 get_item_data(session, item, error_items_list, semaphore)
@@ -145,8 +145,8 @@ async def get_gather_data():
     df_result = pd.DataFrame(sample)
     df_result.drop_duplicates(keep="last", inplace=True, subset="article")
 
-    df_without_del = df_result.loc[df_result["in_stock"] != "del"]
-    df_del = df_result.loc[df_result["in_stock"] == "del"][["article"]]
+    df_without_del = df_result.loc[df_result["stock"] != "del"]
+    df_del = df_result.loc[df_result["stock"] == "del"][["article"]]
     del_path = f"{PATH_TO_FILES}/bb_del.xlsx"
     without_del_path = f"{PATH_TO_FILES}/bb_new_stock.xlsx"
     df_without_del.to_excel(without_del_path, index=False)
