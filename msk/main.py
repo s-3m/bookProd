@@ -148,8 +148,8 @@ async def get_item_data(session, item: str):
             details_dict = {}
 
         book_dict = {
-            "link": link,
-            "article": article + ".0",
+            "Ссылка": link,
+            "Артикул": article + ".0",
             "title": title,
             "author": author,
             "description": description,
