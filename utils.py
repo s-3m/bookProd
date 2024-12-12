@@ -85,7 +85,7 @@ async def fetch_request(session, url, headers: dict, sleep=4):
     for _ in range(20):
         try:
             async with session.get(url, headers=headers, proxy=proxy) as resp:
-                await asyncio.sleep(sleep)
+                await asyncio.sleep(sleep) if sleep else None
                 if resp.status == 200:
                     return await resp.text()
                 elif resp.status == 404:
