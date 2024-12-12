@@ -9,14 +9,18 @@ from fake_useragent import UserAgent
 from bs4 import BeautifulSoup as bs
 import time
 
+from bb.main import sample
 from selenium_data import get_book_data
 from tg_sender import tg_send_files
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from utils import give_me_sample, fetch_request
 
 
 DEBUG = True if sys.platform.startswith("win") else False
 BASE_URL = "https://www.moscowbooks.ru/"
 USER_AGENT = UserAgent()
-PATH_TO_FILES = "/media/source/msk/every_day"
+PATH_TO_FILES = "/media/source/msk/every_day" if not DEBUG else "source/every_day"
 logger.add(
     f"{PATH_TO_FILES}/error.log", format="{time} {level} {message}", level="ERROR"
 )
@@ -29,14 +33,12 @@ excel.ExcelFormatter.header_style = None
 count = 1
 
 
-async def to_check_item(article, session, past_day_result, to_del):
+async def to_check_item(item, session):
     global count
-    link = f"{BASE_URL}/book/{article[:-2]}"
-    # await asyncio.sleep(10)
+    link = f"{BASE_URL}/book/{item["article"][:-2]}"
     try:
-        response = await session.get(link, headers=headers)
-        response_text = await response.text()
-        soup = bs(response_text, "lxml")
+        response = await fetch_request(session, link, headers=headers, sleep=None)
+        soup = bs(response, "lxml")
         age_control = soup.find("input", id="age_verification_form_mode")
         script_index = 1
         if age_control:
@@ -45,8 +47,7 @@ async def to_check_item(article, session, past_day_result, to_del):
             script_index = 5
 
         if not soup.find("div", class_="book__buy"):
-            del past_day_result[article]
-            to_del.append(article)
+            item["stock"] = "del"
         else:
             need_element = soup.find_all("script")
             a = (
@@ -57,11 +58,12 @@ async def to_check_item(article, session, past_day_result, to_del):
             )
             need_data_dict = eval(a[:-1])["Products"][0]
             stock = need_data_dict["Stock"]
-            past_day_result[article] = {"in stock": stock}
+            item["stock"] = stock
 
         print(f"\r{count}", end="")
         count += 1
     except Exception as e:
+        item["stock"] = "error"
         logger.exception(f"ERROR with {link}")
         with open(
             f"{PATH_TO_FILES}/error.txt",
@@ -70,64 +72,40 @@ async def to_check_item(article, session, past_day_result, to_del):
             f.write(f"{link} ------ {e}\n")
 
 
-async def reparse_error(session, past_day_result, to_del):
-    print()  # empty print for clear info visualization
-    logger.warning("Start reparse error")
-    reparse_count = 0
-    error_file = f"{PATH_TO_FILES}/error.txt"
-    try:
-        while True:
-            if not os.path.exists(error_file) or reparse_count > 10:
-                break
-            else:
-                with open(error_file, "r") as file:
-                    error_links_list = [
-                        i.split(" ------ ")[0] for i in file.readlines()
-                    ]
-                    article_list = [
-                        link.split("/")[-2] + ".0" for link in error_links_list
-                    ]
-                    os.remove(error_file)
-                if error_links_list:
-                    for article in article_list:
-                        await to_check_item(article, session, past_day_result, to_del)
-                reparse_count += 1
-    except:
-        pass
-
-
 async def get_compare():
-    to_del = []
-    df_past_day_result = pd.read_excel(
-        f"{PATH_TO_FILES}/msk_new_stock.xlsx",
-        converters={"article": str},
-    )
+    sample = give_me_sample(base_dir=PATH_TO_FILES, prefix="msk", without_merge=True)
 
-    df_past_day_result.drop_duplicates(subset="article", keep="first", inplace=True)
-    past_day_result = df_past_day_result.set_index("article").to_dict("index")
-
-    article_list = list(past_day_result.keys())
     async with aiohttp.ClientSession(
         connector=aiohttp.TCPConnector(ssl=False), trust_env=True
     ) as session:
-        for article in article_list:
-            await to_check_item(article, session, past_day_result, to_del)
-        await reparse_error(session, past_day_result, to_del)
+        for item in sample:
+            await to_check_item(item, session)
+
+        print()  # empty print for clear info visualization
+        logger.warning("Start reparse error")
+
+        for item in sample:
+            if item["stock"] == "error":
+                await to_check_item(item, session)
     global count
     count = 1
-    logger.info("Preparing files for sending")
-    df = pd.DataFrame().from_dict(past_day_result, "index")
-    df.index.name = "article"
-    df.index = df.index.astype(str)
-    file_stock = f"{PATH_TO_FILES}/msk_new_stock.xlsx"
-    df.to_excel(file_stock)
 
-    del_df = pd.DataFrame({"article": to_del})
-    file_del = f"{PATH_TO_FILES}/msk_del.xlsx"
-    del_df.to_excel(file_del, index=False)
+    for item in sample:
+        if item["stock"] == "error":
+            item["stock"] = "del"
+
+    logger.info("Preparing files for sending")
+    df_result = pd.DataFrame(sample)
+    df_without_del = df_result.loc[df_result["stock"] != "del"]
+    without_del_path = f"{PATH_TO_FILES}/msk_new_stock.xlsx"
+    df_without_del.to_excel(without_del_path, index=False)
+
+    df_del = df_result.loc[df_result["stock"] == "del"][["article"]]
+    del_path = f"{PATH_TO_FILES}/msk_del.xlsx"
+    df_del.to_excel(del_path, index=False)
 
     logger.info("Start sending files")
-    await tg_send_files([file_stock, file_del], subject="Москва")
+    await tg_send_files([without_del_path, del_path], subject="Москва")
 
 
 def main():
