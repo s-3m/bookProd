@@ -79,10 +79,10 @@ async def get_gather_data(sample):
     logger.info("Start collect data")
     timeout = aiohttp.ClientTimeout(total=800)
     async with aiohttp.ClientSession(
-            headers=headers,
-            connector=aiohttp.TCPConnector(ssl=False),
-            timeout=timeout,
-            trust_env=True,
+        headers=headers,
+        connector=aiohttp.TCPConnector(ssl=False),
+        timeout=timeout,
+        trust_env=True,
     ) as session:
         tasks = [asyncio.create_task(get_main_data(session, book)) for book in sample]
         await asyncio.gather(*tasks)
