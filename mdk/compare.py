@@ -79,10 +79,10 @@ async def get_gather_data(sample):
     logger.info("Start collect data")
     timeout = aiohttp.ClientTimeout(total=800)
     async with aiohttp.ClientSession(
-        headers=headers,
-        connector=aiohttp.TCPConnector(ssl=False),
-        timeout=timeout,
-        trust_env=True,
+            headers=headers,
+            connector=aiohttp.TCPConnector(ssl=False),
+            timeout=timeout,
+            trust_env=True,
     ) as session:
         tasks = [asyncio.create_task(get_main_data(session, book)) for book in sample]
         await asyncio.gather(*tasks)
@@ -127,5 +127,13 @@ def main():
     logger.success("Script was finished successfully")
 
 
+def super_main():
+    load_dotenv("../.env")
+    schedule.every().day.at("18:30").do(main)
+
+    while True:
+        schedule.run_pending()
+
+
 if __name__ == "__main__":
-    main()
+    super_main()
