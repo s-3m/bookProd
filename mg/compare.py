@@ -102,7 +102,7 @@ def main():
     logger.info("Start MG parsing")
     sample = give_me_sample(BASE_LINUX_DIR, prefix="mg", merge_obj="id")
 
-    semaphore = asyncio.Semaphore(5)
+    semaphore = asyncio.Semaphore(10)
     asyncio.run(get_gather_data(semaphore, sample))
 
     df_result = pd.DataFrame(sample)
