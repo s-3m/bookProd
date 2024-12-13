@@ -51,7 +51,7 @@ async def get_main_data(session, book, proxy):
     book_url = f"{BASE_URL}/book/{book['article'][:-2]}"
     try:
         async with semaphore:
-            response = await fetch_request(session, book_url, headers, proxy)
+            response = await fetch_request(session, book_url, headers, proxy=proxy)
             if response == "404":
                 book["stock"] = "del"
             else:
