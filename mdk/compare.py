@@ -84,14 +84,16 @@ async def get_gather_data(sample, proxy):
         timeout=timeout,
         trust_env=True,
     ) as session:
-        tasks = [asyncio.create_task(get_main_data(session, book, proxy)) for book in sample]
+        tasks = [
+            asyncio.create_task(get_main_data(session, book, proxy)) for book in sample
+        ]
         await asyncio.gather(*tasks)
 
         # Reparse errors
         logger.warning(f"Errors detected: {len(error_book)}")
         error_book.clear()
         error_tasks = [
-            asyncio.create_task(get_main_data(session, book))
+            asyncio.create_task(get_main_data(session, book, proxy))
             for book in sample
             if book["stock"] == "error"
         ]
