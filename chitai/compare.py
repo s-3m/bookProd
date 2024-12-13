@@ -40,41 +40,39 @@ logger.add(
     format="{time} {level} {message}",
     level="ERROR",
 )
-semaphore = asyncio.Semaphore(15)
 error_book = []
 count = 1
 
 
 async def get_main_data(session, book_item):
-    async with semaphore:
-        try:
-            response = await fetch_request(session, book_item["link"], headers)
-            if response == "404":
-                book_item["stock"] = "del"
-                return
-            soup = bs(response, "lxml")
-            stock = soup.find(
-                "link", attrs={"itemprop": "availability", "href": "InStock"}
-            )
-            if stock:
-                stock = stock.next.strip()
-
-            unavailable_status = soup.find("div", class_="product-unavailable-info")
-
-            if unavailable_status:
-                book_item["stock"] = "del"
-                return
-            book_item["stock"] = stock
-        except Exception as e:
+    try:
+        response = await fetch_request(session, book_item["link"], headers)
+        if response == "404":
             book_item["stock"] = "del"
-            error_book.append(book_item["article"])
-            logger.exception(f"ERROR - {book_item['link']}")
-            with open(f"{BASE_LINUX_DIR}/error.txt", "a") as f:
-                f.write(f"{book_item['link']} --- {e}\n")
-        finally:
-            global count
-            print(f"\rDone - {count}", end="")
-            count += 1
+            return
+        soup = bs(response, "lxml")
+        stock = soup.find(
+            "link", attrs={"itemprop": "availability", "href": "InStock"}
+        )
+        if stock:
+            stock = stock.next.strip()
+
+        unavailable_status = soup.find("div", class_="product-unavailable-info")
+
+        if unavailable_status:
+            book_item["stock"] = "del"
+            return
+        book_item["stock"] = stock
+    except Exception as e:
+        book_item["stock"] = "del"
+        error_book.append(book_item["article"])
+        logger.exception(f"ERROR - {book_item['link']}")
+        with open(f"{BASE_LINUX_DIR}/error.txt", "a") as f:
+            f.write(f"{book_item['link']} --- {e}\n")
+    finally:
+        global count
+        print(f"\rDone - {count}", end="")
+        count += 1
 
 
 async def get_auth_token(session):
@@ -115,7 +113,7 @@ async def get_gather_data(sample):
     timeout = aiohttp.ClientTimeout(total=800)
     async with aiohttp.ClientSession(
         headers=headers,
-        connector=aiohttp.TCPConnector(ssl=False),
+        connector=aiohttp.TCPConnector(ssl=False, limit=15, limit_per_host=15),
         timeout=timeout,
         trust_env=True,
     ) as session:

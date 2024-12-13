@@ -65,7 +65,6 @@ async def get_main_data(session, book):
 
                 book["stock"] = stock
     except Exception as e:
-        book["stock"] = "error"
         error_book.append(book)
         logger.exception(f"ERROR with {book['article'][:-2]}")
         with open(f"{BASE_LINUX_DIR}/error.txt", "a") as f:
@@ -125,9 +124,13 @@ def main():
     logger.success("Script was finished successfully")
 
 
+def super_main():
+    load_dotenv("../.env")
+    schedule.every().day.at("18:30").do(main)
+
+    while True:
+        schedule.run_pending()
+
+
 if __name__ == "__main__":
     main()
-
-# a = [{"a": 1}, {"b": 2}, {"c": 3}]
-# df = pd.DataFrame(a)
-# print(df)
