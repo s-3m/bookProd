@@ -128,11 +128,11 @@ def main():
 
 def super_main():
     load_dotenv("../.env")
-    schedule.every().day.at("18:30").do(main)
+    schedule.every().day.at("06:50").do(main)
 
     while True:
         schedule.run_pending()
 
 
 if __name__ == "__main__":
-    main()
+    super_main()
