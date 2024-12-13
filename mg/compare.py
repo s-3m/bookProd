@@ -1,4 +1,4 @@
-import sys
+import sys, os
 import time
 import schedule
 import pandas.io.formats.excel
@@ -7,9 +7,10 @@ from fake_useragent import UserAgent
 import aiohttp
 import asyncio
 import pandas as pd
-from tg_sender import tg_send_files
 from loguru import logger
 from dotenv import load_dotenv
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from tg_sender import tg_send_files
 from utils import fetch_request, give_me_sample
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
