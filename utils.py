@@ -5,6 +5,8 @@ import pandas as pd
 import numpy as np
 from typing import Literal
 import aiohttp
+import json
+import random
 
 
 def filesdata_to_dict(folder_path: str, combined=False, return_df=False) -> dict | None:
@@ -78,13 +80,23 @@ async def check_danger_string(
     return base_string
 
 
-proxy = "http://4XRUpQ:cKCEtZ@46.161.45.111:9374"
+with open("../mob_proxy.json", "r") as f:
+    proxy_list = json.load(f)
+    print("Proxy инициализирован")
 
 
-async def fetch_request(session, url, headers: dict, sleep=4):
+async def fetch_request(
+    session, url, headers: dict, sleep=4, cookies=None, proxy_flag=True
+):
     for _ in range(20):
         try:
-            async with session.get(url, headers=headers, proxy=proxy) as resp:
+            proxy = random.choice(proxy_list)
+            async with session.get(
+                url,
+                headers=headers,
+                proxy=proxy if proxy_flag else None,
+                cookies=cookies,
+            ) as resp:
                 await asyncio.sleep(sleep) if sleep else None
                 if resp.status == 200:
                     return await resp.text()

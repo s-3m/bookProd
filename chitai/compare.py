@@ -11,7 +11,7 @@ import pandas as pd
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files
-from utils import fetch_request, give_me_sample, proxy
+from utils import fetch_request, give_me_sample
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 
@@ -51,9 +51,7 @@ async def get_main_data(session, book_item):
             book_item["stock"] = "del"
             return
         soup = bs(response, "lxml")
-        stock = soup.find(
-            "link", attrs={"itemprop": "availability", "href": "InStock"}
-        )
+        stock = soup.find("link", attrs={"itemprop": "availability", "href": "InStock"})
         if stock:
             stock = stock.next.strip()
 
@@ -113,7 +111,7 @@ async def get_gather_data(sample):
     timeout = aiohttp.ClientTimeout(total=800)
     async with aiohttp.ClientSession(
         headers=headers,
-        connector=aiohttp.TCPConnector(ssl=False, limit=15, limit_per_host=15),
+        connector=aiohttp.TCPConnector(ssl=False, limit=10, limit_per_host=10),
         timeout=timeout,
         trust_env=True,
     ) as session:
@@ -179,4 +177,5 @@ def super_main():
 
 
 if __name__ == "__main__":
-    super_main()
+    # super_main()
+    main()
