@@ -91,7 +91,9 @@ async def get_gather_data(sample):
         logger.warning(f"Errors detected: {len(error_book)}")
         error_book.clear()
         error_tasks = [
-            asyncio.create_task(get_main_data(session, book)) for book in sample if book["stock"] == "error"
+            asyncio.create_task(get_main_data(session, book))
+            for book in sample
+            if book["stock"] == "error"
         ]
         await asyncio.gather(*error_tasks)
         logger.warning(f"Error not reparse: {len(error_book)}")
