@@ -41,14 +41,15 @@ del_article: set = set(sample.keys())
 result = []
 id_to_add = []
 
-semaphore = asyncio.Semaphore(5)
+semaphore = asyncio.Semaphore(10)
+count = 1
 
 
 async def get_item_data(session, link, main_category):
     link = f"{BASE_URL}{link}"
     global semaphore
     try:
-        item_data = {}
+        item_data = {"Ссылка": link}
         async with semaphore:
             response = await fetch_request(session, link, headers)
             soup = bs(response, "lxml")
@@ -118,6 +119,8 @@ async def get_item_data(session, link, main_category):
             except:
                 item_data["photo"] = "Нет изображения"
 
+            item_data["Артикул"] = isbn + ".0"
+
             if isbn + ".0" in not_in_sale and quantity == "есть в наличии":
                 not_in_sale[isbn + ".0"]["on sale"] = "да"
             elif isbn + ".0" not in sample and quantity == "есть в наличии":
@@ -130,6 +133,9 @@ async def get_item_data(session, link, main_category):
                     prices[d][isbn + ".0"]["price"] = price
 
             result.append(item_data)
+            global count
+            print(f"\rDONE - {count}", end="")
+            count += 1
     except Exception as e:
         logger.exception(link)
         with open(f"{BASE_LINUX_DIR}/error.txt", "a+", encoding="utf-8") as f:
