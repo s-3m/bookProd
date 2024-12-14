@@ -42,7 +42,7 @@ logger.add(
     format="{time} {level} {message}",
     level="ERROR",
 )
-semaphore = asyncio.Semaphore(15)
+# semaphore = asyncio.Semaphore(15)
 error_book = []
 count = 1
 
@@ -50,20 +50,20 @@ count = 1
 async def get_main_data(session, book, proxy):
     book_url = f"{BASE_URL}/book/{book['article'][:-2]}"
     try:
-        async with semaphore:
-            response = await fetch_request(session, book_url, headers, proxy=proxy)
-            if response == "404":
-                book["stock"] = "del"
-            else:
-                soup = bs(response, "lxml")
-                try:
-                    stock = soup.find("div", {"class": "tg-quantityholder"}).get(
-                        "data-maxqty"
-                    )
-                except:
-                    stock = "del"
+        # async with semaphore:
+        response = await fetch_request(session, book_url, headers, proxy=proxy)
+        if response == "404":
+            book["stock"] = "del"
+        else:
+            soup = bs(response, "lxml")
+            try:
+                stock = soup.find("div", {"class": "tg-quantityholder"}).get(
+                    "data-maxqty"
+                )
+            except:
+                stock = "del"
 
-                book["stock"] = stock
+            book["stock"] = stock
     except Exception as e:
         error_book.append(book)
         logger.exception(f"ERROR with {book['article'][:-2]}")
