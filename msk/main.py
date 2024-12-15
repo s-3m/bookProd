@@ -170,7 +170,7 @@ async def get_item_data(session, item: str):
             not_in_sale[article_for_check]["on sale"] = "да"
         elif article_for_check not in sample and item_status is not None:
             id_to_add.append(book_dict)
-        elif article_for_check in sample and item_status is not None:
+        elif article_for_check in id_to_del and item_status is not None:
             id_to_del.remove(article_for_check)
 
         result.append(book_dict)

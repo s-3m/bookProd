@@ -145,7 +145,7 @@ async def get_item_data(session, book: str):
                 not_in_sale[article]["on sale"] = "да"
             elif article not in sample and stock > 0:
                 id_to_add.append(book_data)
-            elif article in sample and stock > 0:
+            elif article in id_to_del and stock > 0:
                 id_to_del.remove(article)
 
             print(f"\rDone - {count}", end="")
