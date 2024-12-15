@@ -1,6 +1,8 @@
 import asyncio
+import json
 import os
 import re
+import random
 import pandas as pd
 import numpy as np
 from typing import Literal
@@ -79,9 +81,13 @@ async def check_danger_string(
 
 
 # proxy = "http://4XRUpQ:cKCEtZ@46.161.45.111:9374"
+with open("proxy.json") as f:
+    proxy_list = json.load(f)
 
 
 async def fetch_request(session, url, headers: dict, sleep=4, proxy=None):
+    if proxy:
+        proxy = random.choice(proxy_list)
     for _ in range(20):
         try:
             async with session.get(url, headers=headers, proxy=proxy) as resp:

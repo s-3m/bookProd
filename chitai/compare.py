@@ -46,7 +46,7 @@ count = 1
 
 async def get_main_data(session, book_item):
     try:
-        response = await fetch_request(session, book_item["link"], headers)
+        response = await fetch_request(session, book_item["link"], headers, proxy=True)
         if response == "404":
             book_item["stock"] = "del"
             return
