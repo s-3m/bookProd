@@ -11,7 +11,7 @@ import pandas as pd
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files
-from utils import fetch_request, give_me_sample, proxy
+from utils import fetch_request, give_me_sample
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 
@@ -51,9 +51,7 @@ async def get_main_data(session, book_item):
             book_item["stock"] = "del"
             return
         soup = bs(response, "lxml")
-        stock = soup.find(
-            "link", attrs={"itemprop": "availability", "href": "InStock"}
-        )
+        stock = soup.find("link", attrs={"itemprop": "availability", "href": "InStock"})
         if stock:
             stock = stock.next.strip()
 
@@ -94,7 +92,9 @@ async def get_auth_token(session):
 async def get_link_from_ajax(session, article):
     params = {
         "phrase": article[:-2],
-        "include": "products",
+        "suggests[page]": 1,
+        "suggests[per-page]": 6,
+        "include": "products,authors,bookCycles,publisherSeries,publishers,categories",
     }
     async with session.get(
         "https://web-gate.chitai-gorod.ru/api/v2/search/search-phrase-suggests",
@@ -113,7 +113,7 @@ async def get_gather_data(sample):
     timeout = aiohttp.ClientTimeout(total=800)
     async with aiohttp.ClientSession(
         headers=headers,
-        connector=aiohttp.TCPConnector(ssl=False, limit=15, limit_per_host=15),
+        connector=aiohttp.TCPConnector(ssl=False, limit=4, limit_per_host=2),
         timeout=timeout,
         trust_env=True,
     ) as session:
@@ -121,9 +121,11 @@ async def get_gather_data(sample):
         for i in sample:
             try:
                 if not i["link"]:
-                    i_link = await get_link_from_ajax(session, i["article"])
-                    i["link"] = f"{BASE_URL}/{i_link}"
+                    i["link"] = "del"
+                    # i_link = await get_link_from_ajax(session, i["article"])
+                    # i["link"] = f"{BASE_URL}/{i_link}"
             except Exception as e:
+                logger.exception(f"ERROR - {i}")
                 i["stock"] = "del"
             if i["link"]:
                 task = asyncio.create_task(get_main_data(session, i))
@@ -149,6 +151,7 @@ async def get_gather_data(sample):
 
 
 def main():
+    print(f" PROXY - {os.getenv("HTTPS_PROXY")}")
     sample = give_me_sample(base_dir=BASE_LINUX_DIR, prefix="chit-gor")
     asyncio.run(get_gather_data(sample))
 
@@ -172,10 +175,11 @@ def main():
 
 def super_main():
     load_dotenv("../.env")
-    schedule.every().day.at("16:00").do(main)
-
-    while True:
-        schedule.run_pending()
+    main()
+    # schedule.every().day.at("16:00").do(main)
+    #
+    # while True:
+    #     schedule.run_pending()
 
 
 if __name__ == "__main__":
