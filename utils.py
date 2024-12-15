@@ -127,6 +127,13 @@ def write_result_files(
             f"{base_dir}/result/{prefix}_price_{price_item}.xlsx", index=True
         )
 
+    df_not_in_sale2 = pd.DataFrame().from_dict(not_in_sale, orient="index")
+    df_not_in_sale2.index.name = "article"
+    df_not_in_sale2 = df_not_in_sale2.loc[df_not_in_sale2["on sale"] == "да"][
+        ["article"]
+    ]
+    df_not_in_sale2.to_excel(f"{base_dir}/result/{prefix}_not_in_sale2.xlsx")
+
 
 def give_me_sample(
     base_dir: str, prefix: str, without_merge=False, merge_obj="Ссылка"
