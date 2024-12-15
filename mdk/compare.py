@@ -65,6 +65,7 @@ async def get_main_data(session, book, proxy):
 
             book["stock"] = stock
     except Exception as e:
+        book["stock"] = "error"
         error_book.append(book)
         logger.exception(f"ERROR with {book['article'][:-2]}")
         with open(f"{BASE_LINUX_DIR}/error.txt", "a") as f:
