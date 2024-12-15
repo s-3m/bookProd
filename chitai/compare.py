@@ -113,7 +113,7 @@ async def get_gather_data(sample):
     timeout = aiohttp.ClientTimeout(total=800)
     async with aiohttp.ClientSession(
         headers=headers,
-        connector=aiohttp.TCPConnector(ssl=False, limit=4, limit_per_host=2),
+        connector=aiohttp.TCPConnector(ssl=False, limit=4, limit_per_host=4),
         timeout=timeout,
         trust_env=True,
     ) as session:
@@ -121,7 +121,7 @@ async def get_gather_data(sample):
         for i in sample:
             try:
                 if not i["link"]:
-                    i["link"] = "del"
+                    i["stock"] = "del"
                     # i_link = await get_link_from_ajax(session, i["article"])
                     # i["link"] = f"{BASE_URL}/{i_link}"
             except Exception as e:
