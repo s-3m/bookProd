@@ -62,7 +62,7 @@ hard_delete = DF_danger_string[DF_danger_string.columns[2]].dropna().to_list()
 
 
 async def check_danger_string(
-    base_string: str, place_to_check: Literal["title", "description"]
+        base_string: str, place_to_check: Literal["title", "description"]
 ):
     if place_to_check == "title":
         if any(x in base_string for x in hard_delete):
@@ -87,7 +87,7 @@ with open("proxy.json") as f:
 
 async def fetch_request(session, url, headers: dict, sleep=4, proxy=None):
     if proxy:
-        proxy = random.choice(proxy_list)
+        proxy = "http://" + random.choice(proxy_list)
     for _ in range(20):
         try:
             async with session.get(url, headers=headers, proxy=proxy) as resp:
@@ -104,13 +104,13 @@ async def fetch_request(session, url, headers: dict, sleep=4, proxy=None):
 
 
 def write_result_files(
-    base_dir: str,
-    prefix: str,
-    all_books_result,
-    id_to_add: list,
-    id_to_del: list | set,
-    not_in_sale: dict,
-    prices: dict[str, dict],
+        base_dir: str,
+        prefix: str,
+        all_books_result,
+        id_to_add: list,
+        id_to_del: list | set,
+        not_in_sale: dict,
+        prices: dict[str, dict],
 ):
     all_result_df = pd.DataFrame(all_books_result).drop_duplicates(subset="Артикул")
     all_result_df.to_excel(f"{base_dir}/result/{prefix}_all.xlsx", index=False)
@@ -142,7 +142,7 @@ def write_result_files(
 
 
 def give_me_sample(
-    base_dir: str, prefix: str, without_merge=False, merge_obj="Ссылка"
+        base_dir: str, prefix: str, without_merge=False, merge_obj="Ссылка"
 ) -> list[dict]:
     path_to_sample = os.path.join(base_dir, "..")
     df1 = filesdata_to_dict(f"{path_to_sample}/sale", combined=True, return_df=True)
