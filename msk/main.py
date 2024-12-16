@@ -180,17 +180,17 @@ async def get_item_data(session, item: str):
         book_dict.update(details_dict)
 
         article_for_check = article + ".0"
-        item_status = soup.find("div", class_="book__buy")
+        item_status = soup.find("div", class_="book__shop-name").text.strip().lower()
 
         for d in prices:
-            if article_for_check in prices[d] and item_status is not None:
+            if article_for_check in prices[d] and item_status != "нет в наличии":
                 prices[d][article_for_check]["price"] = price
 
-        if article_for_check in not_in_sale and item_status is not None:
+        if article_for_check in not_in_sale and item_status != "нет в наличии":
             not_in_sale[article_for_check]["on sale"] = "да"
-        if article_for_check not in sample and item_status is not None:
+        elif article_for_check not in sample and item_status != "нет в наличии":
             id_to_add.append(book_dict)
-        if article_for_check in id_to_del and item_status is not None:
+        if article_for_check in id_to_del and item_status != "нет в наличии":
             id_to_del.remove(article_for_check)
 
         result.append(book_dict)
