@@ -44,11 +44,12 @@ result = []
 item_error = []
 page_error = []
 id_to_add = []
-id_to_del = []
 
 prices = filesdata_to_dict(f"{BASE_LINUX_DIR}/prices")
 sample = filesdata_to_dict(f"{BASE_LINUX_DIR}/sale", combined=True)
 not_in_sale = filesdata_to_dict(f"{BASE_LINUX_DIR}/not_in_sale", combined=True)
+
+id_to_del = set(sample.keys())
 
 
 async def get_item_data(session, item: str):
@@ -64,9 +65,7 @@ async def get_item_data(session, item: str):
     try:
         resp = await fetch_request(session, link, headers)
         if resp == "404":
-            if article + ".0" in sample:
-                id_to_del.append({"article": article + ".0"})
-                return
+            return
         soup = bs(resp, "lxml")
         age_control = soup.find("input", id="age_verification_form_mode")
         script_index = 1
@@ -171,8 +170,8 @@ async def get_item_data(session, item: str):
             not_in_sale[article_for_check]["on sale"] = "да"
         elif article_for_check not in sample and item_status is not None:
             id_to_add.append(book_dict)
-        elif article_for_check in sample and item_status is None:
-            id_to_del.append({"article": article_for_check})
+        elif article_for_check in id_to_del and item_status is not None:
+            id_to_del.remove(article_for_check)
 
         result.append(book_dict)
         print(f"\rDone - {count}", end="")
@@ -206,19 +205,27 @@ async def get_gather_data():
     # semaphore = asyncio.Semaphore(10)
     logger.info("Start to collect data")
     async with aiohttp.ClientSession(
-        connector=aiohttp.TCPConnector(ssl=False), trust_env=True
+        connector=aiohttp.TCPConnector(ssl=False, limit_per_host=10), trust_env=True
     ) as session:
-        response = await session.get(f"{BASE_URL}/books/", headers=headers)
-        response_text = await response.text()
-        soup = bs(response_text, "lxml")
-        max_pagination = soup.find("ul", class_="pager__list").find_all("li")[-2].text
-        tasks = []
-        logger.info(f"Page find - {max_pagination}")
-        # max_pagination = 30
-        for page in range(1, int(max_pagination) + 1):
-            page_link = f"{BASE_URL}/books/?page={page}"
-            await get_page_data(session, page_link, tasks)
-        await asyncio.gather(*tasks)
+        # response = await session.get(f"{BASE_URL}/books/", headers=headers)
+        all_categories = [
+            "https://www.moscowbooks.ru/books/",
+            "https://www.moscowbooks.ru/books/exclusive-and-collective-editions/",
+            "https://www.moscowbooks.ru/bookinist/",
+        ]
+        for cat in all_categories:
+            response = await fetch_request(session, cat, headers)
+            soup = bs(response, "lxml")
+            max_pagination = (
+                soup.find("ul", class_="pager__list").find_all("li")[-2].text
+            )
+            tasks = []
+            logger.info(f"Page find - {max_pagination}")
+            # max_pagination = 30
+            for page in range(1, int(max_pagination) + 1):
+                page_link = f"{cat}?page={page}"
+                await get_page_data(session, page_link, tasks)
+            await asyncio.gather(*tasks)
 
         # Reparse page errors
         page_error_tasks = []

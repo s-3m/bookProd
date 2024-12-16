@@ -1,12 +1,12 @@
 import asyncio
+import json
 import os
 import re
+import random
 import pandas as pd
 import numpy as np
 from typing import Literal
 import aiohttp
-import json
-import random
 
 
 def filesdata_to_dict(folder_path: str, combined=False, return_df=False) -> dict | None:
@@ -80,23 +80,17 @@ async def check_danger_string(
     return base_string
 
 
-with open("../mob_proxy.json", "r") as f:
+# proxy = "http://4XRUpQ:cKCEtZ@46.161.45.111:9374"
+with open("proxy.json") as f:
     proxy_list = json.load(f)
-    print("Proxy инициализирован")
 
 
-async def fetch_request(
-    session, url, headers: dict, sleep=4, cookies=None, proxy_flag=True
-):
+async def fetch_request(session, url, headers: dict, sleep=4, proxy=None):
+    if proxy:
+        proxy = "http://" + random.choice(proxy_list)
     for _ in range(20):
         try:
-            proxy = random.choice(proxy_list)
-            async with session.get(
-                url,
-                headers=headers,
-                proxy=proxy if proxy_flag else None,
-                cookies=cookies,
-            ) as resp:
+            async with session.get(url, headers=headers, proxy=proxy) as resp:
                 await asyncio.sleep(sleep) if sleep else None
                 if resp.status == 200:
                     return await resp.text()
@@ -110,13 +104,13 @@ async def fetch_request(
 
 
 def write_result_files(
-    base_dir: str,
-    prefix: str,
-    all_books_result,
-    id_to_add: list,
-    id_to_del: list | set,
-    not_in_sale: dict,
-    prices: dict[str, dict],
+        base_dir: str,
+        prefix: str,
+        all_books_result,
+        id_to_add: list,
+        id_to_del: list | set,
+        not_in_sale: dict,
+        prices: dict[str, dict],
 ):
     all_result_df = pd.DataFrame(all_books_result).drop_duplicates(subset="Артикул")
     all_result_df.to_excel(f"{base_dir}/result/{prefix}_all.xlsx", index=False)
@@ -139,9 +133,16 @@ def write_result_files(
             f"{base_dir}/result/{prefix}_price_{price_item}.xlsx", index=True
         )
 
+    df_not_in_sale2 = pd.DataFrame().from_dict(not_in_sale, orient="index")
+    df_not_in_sale2.index.name = "article"
+    df_not_in_sale2 = df_not_in_sale2.loc[df_not_in_sale2["on sale"] == "да"][
+        ["article"]
+    ]
+    df_not_in_sale2.to_excel(f"{base_dir}/result/{prefix}_not_in_sale2.xlsx")
+
 
 def give_me_sample(
-    base_dir: str, prefix: str, without_merge=False, merge_obj="Ссылка"
+        base_dir: str, prefix: str, without_merge=False, merge_obj="Ссылка"
 ) -> list[dict]:
     path_to_sample = os.path.join(base_dir, "..")
     df1 = filesdata_to_dict(f"{path_to_sample}/sale", combined=True, return_df=True)

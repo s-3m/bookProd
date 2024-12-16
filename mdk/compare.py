@@ -42,29 +42,30 @@ logger.add(
     format="{time} {level} {message}",
     level="ERROR",
 )
-semaphore = asyncio.Semaphore(15)
+# semaphore = asyncio.Semaphore(15)
 error_book = []
 count = 1
 
 
-async def get_main_data(session, book):
+async def get_main_data(session, book, proxy):
     book_url = f"{BASE_URL}/book/{book['article'][:-2]}"
     try:
-        async with semaphore:
-            response = await fetch_request(session, book_url, headers)
-            if response == "404":
-                book["stock"] = "del"
-            else:
-                soup = bs(response, "lxml")
-                try:
-                    stock = soup.find("div", {"class": "tg-quantityholder"}).get(
-                        "data-maxqty"
-                    )
-                except:
-                    stock = "del"
+        # async with semaphore:
+        response = await fetch_request(session, book_url, headers, proxy=proxy)
+        if response == "404":
+            book["stock"] = "del"
+        else:
+            soup = bs(response, "lxml")
+            try:
+                stock = soup.find("div", {"class": "tg-quantityholder"}).get(
+                    "data-maxqty"
+                )
+            except:
+                stock = "del"
 
-                book["stock"] = stock
+            book["stock"] = stock
     except Exception as e:
+        book["stock"] = "error"
         error_book.append(book)
         logger.exception(f"ERROR with {book['article'][:-2]}")
         with open(f"{BASE_LINUX_DIR}/error.txt", "a") as f:
@@ -75,23 +76,25 @@ async def get_main_data(session, book):
         count += 1
 
 
-async def get_gather_data(sample):
+async def get_gather_data(sample, proxy):
     logger.info("Start collect data")
     timeout = aiohttp.ClientTimeout(total=800)
     async with aiohttp.ClientSession(
         headers=headers,
-        connector=aiohttp.TCPConnector(ssl=False),
+        connector=aiohttp.TCPConnector(ssl=False, limit_per_host=5),
         timeout=timeout,
         trust_env=True,
     ) as session:
-        tasks = [asyncio.create_task(get_main_data(session, book)) for book in sample]
+        tasks = [
+            asyncio.create_task(get_main_data(session, book, proxy)) for book in sample
+        ]
         await asyncio.gather(*tasks)
 
         # Reparse errors
         logger.warning(f"Errors detected: {len(error_book)}")
         error_book.clear()
         error_tasks = [
-            asyncio.create_task(get_main_data(session, book))
+            asyncio.create_task(get_main_data(session, book, proxy))
             for book in sample
             if book["stock"] == "error"
         ]
@@ -108,9 +111,10 @@ async def get_gather_data(sample):
 
 
 def main():
+    proxy = os.getenv("PROXY")
     logger.info("Start script")
     sample = give_me_sample(base_dir=BASE_LINUX_DIR, prefix="mdk", without_merge=True)
-    asyncio.run(get_gather_data(sample))
+    asyncio.run(get_gather_data(sample, proxy))
     logger.info("Start write files")
 
     df = pd.DataFrame(sample)
@@ -133,7 +137,7 @@ def main():
 
 def super_main():
     load_dotenv("../.env")
-    schedule.every().day.at("06:50").do(main)
+    schedule.every().day.at("22:50").do(main)
 
     while True:
         schedule.run_pending()

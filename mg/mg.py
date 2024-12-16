@@ -41,14 +41,15 @@ del_article: set = set(sample.keys())
 result = []
 id_to_add = []
 
-semaphore = asyncio.Semaphore(15)
+semaphore = asyncio.Semaphore(10)
+count = 1
 
 
 async def get_item_data(session, link, main_category):
     link = f"{BASE_URL}{link}"
     global semaphore
     try:
-        item_data = {}
+        item_data = {"Ссылка": link}
         async with semaphore:
             response = await fetch_request(session, link, headers)
             soup = bs(response, "lxml")
@@ -118,11 +119,13 @@ async def get_item_data(session, link, main_category):
             except:
                 item_data["photo"] = "Нет изображения"
 
+            item_data["Артикул"] = isbn + ".0"
+
             if isbn + ".0" in not_in_sale and quantity == "есть в наличии":
                 not_in_sale[isbn + ".0"]["on sale"] = "да"
             elif isbn + ".0" not in sample and quantity == "есть в наличии":
                 id_to_add.append(item_data)
-            elif isbn + ".0" in sample and quantity == "есть в наличии":
+            elif isbn + ".0" in del_article and quantity == "есть в наличии":
                 del_article.remove(isbn + ".0")
 
             for d in prices:
@@ -130,6 +133,9 @@ async def get_item_data(session, link, main_category):
                     prices[d][isbn + ".0"]["price"] = price
 
             result.append(item_data)
+            global count
+            print(f"\rDONE - {count}", end="")
+            count += 1
     except Exception as e:
         logger.exception(link)
         with open(f"{BASE_LINUX_DIR}/error.txt", "a+", encoding="utf-8") as f:
@@ -146,7 +152,7 @@ async def get_gather_data():
         soup = bs(response_text, "lxml")
         cat_list = soup.find_all("h4")
         cat_list = [item.find("a")["href"] for item in cat_list[:8]]
-
+        cat_error = []
         for cat_link in cat_list:
             try:
                 url = BASE_URL + cat_link
@@ -179,10 +185,28 @@ async def get_gather_data():
                         )
                         tasks.append(task)
             except Exception as e:
+                cat_error.append(f"{BASE_URL}{cat_link}?page={page_numb}&orderNew=asc")
                 with open(f"{BASE_LINUX_DIR}/cat_error.txt", "a+") as f:
                     f.write(f"{BASE_URL}{cat_link} ----- {e}\n")
                     continue
         await asyncio.gather(*tasks)
+
+        if cat_error:
+            reparse_tasks = []
+            for link in cat_error:
+                try:
+                    response = await fetch_request(session, link, headers)
+                    soup = bs(response, "lxml")
+                    items_on_page = soup.find_all("div", class_="product_img")
+                    items_links = [item.find("a")["href"] for item in items_on_page]
+                    for item_link in items_links:
+                        task = asyncio.create_task(
+                            get_item_data(session, item_link, main_category)
+                        )
+                        reparse_tasks.append(task)
+                except Exception as e:
+                    continue
+            await asyncio.gather(*reparse_tasks)
 
 
 def main():

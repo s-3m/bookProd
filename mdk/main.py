@@ -5,7 +5,6 @@ import pandas.io.formats.excel
 from bs4 import BeautifulSoup as bs
 import aiohttp
 import asyncio
-import pandas as pd
 from loguru import logger
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -45,7 +44,7 @@ headers = {
 
 all_books_result = []
 id_to_add = []
-id_to_del = []
+id_to_del = set(sample.keys())
 
 done_count = 0
 item_error = []
@@ -146,8 +145,8 @@ async def get_item_data(session, book: str):
                 not_in_sale[article]["on sale"] = "да"
             elif article not in sample and stock > 0:
                 id_to_add.append(book_data)
-            elif article in sample and stock == 0:
-                id_to_del.append({"article": article})
+            elif article in id_to_del and stock > 0:
+                id_to_del.remove(article)
 
             print(f"\rDone - {count}", end="")
             count += 1
@@ -205,6 +204,7 @@ async def get_category_data(session, category: str):
 def get_all_catalogs():
     with open("all_catalog.json") as file:
         cat_list = json.load(file)
+        cat_list = [i for i in cat_list if int(i.split("=")[-1]) < 3259]
     return cat_list
 
 
@@ -213,7 +213,7 @@ async def get_gather_data():
     logger.info("Начинаю сбор данных МДК")
     tasks = []
     async with aiohttp.ClientSession(
-        headers=headers, connector=aiohttp.TCPConnector(ssl=False)
+        headers=headers, connector=aiohttp.TCPConnector(ssl=False, limit_per_host=10)
     ) as session:
 
         logger.info("Формирование списка категорий")
