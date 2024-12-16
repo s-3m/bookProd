@@ -138,7 +138,9 @@ async def get_item_data(session, item: str):
 
         # Price
         try:
-            price = soup.find("div", class_="book__price").text.strip()
+            price = soup.find("div", class_="book__price")
+            if price:
+                price = price.text.strip()
         except:
             price = "Цена не указана"
 
@@ -168,7 +170,7 @@ async def get_item_data(session, item: str):
 
         book_dict = {
             "Ссылка": link,
-            "Артикул": article + ".0",
+            "Артикул_OZ": article + ".0",
             "title": title,
             "author": author,
             "description": description,
@@ -183,7 +185,7 @@ async def get_item_data(session, item: str):
         item_status = soup.find("div", class_="book__shop-name").text.strip().lower()
 
         for d in prices:
-            if article_for_check in prices[d] and item_status != "нет в наличии":
+            if article_for_check in prices[d] and price is not None:
                 prices[d][article_for_check]["price"] = price
 
         if article_for_check in not_in_sale and item_status != "нет в наличии":
@@ -266,6 +268,7 @@ async def get_gather_data():
 
         # Reparse empty string
         # del file
+        logger.info("Reparse del file")
         del_list = [{"Артикул": i} for i in id_to_del]
         reparse_del_tasks = [
             asyncio.create_task(check_empty_element(session, item)) for item in del_list
@@ -273,6 +276,7 @@ async def get_gather_data():
         await asyncio.gather(*reparse_del_tasks)
 
         # price files
+        logger.info("Reparse empty price")
         for i_dict in prices:
             prices_tasks = [
                 asyncio.create_task(
