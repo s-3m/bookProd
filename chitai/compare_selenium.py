@@ -190,17 +190,17 @@ def main():
 
     logger.success("Finish write to excel")
 
-    asyncio.run(tg_send_files([new_stock_path, del_path], "Chit-gor"))
+    # asyncio.run(tg_send_files([new_stock_path, del_path], "Chit-gor"))
 
     logger.success("Script was finished successfully")
 
 
-def super_main():
-    load_dotenv("../.env")
-    schedule.every().day.at("16:00").do(main)
-
-    while True:
-        schedule.run_pending()
+# def super_main():
+#     load_dotenv("../.env")
+#     schedule.every().day.at("16:00").do(main)
+#
+#     while True:
+#         schedule.run_pending()
 
 
 if __name__ == "__main__":
