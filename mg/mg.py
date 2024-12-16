@@ -119,7 +119,7 @@ async def get_item_data(session, link, main_category):
             except:
                 item_data["photo"] = "Нет изображения"
 
-            item_data["Артикул"] = isbn + ".0"
+            item_data["Артикул_OZ"] = isbn + ".0"
 
             if isbn + ".0" in not_in_sale and quantity == "есть в наличии":
                 not_in_sale[isbn + ".0"]["on sale"] = "да"

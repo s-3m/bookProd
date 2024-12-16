@@ -121,7 +121,7 @@ async def get_item_data(session, book: str):
             book_data = {
                 "Ссылка": link,
                 "Название": title,
-                "Артикул": article,
+                "Артикул_OZ": article,
                 "Фото": photo,
                 "Автор": author,
                 "Цена": price,

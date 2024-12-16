@@ -128,7 +128,7 @@ async def get_book_data(session, book_url: str):
             detail_dict = None
         article = detail_dict["ID товара"] + ".0"
         book_result = {
-            "Артикул": article,
+            "Артикул_OZ": article,
             "Ссылка": link,
             "Название": title,
             "Автор": author,

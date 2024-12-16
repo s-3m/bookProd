@@ -133,10 +133,10 @@ async def get_item_data(item, session, main_category=None):
             article = (
                 soup.find("div", class_="article").find_all("span")[1].text.strip()
             )
-            res_dict["Артикул"] = article + ".0"
+            res_dict["Артикул_OZ"] = article + ".0"
         except:
             article = "Нет артикула"
-            res_dict["Артикул"] = article
+            res_dict["Артикул_OZ"] = article
 
         try:
             photo_link = soup.find(

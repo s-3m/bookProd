@@ -172,7 +172,7 @@ async def get_book_data(session, book_link):
 
             book_result.update(main_char)
             article = main_char["Артикул"] + ".0"
-            book_result["Артикул"] = article
+            book_result["Артикул_OZ"] = article
             unique_books_articles.add(article)
 
             for d in prices:

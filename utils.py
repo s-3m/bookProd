@@ -153,8 +153,9 @@ def give_me_sample(
         if not without_merge:
             df2 = pd.read_excel(
                 f"{path_to_sample}/result/{prefix}_all.xlsx",
-                converters={"Артикул": str, merge_obj: str},
-            )[["Артикул", merge_obj]]
+                converters={"Артикул_OZ": str, merge_obj: str},
+            )[["Артикул_OZ", merge_obj]]
+            df2.columns = ["Артикул", merge_obj]
 
             sample = pd.merge(df1[["Артикул"]], df2, on="Артикул", how="left")
             sample.columns = ["article", merge_obj_translate]
