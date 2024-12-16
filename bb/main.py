@@ -43,7 +43,7 @@ count = 1
 empty_price_count = 1
 result = []
 
-id_to_del = []
+id_to_del = set(sample.keys())
 id_to_add = []
 
 
@@ -64,17 +64,18 @@ def to_write_file(temporary=False, final_result=False):
     for price_item in prices:
         df_result = pd.DataFrame().from_dict(prices[price_item], orient="index")
         df_result.index.name = "article"
-        df_result.to_excel(f"{filepath}/price_{price_item}.xlsx", index=True)
+        df_result.to_excel(f"{filepath}/bb_price_{price_item}.xlsx", index=True)
 
     df_not_in_sale = pd.DataFrame().from_dict(not_in_sale, orient="index")
     df_not_in_sale.index.name = "article"
-    df_not_in_sale.to_excel(f"{filepath}/not_in_sale.xlsx")
+    df_not_in_sale.to_excel(f"{filepath}/bb_not_in_sale.xlsx")
 
     df_add = pd.DataFrame(id_to_add)
-    df_add.to_excel(f"{filepath}/add.xlsx", index=False)
+    df_add.to_excel(f"{filepath}/bb_add.xlsx", index=False)
 
     df_del = pd.DataFrame(id_to_del)
-    df_del.to_excel(f"{filepath}/del.xlsx", index=False)
+    df_del.columns = ["Артикул"]
+    df_del.to_excel(f"{filepath}/bb_del.xlsx", index=False)
 
 
 semaphore = asyncio.Semaphore(8)
@@ -196,8 +197,8 @@ async def get_item_data(item, session, main_category=None):
         elif article + ".0" not in sample and quantity != "Нет в наличии":
             res_dict["Артикул"] = article + ".0"
             id_to_add.append(res_dict)
-        elif article + ".0" in sample and quantity == "Нет в наличии":
-            id_to_del.append({"article": article + ".0"})
+        elif article + ".0" in id_to_del and quantity != "Нет в наличии":
+            id_to_del.remove(article + ".0")
 
         if count % 50 == 0:
             to_write_file(temporary=True)

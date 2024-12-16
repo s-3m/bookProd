@@ -57,8 +57,7 @@ sample = filesdata_to_dict(f"{BASE_LINUX_DIR}/sale", combined=True)
 not_in_sale = filesdata_to_dict(f"{BASE_LINUX_DIR}/not_in_sale", combined=True)
 
 all_books_result = []
-unique_books_articles = set()
-id_to_del = []
+id_to_del = set(sample.keys())
 id_to_add = []
 
 done_count = 0
@@ -173,7 +172,6 @@ async def get_book_data(session, book_link):
             book_result.update(main_char)
             article = main_char["Артикул"] + ".0"
             book_result["Артикул_OZ"] = article
-            unique_books_articles.add(article)
 
             for d in prices:
                 if article in prices[d] and item_status:
@@ -183,8 +181,8 @@ async def get_book_data(session, book_link):
                 not_in_sale[article]["on sale"] = "да"
             elif article not in sample and item_status:
                 id_to_add.append(book_result)
-            elif article in sample and not item_status:
-                id_to_del.append({"article": article})
+            elif article in id_to_del and item_status:
+                id_to_del.remove(article)
 
             all_books_result.append(book_result)
             global done_count
@@ -335,11 +333,6 @@ async def get_gather_data():
 
         await asyncio.gather(*new_tasks)
         logger.success("Сбор данных завершён")
-
-    # create del file
-    for i in sample:
-        if i not in unique_books_articles:
-            id_to_del.append({"article": i})
 
     logger.info("Начинаю запись данных в файл")
     write_result_files(

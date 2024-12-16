@@ -45,7 +45,7 @@ headers = {
 
 all_books_result = []
 id_to_add = []
-id_to_del = []
+id_to_del = set(sample.keys())
 
 done_count = 0
 item_error = []
@@ -150,8 +150,8 @@ async def get_book_data(session, book_url: str):
             not_in_sale[article]["on sale"] = "да"
         elif article not in sample and stock_status:
             id_to_add.append(book_result)
-        elif article in sample and stock_status is None:
-            id_to_del.append({"article": article})
+        elif article in sample and stock_status is not None:
+            id_to_del.remove(article)
 
         all_books_result.append(book_result)
 
