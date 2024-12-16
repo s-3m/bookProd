@@ -52,6 +52,26 @@ not_in_sale = filesdata_to_dict(f"{BASE_LINUX_DIR}/not_in_sale", combined=True)
 id_to_del = set(sample.keys())
 
 
+async def check_empty_element(session, item, check_price=False):
+    link = f"{BASE_URL}/book/{item["Артикул"][:-2]}"
+    resp = await fetch_request(session, link, headers)
+    soup = bs(resp, "lxml")
+
+    if not check_price:
+        item_status = soup.find("div", class_="book__buy")
+
+        if item_status:
+            item["Статус"] = "В продаже"
+        else:
+            item["Статус"] = "Не в продаже"
+
+    if check_price:
+        price = soup.find("div", class_="book__price")
+        if price:
+            price = price.text.strip()
+            item["price"] = price
+
+
 async def get_item_data(session, item: str):
     global count
     link = item if item.startswith("https") else BASE_URL + item
@@ -168,9 +188,9 @@ async def get_item_data(session, item: str):
 
         if article_for_check in not_in_sale and item_status is not None:
             not_in_sale[article_for_check]["on sale"] = "да"
-        elif article_for_check not in sample and item_status is not None:
+        if article_for_check not in sample and item_status is not None:
             id_to_add.append(book_dict)
-        elif article_for_check in id_to_del and item_status is not None:
+        if article_for_check in id_to_del and item_status is not None:
             id_to_del.remove(article_for_check)
 
         result.append(book_dict)
@@ -244,24 +264,41 @@ async def get_gather_data():
                 items_error_tasks.append(task)
             await asyncio.gather(*items_error_tasks)
 
-        print()
-        logger.success("Finish collect data")
+        # Reparse empty string
+        # del file
+        del_list = [{"Артикул": i} for i in id_to_del]
+        reparse_del_tasks = [
+            asyncio.create_task(check_empty_element(session, item)) for item in del_list
+        ]
+        await asyncio.gather(*reparse_del_tasks)
 
-
-@logger.catch
-def main():
-    asyncio.run(get_gather_data())
+        # price files
+        for i_dict in prices:
+            prices_tasks = [
+                asyncio.create_task(
+                    check_empty_element(session, item, check_price=True)
+                )
+                for item in i_dict
+                if item["price"] == ""
+            ]
+            await asyncio.gather(*prices_tasks)
+    print()
     logger.info("Start to write data in file")
     write_result_files(
         base_dir=BASE_LINUX_DIR,
         prefix="msk",
         all_books_result=result,
         id_to_add=id_to_add,
-        id_to_del=id_to_del,
+        id_to_del=[i["Артикул"] for i in del_list if i["Статус"] == "Не в продаже"],
         not_in_sale=not_in_sale,
         prices=prices,
     )
     logger.success("Data was wrote in file successfully")
+
+
+@logger.catch
+def main():
+    asyncio.run(get_gather_data())
 
 
 if __name__ == "__main__":
