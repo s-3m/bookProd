@@ -93,7 +93,11 @@ async def get_book_data(session, book_url: str):
             photo = "Нет фото"
 
         try:
-            price = soup.find("span", attrs={"itemprop": "price"}).get("content")
+            sale = soup.find("span", class_="product-offer-price__old-price")
+            if sale:
+                price = sale.text.strip()[:-1]
+            else:
+                price = soup.find("span", attrs={"itemprop": "price"}).get("content")
         except:
             price = "Цена не указана"
 
