@@ -9,7 +9,6 @@ from fake_useragent import UserAgent
 from bs4 import BeautifulSoup as bs
 import time
 
-from bb.main import sample
 from selenium_data import get_book_data
 from tg_sender import tg_send_files
 
