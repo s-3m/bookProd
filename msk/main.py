@@ -233,7 +233,6 @@ async def get_gather_data():
         all_categories = [
             "https://www.moscowbooks.ru/books/",
             "https://www.moscowbooks.ru/books/exclusive-and-collective-editions/",
-            "https://www.moscowbooks.ru/bookinist/",
         ]
         for cat in all_categories:
             response = await fetch_request(session, cat, headers)
