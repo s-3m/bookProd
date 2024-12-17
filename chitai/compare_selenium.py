@@ -66,16 +66,22 @@ def get_main_data(book_item):
                 break
 
         soup = bs(response_text, "lxml")
+
+        online_option = soup.find("div", class_="product-offer-price")
+        in_shop_option = soup.find("p", class_="product-offer-header__title")
+        not_in_option = soup.find("div", class_="detail-product__unavailable")
+
         stock = soup.find("link", attrs={"itemprop": "availability", "href": "InStock"})
-        if stock:
-            stock = stock.next.strip()
 
-        unavailable_status = soup.find("div", class_="product-unavailable-info")
-
-        if unavailable_status:
+        if online_option or in_shop_option:
+            if stock:
+                stock = stock.next.strip()
+                book_item["stock"] = stock
+            else:
+                book_item["stock"] = "Только в магазине"
+        elif not_in_option:
             book_item["stock"] = "del"
-            return
-        book_item["stock"] = stock
+
     except Exception as e:
         book_item["stock"] = "error"
         error_book.append(book_item["article"])
