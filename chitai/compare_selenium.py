@@ -47,14 +47,30 @@ error_book = []
 count = 1
 
 
+def get_link_from_ajax(article):
+
+    params = {
+        "phrase": article[:-2],
+        "customerCityId": "213",
+    }
+    resp = requests.get(
+        "https://web-gate.chitai-gorod.ru/api/v2/search/product",
+        headers=headers,
+        params=params,
+    )
+    response = resp.json()
+    link = response["included"][0]["attributes"]["url"]
+    return link
+
+
 def get_main_data(book_item):
     try:
-        # response = await fetch_request(
-        #     session, book_item["link"], headers, proxy=os.getenv("PROXY")
-        # )
-        # if response == "404":
-        #     book_item["stock"] = "del"
-        #     return
+        if not book_item["link"]:
+            logger.info("Нет ссылки")
+            i_link = get_link_from_ajax(book_item["article"])
+            book_item["link"] = f"{BASE_URL}/{i_link}"
+            logger.info(f"Нашёл ссылку - {book_item["link"]}")
+
         response_text = ""
         for _ in range(5):
             response = requests.get(book_item["link"], headers=headers)
@@ -94,82 +110,37 @@ def get_main_data(book_item):
         count += 1
 
 
-# async def get_auth_token(session):
-#     async with session.get(
-#         "https://www.chitai-gorod.ru",
-#         headers=headers,
-#     ) as resp:
-#         ddd = resp.cookies
-#         acc_token = (
-#             str(ddd["access-token"])
-#             .split("access-token=")[1]
-#             .split(";")[0]
-#             .replace("%20", " ")
-#         )
-#         print(acc_token)
-#         headers["Authorization"] = acc_token
-#
-#
-# async def get_link_from_ajax(session, article):
-#     params = {
-#         "phrase": article[:-2],
-#         "include": "products",
-#     }
-#     async with session.get(
-#         "https://web-gate.chitai-gorod.ru/api/v2/search/search-phrase-suggests",
-#         headers=headers,
-#         params=params,
-#     ) as resp:
-#         response = await resp.json()
-#         link = response["included"][0]["attributes"]["url"]
-#         return link
+async def get_auth_token():
+    resp = requests.get("https://www.chitai-gorod.ru", headers=headers)
+    ddd = resp.cookies
+    acc_token = (
+        str(ddd["access-token"])
+        .split("access-token=")[0]
+        .split(";")[0]
+        .replace("%20", " ")
+    )
+    print(acc_token)
+    headers["Authorization"] = acc_token
 
 
 async def get_gather_data(sample):
     logger.info("Start collect data")
     print()
-    tasks = []
-    # timeout = aiohttp.ClientTimeout(total=800)
-    # async with aiohttp.ClientSession(
-    #     headers=headers,
-    #     connector=aiohttp.TCPConnector(ssl=False, limit=2, limit_per_host=2),
-    #     timeout=timeout,
-    #     trust_env=True,
-    # ) as session:
-    # await get_auth_token(session)
+    await get_auth_token()
 
+    # Main loop
     with ThreadPoolExecutor(max_workers=5) as executor:
-        threads = [executor.submit(get_main_data, i) for i in sample if i["link"]]
-        # for i in sample:
-        # try:
-        #     if not i["link"]:
-        #         i_link = await get_link_from_ajax(session, i["article"])
-        #         i["link"] = f"{BASE_URL}/{i_link}"
-        # except Exception as e:
-        #     i["stock"] = "del"
-        #     if i["link"]:
-        #         task = asyncio.create_task(get_main_data(session, i))
-        #         tasks.append(task)
-        # await asyncio.gather(*tasks)
+        threads = [executor.submit(get_main_data, i) for i in sample]
 
         # Reparse item
-        with ThreadPoolExecutor(max_workers=5) as executor:
-            threads_repars = [
-                executor.submit(get_main_data, i)
-                for i in sample
-                if i["link"] and i["stock"] == "error"
-            ]
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        threads_repars = [
+            executor.submit(get_main_data, i) for i in sample if i["stock"] == "error"
+        ]
 
-        # error_tasks = []
-        # if error_book:
-        #     logger.warning(f"Find {len(error_book)} errors")
-        #     for error_article in error_book:
-        #         for i in sample:
-        #             if i["article"] == error_article:
-        #                 task = asyncio.create_task(get_main_data(session, i))
-        #                 error_tasks.append(task)
-        #                 break
-        #     await asyncio.gather(*error_tasks)
+    for i in sample:
+        if i["stock"] == "error":
+            i["stock"] = "del"
 
     print()
     global count
@@ -179,8 +150,8 @@ async def get_gather_data(sample):
 
 def main():
     # load_dotenv("../.env")
-    # print(os.getenv("PROXY"))
     sample = give_me_sample(base_dir=BASE_LINUX_DIR, prefix="chit-gor")
+    print(len(sample))
     asyncio.run(get_gather_data(sample))
 
     logger.info("Start write to excel")
@@ -196,19 +167,18 @@ def main():
 
     logger.success("Finish write to excel")
 
-    # asyncio.run(tg_send_files([new_stock_path, del_path], "Chit-gor"))
+    asyncio.run(tg_send_files([new_stock_path, del_path], "Chit-gor"))
 
     logger.success("Script was finished successfully")
 
 
-# def super_main():
-#     load_dotenv("../.env")
-#     schedule.every().day.at("16:00").do(main)
-#
-#     while True:
-#         schedule.run_pending()
+def super_main():
+    load_dotenv("../.env")
+    schedule.every().day.at("16:00").do(main)
+
+    while True:
+        schedule.run_pending()
 
 
 if __name__ == "__main__":
-    # super_main()
-    main()
+    super_main()
