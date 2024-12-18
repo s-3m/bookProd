@@ -4,6 +4,8 @@ from fake_useragent import UserAgent
 from bs4 import BeautifulSoup as bs
 import aiohttp
 import asyncio
+
+from filter import filtering_cover
 from selenium_data import get_book_data
 from loguru import logger
 import pandas.io.formats.excel
@@ -50,6 +52,7 @@ sample = filesdata_to_dict(f"{BASE_LINUX_DIR}/sale", combined=True)
 not_in_sale = filesdata_to_dict(f"{BASE_LINUX_DIR}/not_in_sale", combined=True)
 
 id_to_del = set(sample.keys())
+last_isbn = None
 
 
 async def check_empty_element(session, item, check_price=False):
@@ -110,7 +113,7 @@ async def get_item_data(session, item: str):
             author_list = [i.text.strip() for i in author_div.find_all("a")]
             author = ", ".join(author_list)
         except:
-            author = "Автор не указан"
+            author = "Нет автора"
 
         # Photo
         try:
@@ -165,6 +168,41 @@ async def get_item_data(session, item: str):
                 i.find_all()[0].text.strip().split(":")[0]: i.find_all()[1].text.strip()
                 for i in all_details
             }
+            isbn = details_dict.get("ISBN")
+            publish_year = details_dict.get("Год издания")
+            age = details_dict.get("Возраст")
+            publisher = details_dict.get("Издательство")
+            cover_type = details_dict.get("Тип обложки")
+            if not cover_type:
+                details_dict["Тип обложки"] = "Мягкая обложка"
+            else:
+                details_dict["Тип обложки"] = filtering_cover(cover_type)
+
+            if not publisher:
+                details_dict["Издательство"] = "АСТ"
+
+            if age:
+                if age[0] == "0":
+                    details_dict["Возраст"] = "1+"
+                elif "-" in age:
+                    age = age.split("-")[0].strip() + "+"
+                    details_dict["Возраст"] = age
+
+            if publish_year:
+                if (
+                    "<2018"
+                    or "< 2018"
+                    or ">2024"
+                    or "> 2024" in publish_year
+                    or len(publish_year) < 4
+                ):
+                    details_dict["Год издания"] = "2018"
+
+            global last_isbn
+            if isbn:
+                last_isbn = isbn
+            else:
+                details_dict["ISBN"] = last_isbn
         except:
             details_dict = {}
 
