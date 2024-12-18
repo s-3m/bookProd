@@ -266,7 +266,7 @@ async def get_gather_data():
         logger.info(f"Найдено {len(all_categories)} категорий")
         logger.info(f"Начался сбор данных по категориям")
 
-        for main_category in all_categories[:1]:
+        for main_category in all_categories:
             task = asyncio.create_task(get_category_data(session, main_category))
             tasks.append(task)
         await asyncio.gather(*tasks)
