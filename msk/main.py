@@ -135,7 +135,9 @@ async def get_item_data(session, item: str):
 
         # Category
         try:
-            category = soup.find_all("li", class_="breadcrumbs__item")[-2].text.strip()
+            category_area = soup.find_all("li", class_="breadcrumbs__item")
+            category = category_area[-3].text.strip()
+            sub_category = category_area[-2].text.strip()
         except:
             category = "Без категории"
 
@@ -190,9 +192,9 @@ async def get_item_data(session, item: str):
 
             if publish_year:
                 if (
-                    "<2018"
-                    or "< 2018"
-                    or ">2024"
+                    "<2018" in publish_year
+                    or "< 2018" in publish_year
+                    or ">2024" in publish_year
                     or "> 2024" in publish_year
                     or len(publish_year) < 4
                 ):
@@ -212,25 +214,31 @@ async def get_item_data(session, item: str):
             "title": title,
             "author": author,
             "description": description,
-            "category": category,
-            "price": price,
-            "stock": stock,
-            "image": img,
+            "Категория": category,
+            "Подкатегория": category,
+            "Цена": price,
+            "Наличие": stock,
+            "Фото": img,
         }
         book_dict.update(details_dict)
 
         article_for_check = article + ".0"
-        item_status = soup.find("div", class_="book__shop-name").text.strip().lower()
+        item_status = (
+            soup.find("div", class_="book__shop-details")
+            .find("span")
+            .text.lower()
+            .strip()
+        )
 
         for d in prices:
             if article_for_check in prices[d] and price is not None:
                 prices[d][article_for_check]["price"] = price
 
-        if article_for_check in not_in_sale and item_status != "нет в наличии":
+        if article_for_check in not_in_sale and item_status == "в наличии":
             not_in_sale[article_for_check]["on sale"] = "да"
-        elif article_for_check not in sample and item_status != "нет в наличии":
+        elif article_for_check not in sample and item_status == "в наличии":
             id_to_add.append(book_dict)
-        if article_for_check in id_to_del and item_status != "нет в наличии":
+        if article_for_check in id_to_del and item_status == "в наличии":
             id_to_del.remove(article_for_check)
 
         result.append(book_dict)

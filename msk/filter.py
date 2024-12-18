@@ -1,6 +1,3 @@
-import time
-
-
 def filtering_cover(text: str):
     cover = [
         ("Мягкая обложка +", "Мягкая обложка, суперобложка"),
@@ -48,7 +45,3 @@ test = [
     "Мягкая обложка",
     "Что-то другое",
 ]
-
-for i in test:
-    print(filtering_cover(i))
-    time.sleep(0.5)
