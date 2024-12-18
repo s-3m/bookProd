@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup as bs
 import aiohttp
 import asyncio
 from loguru import logger
+from filter import filtering_cover
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import (
@@ -57,15 +58,24 @@ book_error = 0
 
 logger.add("mdk_error.log", format="{time} {level} {message}", level="ERROR")
 semaphore = asyncio.Semaphore(10)
+unique_book_links = set()
+last_isbn = None
 
 
 async def get_item_data(session, book: str):
     global count
+    if book in unique_book_links:
+        return
     link = book if book.startswith("http") else f"{BASE_URL}{book}"
     try:
         async with semaphore:
             response = await fetch_request(session, link, headers)
             soup = bs(response, "lxml")
+
+            in_arbat = soup.find("div", {"class": "shop_on_map", "data-id": "1"})
+            if not in_arbat:
+                return
+
             # Название книги
             try:
                 title = soup.find("h1").text
@@ -133,9 +143,43 @@ async def get_item_data(session, book: str):
                 all_char = soup.find("ul", class_="tg-productinfo").find_all("li")
                 for i in all_char:
                     row = i.find_all("span")
-                    book_data[row[0].text] = row[1].text
+                    book_data[row[0].text.strip().replace(":", "")] = row[
+                        1
+                    ].text.strip()
             except:
                 pass
+            # Cover filter
+            cover = book_data.get("Переплет")
+            if cover:
+                cover = filtering_cover(cover)
+                book_data["Переплет"] = cover
+            else:
+                book_data["Переплет"] = "Мягкая обложка"
+
+            # ISBN filter
+            global last_isbn
+            isbn = book_data.get("ISBN")
+            if isbn:
+                last_isbn = isbn
+            else:
+                book_data["ISBN"] = last_isbn
+
+            # Year filter
+            publish_year = book_data.get("Год издания")
+            if publish_year:
+                if (
+                    "<2018" in publish_year
+                    or "< 2018" in publish_year
+                    or ">2024" in publish_year
+                    or "> 2024" in publish_year
+                    or len(publish_year) < 4
+                ):
+                    book_data["Год издания"] = "2018"
+
+            # Publisher filter
+            publisher = book_data.get("Издательство")
+            if not publisher:
+                book_data["Издательство"] = "АСТ"
 
             for d in prices:
                 if article in prices[d] and stock > 0:
@@ -150,6 +194,7 @@ async def get_item_data(session, book: str):
 
             print(f"\rDone - {count}", end="")
             count += 1
+            unique_book_links.add(book)
             all_books_result.append(book_data)
 
     except (BaseException, Exception) as e:
