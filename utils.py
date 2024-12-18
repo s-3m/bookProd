@@ -7,6 +7,9 @@ import pandas as pd
 import numpy as np
 from typing import Literal
 import aiohttp
+import requests
+
+from bb.main import headers
 
 
 def filesdata_to_dict(folder_path: str, combined=False, return_df=False) -> dict | None:
@@ -83,6 +86,17 @@ async def check_danger_string(
 # proxy = "http://4XRUpQ:cKCEtZ@46.161.45.111:9374"
 with open("proxy.json") as f:
     proxy_list = json.load(f)
+
+
+def sync_fetch_request(url, headers):
+    for _ in range(10):
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            return response.text
+        elif response.status_code == 404:
+            return "404"
+        else:
+            return response.status_code
 
 
 async def fetch_request(session, url, headers: dict, sleep=4, proxy=None):
