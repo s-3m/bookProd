@@ -4,12 +4,9 @@ import os
 import re
 import random
 import pandas as pd
-import numpy as np
 from typing import Literal
 import aiohttp
 import requests
-
-from bb.main import headers
 
 
 def filesdata_to_dict(folder_path: str, combined=False, return_df=False) -> dict | None:
@@ -127,10 +124,10 @@ def write_result_files(
     not_in_sale: dict,
     prices: dict[str, dict],
 ):
-    all_result_df = pd.DataFrame(all_books_result).drop_duplicates(subset="Артикул")
+    all_result_df = pd.DataFrame(all_books_result).drop_duplicates(subset="Артикул_OZ")
     all_result_df.to_excel(f"{base_dir}/result/{prefix}_all.xlsx", index=False)
 
-    df_add = pd.DataFrame(id_to_add).drop_duplicates(subset="Артикул")
+    df_add = pd.DataFrame(id_to_add).drop_duplicates(subset="Артикул_OZ")
     df_add.to_excel(f"{base_dir}/result/{prefix}_add.xlsx", index=False)
 
     df_del = pd.DataFrame(id_to_del).drop_duplicates()
