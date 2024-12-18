@@ -189,7 +189,7 @@ async def get_item_data(session, book: str):
                 not_in_sale[article]["on sale"] = "да"
             elif article not in sample and stock > 0:
                 id_to_add.append(book_data)
-            elif article in id_to_del and stock > 0:
+            if article in id_to_del and stock > 0:
                 id_to_del.remove(article)
 
             print(f"\rDone - {count}", end="")
@@ -266,7 +266,7 @@ async def get_gather_data():
         logger.info(f"Найдено {len(all_categories)} категорий")
         logger.info(f"Начался сбор данных по категориям")
 
-        for main_category in all_categories:
+        for main_category in all_categories[:1]:
             task = asyncio.create_task(get_category_data(session, main_category))
             tasks.append(task)
         await asyncio.gather(*tasks)
