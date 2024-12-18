@@ -22,21 +22,19 @@ BASE_URL = "https://bookbridge.ru"
 USER_AGENT = UserAgent()
 
 headers = {
-    "Accept": "*/*",
-    "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
-    "BX-ACTION-TYPE": "get_dynamic",
-    "BX-CACHE-BLOCKS": '{"4i19eW":"68b329da9893","basketitems-component-block":"d41d8cd98f00","header-auth-block1":"d41d8cd98f00","mobile-basket-with-compare-block1":"d41d8cd98f00","header-auth-block2":"d41d8cd98f00","header-basket-with-compare-block1":"d41d8cd98f00","header-auth-block3":"d41d8cd98f00","header-basket-with-compare-block2":"d41d8cd98f00","header-basket-with-compare-block3":"d41d8cd98f00","header-auth-block4":"d41d8cd98f00","mobile-auth-block1":"d41d8cd98f00","mobile-basket-with-compare-block2":"d41d8cd98f00","dv_351631":"87e7cc8bdbc9","qepX1R":"d41d8cd98f00","OhECjo":"d41d8cd98f00","6zLbbW":"c40340d595f5","KSBlai":"d41d8cd98f00","area":"d41d8cd98f00","des":"d41d8cd98f00","viewed-block":"d41d8cd98f00","footer-subscribe":"d41d8cd98f00","8gJilP":"d41d8cd98f00","basketitems-block":"d41d8cd98f00","bottom-panel-block":"d41d8cd98f00"}',
-    "BX-CACHE-MODE": "HTMLCACHE",
-    "BX-REF": "https://bookbridge.ru/catalog/angliyskiy/uchebnaya_literatura/",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    "Accept-Language": "ru,en;q=0.9",
     "Connection": "keep-alive",
-    # 'Cookie': 'ASPRO_MAX_USE_MODIFIER=Y; BITRIX_SM_GUEST_ID=1624218; BITRIX_SM_SALE_UID=e18c295fc8063d2ca6e15168ee6ac63d; _ym_debug=null; BITRIX_CONVERSION_CONTEXT_s1=%7B%22ID%22%3A2%2C%22EXPIRE%22%3A1727125140%2C%22UNIQUE%22%3A%5B%22conversion_visit_day%22%5D%7D; _ym_uid=1727085555223271303; _ym_isad=2; BX_USER_ID=7fb6960376433edd08736e7dacc8660d; PHPSESSID=sKj7Sj7tTeow2NuxAqVXp1BzIu3A2nTq; _ym_visorc=w; MAX_VIEWED_ITEMS_s1=%7B%2218139%22%3A%5B%221727085604307%22%2C%222106313%22%5D%2C%2277316%22%3A%5B%221727089427922%22%2C%222212995%22%5D%2C%22351631%22%3A%5B%221727089643749%22%2C%222215984%22%5D%7D; _ym_d=1727089644; BITRIX_SM_LAST_VISIT=23.09.2024%2014%3A07%3A24',
-    "Referer": "https://bookbridge.ru/catalog/angliyskiy/detskaya_literatura_1/razvivayushchaya_literatura_dlya_detey/knigi_dlya_uchashchikhsya_nachalnoy_shkoly_7_10_let_3/351631/",
-    "Sec-Fetch-Dest": "empty",
-    "Sec-Fetch-Mode": "cors",
+    # 'Cookie': 'prefers-color-scheme=dark; prefers-color-scheme=dark; prefers-color-scheme=dark; _ym_uid=1717183212832820790; BX_USER_ID=a0af244758793d3dc0af39826552039d; BITRIX_SM_LAST_ADV=7; BITRIX_SM_SALE_UID=78be4594d53d6b19bf10305a8e1d4a6e; searchbooster_v2_user_id=n05uIFy3UTrz7mcUOGX3B_8cAbP0_BBEfGtwSyhfWyi%7C9.26.23.36; ageCheckPopupRedirectUrl=%2Fv2-mount-input; BITRIX_SM_AG_SMSE_H=9780230452732_U1%7C9780230438002%7C9780545231398%7C9781380013514%7C9781903128770%7C9780521713214%7C9780521538053%7C9781408216965%7C9780521608794%7C9780333665749; _ym_d=1733082642; BITRIX_SM_GUEST_ID=2134331; PHPSESSID=W3azKyeB5MqsmYbqkAXpxjHI9qQBQr5N; ASPRO_MAX_USE_MODIFIER=Y; MAX_VIEWED_ITEMS_s1=%7B%2245576%22%3A%5B%221734210161880%22%2C%222761648%22%5D%7D; prefers-color-scheme=dark; BITRIX_CONVERSION_CONTEXT_s1=%7B%22ID%22%3A2%2C%22EXPIRE%22%3A1734555540%2C%22UNIQUE%22%3A%5B%22conversion_visit_day%22%5D%7D; _ym_debug=null; _ym_isad=2; BITRIX_SM_LAST_VISIT=18.12.2024%2021%3A46%3A29',
+    "Referer": "https://bookbridge.ru/catalog/angliyskiy/uchebnaya_literatura/",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
     "Sec-Fetch-Site": "same-origin",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
-    "X-Bitrix-Composite": "get_dynamic",
-    "sec-ch-ua": '"Chromium";v="128", "Not;A=Brand";v="24", "Google Chrome";v="128"',
+    "Sec-Fetch-User": "?1",
+    "Upgrade-Insecure-Requests": "1",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 YaBrowser/24.12.0.0 Safari/537.36",
+    "cache-control": "no-cache",
+    "sec-ch-ua": '"Chromium";v="130", "YaBrowser";v="24.12", "Not?A_Brand";v="99", "Yowser";v="2.5"',
     "sec-ch-ua-mobile": "?0",
     "sec-ch-ua-platform": '"Windows"',
 }
@@ -51,7 +49,7 @@ async def fetch_request(session, url):
         async with session.get(url, headers=headers) as response:
             await asyncio.sleep(5)
             if response.status == 200:
-                return await response.json(content_type=None)
+                return await response.text()
             elif response.status == 404:
                 return "del"
     return None
@@ -65,13 +63,7 @@ async def get_item_data(session, item, error_items, semaphore):
             if response == "del":
                 item["stock"] = "del"
                 return
-            dynamic_block = response.get("dynamicBlocks")
-            for i in dynamic_block:
-                if i["ID"] == "bxdynamic_qepX1R":
-                    dynamic_index = dynamic_block.index(i)
-                    break
-            page_text = dynamic_block[dynamic_index]["CONTENT"].strip()
-            soup = bs(page_text, "html.parser")
+            soup = bs(response, "lxml")
             quantity_element = soup.find("span", class_="plus dark-color")
             stock_quantity = "del"
             if quantity_element:
@@ -104,7 +96,7 @@ async def get_gather_data():
     semaphore = asyncio.Semaphore(10)
     tasks = []
     async with aiohttp.ClientSession(
-        connector=aiohttp.TCPConnector(ssl=False, limit=50, limit_per_host=10),
+        connector=aiohttp.TCPConnector(ssl=False, limit=10, limit_per_host=10),
         trust_env=True,
     ) as session:
         for item in sample:
