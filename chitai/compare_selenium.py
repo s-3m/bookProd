@@ -84,6 +84,7 @@ def get_main_data(book_item):
         soup = bs(response_text, "lxml")
 
         online_option = soup.find("div", class_="product-offer-price")
+        online_option_2 = soup.find("span", class_="offer-availability-status--green")
         in_shop_option = soup.find("p", class_="product-offer-header__title")
         not_in_option = soup.find("div", class_="detail-product__unavailable")
 
@@ -95,7 +96,7 @@ def get_main_data(book_item):
                 book_item["stock"] = stock
             else:
                 book_item["stock"] = "Только в магазине"
-        elif not_in_option:
+        elif not_in_option and online_option_2 is None:
             book_item["stock"] = "del"
 
     except Exception as e:
