@@ -146,15 +146,40 @@ async def get_book_data(session, book_url: str):
         if detail_dict:
             book_result.update(detail_dict)
 
-        for d in prices:
-            if article in prices[d] and stock_status:
-                prices[d][article]["price"] = price
+        online_option = soup.find("div", class_="product-offer-price")
+        online_option_2 = soup.find("span", class_="offer-availability-status--green")
+        in_shop_option = soup.find("p", class_="product-offer-header__title")
+        not_in_option = soup.find("div", class_="detail-product__unavailable")
+        if in_shop_option:
+            moscow_shop_check = soup.find(
+                "div", class_="product-offer-shops__title"
+            ).text
+            if "В наличии в" in moscow_shop_check:
+                in_shop_option = True
+                offline_price = soup.find(
+                    "h5",
+                    class_="product-offer-retail-title product-offer__title product-offer-retail-title--capitalize",
+                )
+                if offline_price:
+                    offline_price = offline_price.text.strip().split(" ")[1].strip()
+                    book_result["Цена"] = offline_price
+                    book_result["Наличие"] = "Только в магазине"
+                else:
+                    book_result["Цена"] = "Цена не указана"
 
-        if article in not_in_sale and stock_status:
+            else:
+                in_shop_option = False
+        avalible_status = True if online_option or in_shop_option else False
+
+        for d in prices:
+            if article in prices[d] and avalible_status:
+                prices[d][article]["price"] = book_result["Цена"]
+
+        if article in not_in_sale and avalible_status:
             not_in_sale[article]["on sale"] = "да"
-        elif article not in sample and stock_status:
+        elif article not in sample and avalible_status:
             id_to_add.append(book_result)
-        elif article in sample and stock_status is not None:
+        if article in sample and avalible_status:
             id_to_del.remove(article)
 
         all_books_result.append(book_result)
