@@ -14,6 +14,7 @@ from loguru import logger
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import filesdata_to_dict, check_danger_string, fetch_request
+from filter import filtering_cover
 
 pd.io.formats.excel.ExcelFormatter.header_style = None
 DEBUG = True if sys.platform.startswith("win") else False
@@ -125,8 +126,7 @@ async def get_item_data(item, session, main_category=None):
             price = eval(pattern.search(script.text).group(2)).get("ROUND_VALUE_VAT")
             res_dict["price"] = price
         except:
-            price = "Цена не указана"
-            res_dict["price"] = price
+            return
 
         res_dict["category"] = main_category
 
@@ -136,8 +136,7 @@ async def get_item_data(item, session, main_category=None):
             )
             res_dict["Артикул_OZ"] = article + ".0"
         except:
-            article = "Нет артикула"
-            res_dict["Артикул_OZ"] = article
+            return
 
         try:
             photo_link = soup.find(
@@ -146,7 +145,7 @@ async def get_item_data(item, session, main_category=None):
             photo_path = BASE_URL + photo_link
             res_dict["photo"] = photo_path
         except:
-            res_dict["photo"] = "Нет фото"
+            res_dict["photo"] = "https://zapobedu21.ru/images/26.07.2017/kniga.jpg"
 
         try:
             quantity = (
@@ -176,6 +175,7 @@ async def get_item_data(item, session, main_category=None):
             for i in all_chars:
                 char = i.find_all("td")
                 res_dict[char[0].text.strip()] = char[1].text.strip()
+
         except:
             try:
                 all_chars = soup.find(class_="product-chars").find_all(
@@ -187,6 +187,38 @@ async def get_item_data(item, session, main_category=None):
                     ).text.strip()
             except:
                 pass
+
+        # Cover filter
+        cover_type = res_dict.get("Тип обложки")
+        if cover_type:
+            new_cover = filtering_cover(cover_type)
+            if new_cover == "del":
+                del res_dict["Тип обложки"]
+            else:
+                res_dict["Тип обложки"] = new_cover
+
+        # Digit filter
+        digit_item = res_dict["Вид продукта"]
+        if digit_item:
+            if digit_item == "Цифровой":
+                return
+
+        # Author filter
+        author = res_dict.get("Автор")
+        if not author:
+            res_dict["Автор"] = "Нет автора"
+
+        # Publisher filter
+        publisher = res_dict.get("Издательство")
+        if not publisher:
+            res_dict["Издательство"] = "Не указано"
+
+        # ISBN filter
+        isbn = res_dict.get("ISBN")
+        if isbn:
+            digit_checker = isbn.replace("_", "").isdigit()
+            if not digit_checker:
+                res_dict["ISBN"] = "978-5-0000-0000-0"
 
         for d in prices:
             if article + ".0" in prices[d] and quantity != "Нет в наличии":
