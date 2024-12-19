@@ -15,6 +15,7 @@ from utils import (
     filesdata_to_dict,
     write_result_files,
 )
+from filter import filtering_cover
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 logger.add("chitai_error.log", format="{time} {level} {message}", level="ERROR")
@@ -51,6 +52,7 @@ id_to_del = set(sample.keys())
 done_count = 0
 item_error = []
 page_error = []
+last_isbn = None
 
 
 def get_book_data(book_url: str):
@@ -71,7 +73,7 @@ def get_book_data(book_url: str):
         try:
             author = soup.find("a", class_="product-info-authors__author").text.strip()
         except:
-            author = "Автор не указан"
+            author = "Нет автора"
 
         try:
             category = soup.find_all("li", class_="product-breadcrumbs__item")[
@@ -146,6 +148,36 @@ def get_book_data(book_url: str):
 
         if detail_dict:
             book_result.update(detail_dict)
+
+        # Cover filter
+        cover_type = book_result.get("Тип обложки")
+        book_result["Тип обложки"] = (
+            filtering_cover(cover_type) if cover_type else "Мягкая обложка"
+        )
+        # ISBN filter
+        isbn = book_result.get("ISBN")
+        global last_isbn
+        if isbn:
+            last_isbn = isbn
+        else:
+            book_result["ISBN"] = last_isbn
+
+            # Year filter
+        publish_year = book_result.get("Год издания")
+        if publish_year:
+            if (
+                "<2018" in publish_year
+                or "< 2018" in publish_year
+                or ">2024" in publish_year
+                or "> 2024" in publish_year
+                or len(publish_year) < 4
+            ):
+                book_result["Год издания"] = "2018"
+
+        # Publisher filter
+        publisher = book_result.get("Издательство")
+        if not publisher:
+            book_result["Издательство"] = "АСТ"
 
         online_option = soup.find("div", class_="product-offer-price")
         online_option_2 = soup.find("span", class_="offer-availability-status--green")
