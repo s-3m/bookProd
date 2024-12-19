@@ -98,7 +98,7 @@ def get_book_data(book_url: str):
         try:
             sale = soup.find("span", class_="product-offer-price__old-price")
             if sale:
-                price = sale.text.strip()[:-1]
+                price = sale.text.strip()[:-1].strip()
             else:
                 price = soup.find("span", attrs={"itemprop": "price"}).get("content")
         except:
@@ -202,7 +202,7 @@ def get_book_data(book_url: str):
 
             else:
                 in_shop_option = False
-        avalible_status = True if online_option or in_shop_option else False
+        avalible_status = True if online_option else False
 
         for d in prices:
             if article in prices[d] and avalible_status:
