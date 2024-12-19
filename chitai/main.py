@@ -1,5 +1,6 @@
 import sys
 import os
+from concurrent.futures import ThreadPoolExecutor
 import pandas.io.formats.excel
 from bs4 import BeautifulSoup as bs
 import aiohttp
@@ -10,7 +11,7 @@ from loguru import logger
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import (
     check_danger_string,
-    fetch_request,
+    sync_fetch_request,
     filesdata_to_dict,
     write_result_files,
 )
@@ -52,15 +53,15 @@ item_error = []
 page_error = []
 
 
-async def get_book_data(session, book_url: str):
+def get_book_data(book_url: str):
     link = book_url if book_url.startswith("http") else f"{BASE_URL}{book_url}"
     try:
-        response = await fetch_request(session, link, headers)
+        response = sync_fetch_request(link, headers)
         soup = bs(response, "lxml")
 
         try:
             title = soup.find("h1").text.strip()
-            title = await check_danger_string(title, "title")
+            title = asyncio.run(check_danger_string(title, "title"))
             if not title:
                 logger.warning(f"Delete DANGER book: {BASE_URL}{book_url}")
                 return
@@ -83,7 +84,7 @@ async def get_book_data(session, book_url: str):
             description = soup.find(
                 "article", class_="detail-description__text"
             ).text.strip()
-            description = await check_danger_string(description, "description")
+            description = asyncio.run(check_danger_string(description, "description"))
         except:
             description = "Нет описания"
 
@@ -197,43 +198,40 @@ async def get_book_data(session, book_url: str):
 page_to_stop = 4600
 
 
-async def get_page_data(session, page_number=1, reparse_url=False):
+def get_page_data(page_number=1, reparse_url=False):
     global page_to_stop
     url = (
         f"{BASE_URL}/catalog/books-18030?page={page_number}&sortPreset=newness"
         if not reparse_url
         else reparse_url
     )
-    async with semaphore:
-        try:
-            response = await fetch_request(session, url, headers)
-            soup = bs(response, "lxml")
-            product_list = soup.find("div", class_="products-list")
-            all_articles = product_list.find_all(
-                "article", class_="product-card product-card product"
-            )
-            stop_count = 0
-            for article in all_articles:
-                buy_possibility = article.find(
-                    "span", class_="action-button__text"
-                ).text.strip()
-                book_link = article.find("a", class_="product-card__title")[
-                    "href"
-                ].strip()
-                if buy_possibility == "Где купить?":
-                    stop_count += 1
-                if buy_possibility == "Купить":
-                    await get_book_data(session, book_link)
+    try:
+        response = sync_fetch_request(url, headers)
+        soup = bs(response, "lxml")
+        product_list = soup.find("div", class_="products-list")
+        all_articles = product_list.find_all(
+            "article", class_="product-card product-card product"
+        )
+        stop_count = 0
+        for article in all_articles:
+            buy_possibility = article.find(
+                "span", class_="action-button__text"
+            ).text.strip()
+            book_link = article.find("a", class_="product-card__title")["href"].strip()
+            if buy_possibility == "Где купить?":
+                stop_count += 1
+            if buy_possibility == "Купить":
+                get_book_data(book_link)
 
-            if not reparse_url:
-                if stop_count >= 48:
-                    page_to_stop = page_number
-                    logger.info(f"Stopped at page {page_number}")
-        except Exception as e:
-            logger.exception(f"Error on page - {url}")
-            page_error.append(url)
-            with open(f"{BASE_LINUX_DIR}/page_error.txt", "a+") as f:
-                f.write(f"{url} --- {e}\n")
+        if not reparse_url:
+            if stop_count >= 48:
+                page_to_stop = page_number
+                logger.info(f"Stopped at page {page_number}")
+    except Exception as e:
+        logger.exception(f"Error on page - {url}")
+        page_error.append(url)
+        with open(f"{BASE_LINUX_DIR}/page_error.txt", "a+") as f:
+            f.write(f"{url} --- {e}\n")
 
 
 async def get_gather_data():
@@ -253,13 +251,12 @@ async def get_gather_data():
             logger.info(f"City - {parse_city}")
             max_pages = int(soup.find_all("a", class_="pagination__button")[-2].text)
             tasks = []
-            for page in range(1, max_pages + 1):
-                if page > page_to_stop:
-                    break
-                await asyncio.sleep(3)
-                task = asyncio.create_task(get_page_data(session, page))
-                tasks.append(task)
-            await asyncio.gather(*tasks)
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                for page in range(1, max_pages + 1):
+                    if page > page_to_stop:
+                        break
+                    executor.submit(get_page_data, page, False)
+
             print()
             logger.success("Main data was collected")
 
@@ -268,22 +265,18 @@ async def get_gather_data():
                 logger.warning(f"Start reparse {len(item_error)} errors")
                 new_item_list = item_error.copy()
                 item_error.clear()
-                item_error_tasks = [
-                    asyncio.create_task(get_book_data(session, item))
-                    for item in new_item_list
-                ]
-                await asyncio.gather(*item_error_tasks)
+                with ThreadPoolExecutor(max_workers=5) as executor:
+                    for item in new_item_list:
+                        executor.submit(get_book_data, item)
 
             # Reparse page errors
             if page_error:
                 logger.warning(f"Start reparse {len(item_error)} pages errors")
                 new_page_list = page_error.copy()
                 page_error.clear()
-                page_error_tasks = [
-                    asyncio.create_task(get_page_data(session, page, reparse_url=url))
-                    for url in new_page_list
-                ]
-                await asyncio.gather(*page_error_tasks)
+                with ThreadPoolExecutor(max_workers=5) as executor:
+                    for url in new_page_list:
+                        executor.submit(get_page_data, 1, url)
 
             logger.warning(
                 f"Datas was collected. Not reparse: item errors - {len(item_error)} --- page errors - {len(page_error)}"
