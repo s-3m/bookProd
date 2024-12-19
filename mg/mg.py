@@ -2,6 +2,7 @@ import time
 import sys
 import os
 import pandas.io.formats.excel
+from IPython.core.release import author
 from bs4 import BeautifulSoup as bs
 from pprint import pprint
 from fake_useragent import UserAgent
@@ -16,6 +17,7 @@ from utils import (
     fetch_request,
     write_result_files,
 )
+from filter import filtering_cover
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 DEBUG = True if sys.platform.startswith("win") else False
@@ -89,9 +91,12 @@ async def get_item_data(session, link, main_category):
                 else:
                     info = "Описание отсутствует"
                 info = await check_danger_string(info, "description")
-                item_data["description"] = info
+                if len(info) < 5:
+                    item_data["description"] = "Автор рекомендует книгу ко прочтению!"
+                else:
+                    item_data["description"] = info
             except:
-                item_data["description"] = "Описание отсутствует"
+                item_data["description"] = "Автор рекомендует книгу ко прочтению!"
             try:
                 price = (
                     soup.find_all("div", class_="product_item_price")[1]
@@ -115,11 +120,37 @@ async def get_item_data(session, link, main_category):
                 item_data["quantity"] = "Наличие не указано"
             try:
                 photo = soup.find("a", class_="highslide")["href"]
-                item_data["photo"] = BASE_URL + photo
+                photo = BASE_URL + photo
+                if photo == "https://www.dkmg.ru/goods_img/no_photo.png":
+                    item_data["photo"] = (
+                        "https://zapobedu21.ru/images/26.07.2017/kniga.jpg"
+                    )
+                else:
+                    item_data["photo"] = photo
             except:
                 item_data["photo"] = "Нет изображения"
 
             item_data["Артикул_OZ"] = isbn + ".0"
+
+            # Cover filter
+            cover_type = item_data.get("Тип обложки:")
+            if cover_type:
+                item_data["cover_type"] = filtering_cover(cover_type)
+
+            # Author filter
+            item_data["Автор:"] = (
+                item_data["Автор:"] if item_data.get("Автор:") else "Нет автора"
+            )
+            # ISBN filter
+            item_data["ISBN:"] = (
+                item_data["ISBN:"] if item_data.get("ISBN:") else "978-5-0000-0000-0"
+            )
+            # Publisher filter
+            item_data["Издательство:"] = (
+                item_data["Издательство:"]
+                if item_data.get("Издательство:")
+                else "Не указано"
+            )
 
             if isbn + ".0" in not_in_sale and quantity == "есть в наличии":
                 not_in_sale[isbn + ".0"]["on sale"] = "да"
