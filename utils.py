@@ -137,9 +137,7 @@ def write_result_files(
     df_del.to_excel(f"{base_dir}/result/{prefix}_del.xlsx", index=False)
 
     df_not_in_sale = pd.DataFrame().from_dict(not_in_sale, orient="index")
-    df_not_in_sale = df_not_in_sale.loc[df_not_in_sale["on sale"] == "да"][
-        ["article"]
-    ]
+    df_not_in_sale = df_not_in_sale.loc[df_not_in_sale["on sale"] == "да"][["article"]]
     df_not_in_sale.to_excel(
         f"{base_dir}/result/{prefix}_not_in_sale2.xlsx", index=False
     )
