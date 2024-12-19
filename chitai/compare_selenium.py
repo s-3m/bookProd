@@ -95,6 +95,7 @@ def get_main_data(book_item):
                 in_shop_option = True
             else:
                 in_shop_option = False
+                book_item["stock"] = "del"
 
         stock = soup.find("link", attrs={"itemprop": "availability", "href": "InStock"})
 
