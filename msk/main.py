@@ -62,6 +62,7 @@ async def check_empty_element(session, item, check_price=False):
 
     if not check_price:
         item_status = soup.find("div", class_="book__buy")
+        under_order = soup.find("div", class_="underorder")
 
         if item_status:
             item["Статус"] = "В продаже"
@@ -223,11 +224,9 @@ async def get_item_data(session, item: str):
         book_dict.update(details_dict)
 
         article_for_check = article + ".0"
+        item_status = soup.find("div", class_="book__shop-details")
         item_status = (
-            soup.find("div", class_="book__shop-details")
-            .find("span")
-            .text.lower()
-            .strip()
+            item_status.find("span").text.lower().strip() if item_status else None
         )
 
         for d in prices:
@@ -288,7 +287,7 @@ async def get_gather_data():
             )
             tasks = []
             logger.info(f"Page find - {max_pagination}")
-            # max_pagination = 30
+            max_pagination = 30
             for page in range(1, int(max_pagination) + 1):
                 page_link = f"{cat}?page={page}"
                 await get_page_data(session, page_link, tasks)

@@ -82,7 +82,8 @@ async def check_danger_string(
 
 
 # proxy = "http://4XRUpQ:cKCEtZ@46.161.45.111:9374"
-with open("proxy.json") as f:
+proxy_path = os.path.abspath(os.path.dirname(__file__))
+with open(f"{proxy_path}/proxy.json") as f:
     proxy_list = json.load(f)
 
 
