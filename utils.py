@@ -3,6 +3,8 @@ import json
 import os
 import re
 import random
+import time
+
 import pandas as pd
 from typing import Literal
 import aiohttp
@@ -23,11 +25,10 @@ def filesdata_to_dict(folder_path: str, combined=False, return_df=False) -> dict
             result_frame = (
                 pd.concat(frame_list).replace({"'": ""}, regex=True).drop_duplicates()
             )
-            return (
-                result_frame
-                if return_df
-                else result_frame.set_index("Артикул").to_dict(orient="index")
-            )
+            result_dict = result_frame.set_index("Артикул").to_dict(orient="index")
+            for i in result_dict:
+                result_dict[i]["article"] = i
+            return result_frame if return_df else result_dict
         except ValueError:
             return None
 
@@ -88,6 +89,7 @@ with open("proxy.json") as f:
 def sync_fetch_request(url, headers):
     for _ in range(10):
         response = requests.get(url, headers=headers)
+        time.sleep(2)
         if response.status_code == 200:
             return response.text
         elif response.status_code == 404:
@@ -146,11 +148,12 @@ def write_result_files(
         )
 
     df_not_in_sale2 = pd.DataFrame().from_dict(not_in_sale, orient="index")
-    df_not_in_sale2.index.name = "article"
     df_not_in_sale2 = df_not_in_sale2.loc[df_not_in_sale2["on sale"] == "да"][
         ["article"]
     ]
-    df_not_in_sale2.to_excel(f"{base_dir}/result/{prefix}_not_in_sale2.xlsx")
+    df_not_in_sale2.to_excel(
+        f"{base_dir}/result/{prefix}_not_in_sale2.xlsx", index=False
+    )
 
 
 def give_me_sample(
