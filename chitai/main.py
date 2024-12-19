@@ -233,7 +233,7 @@ page_to_stop = 4600
 def get_page_data(page_number=1, reparse_url=False):
     global page_to_stop
     url = (
-        f"{BASE_URL}/catalog/books-18030?page={page_number}&sortPreset=newness"
+        f"{BASE_URL}/catalog/books-18030?page={page_number}"
         if not reparse_url
         else reparse_url
     )
@@ -282,7 +282,6 @@ async def get_gather_data():
             parse_city = soup.find("span", class_="header-city__title").text.strip()
             logger.info(f"City - {parse_city}")
             max_pages = int(soup.find_all("a", class_="pagination__button")[-2].text)
-            tasks = []
             with ThreadPoolExecutor(max_workers=5) as executor:
                 for page in range(1, max_pages + 1):
                     if page > page_to_stop:

@@ -137,8 +137,12 @@ def write_result_files(
     df_del.to_excel(f"{base_dir}/result/{prefix}_del.xlsx", index=False)
 
     df_not_in_sale = pd.DataFrame().from_dict(not_in_sale, orient="index")
-    df_not_in_sale.index.name = "article"
-    df_not_in_sale.to_excel(f"{base_dir}/result/{prefix}_not_in_sale.xlsx")
+    df_not_in_sale = df_not_in_sale.loc[df_not_in_sale["on sale"] == "да"][
+        ["article"]
+    ]
+    df_not_in_sale.to_excel(
+        f"{base_dir}/result/{prefix}_not_in_sale2.xlsx", index=False
+    )
 
     for price_item in prices:
         df_result = pd.DataFrame().from_dict(prices[price_item], orient="index")
@@ -146,14 +150,6 @@ def write_result_files(
         df_result.to_excel(
             f"{base_dir}/result/{prefix}_price_{price_item}.xlsx", index=True
         )
-
-    df_not_in_sale2 = pd.DataFrame().from_dict(not_in_sale, orient="index")
-    df_not_in_sale2 = df_not_in_sale2.loc[df_not_in_sale2["on sale"] == "да"][
-        ["article"]
-    ]
-    df_not_in_sale2.to_excel(
-        f"{base_dir}/result/{prefix}_not_in_sale2.xlsx", index=False
-    )
 
 
 def give_me_sample(
