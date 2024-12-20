@@ -156,7 +156,7 @@ async def get_item_data(session, link, main_category):
                 not_in_sale[isbn + ".0"]["on sale"] = "да"
             elif isbn + ".0" not in sample and quantity == "есть в наличии":
                 id_to_add.append(item_data)
-            elif isbn + ".0" in del_article and quantity == "есть в наличии":
+            if isbn + ".0" in del_article and quantity == "есть в наличии":
                 del_article.remove(isbn + ".0")
 
             for d in prices:
