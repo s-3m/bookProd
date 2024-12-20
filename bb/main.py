@@ -363,7 +363,7 @@ async def get_gather_data():
                 pagination = 1
             # pagination = 3
             for page in range(1, pagination + 1):
-                await asyncio.sleep(5)
+                await asyncio.sleep(2)
 
                 try:
                     for _ in range(20):
@@ -384,7 +384,7 @@ async def get_gather_data():
                                     )
                                     tasks.append(task)
                                 await asyncio.gather(*tasks)
-                                await asyncio.sleep(10)
+                                await asyncio.sleep(5)
                                 break
                             else:
                                 await asyncio.sleep(10)
