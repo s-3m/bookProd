@@ -212,7 +212,7 @@ def get_book_data(book_url: str):
             not_in_sale[article]["on sale"] = "да"
         elif article not in sample and avalible_status:
             id_to_add.append(book_result)
-        if article in sample and avalible_status:
+        if article in id_to_del and avalible_status:
             id_to_del.remove(article)
 
         all_books_result.append(book_result)
