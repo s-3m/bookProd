@@ -198,7 +198,7 @@ async def get_item_data(item, session, main_category=None):
                 res_dict["Тип обложки"] = new_cover
 
         # Digit filter
-        digit_item = res_dict["Вид продукта"]
+        digit_item = res_dict.get("Вид продукта")
         if digit_item:
             if digit_item == "Цифровой":
                 return
@@ -383,6 +383,8 @@ async def get_gather_data():
                                         get_item_data(item, session, main_category)
                                     )
                                     tasks.append(task)
+                                await asyncio.gather(*tasks)
+                                await asyncio.sleep(10)
                                 break
                             else:
                                 await asyncio.sleep(10)
@@ -390,11 +392,8 @@ async def get_gather_data():
                     with open(
                         f"{BASE_LINUX_DIR}/page_error.txt", "a+", encoding="utf-8"
                     ) as file:
-                        file.write(f"{link} --- {page} --- {e}\n")
+                        file.write(f"{BASE_URL}{link} --- {page} --- {e}\n")
                     continue
-
-        await asyncio.gather(*tasks)
-        await asyncio.sleep(10)
 
         print()  # empty print for break string after count
         logger.success("Main data was collected")
