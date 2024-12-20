@@ -242,7 +242,10 @@ async def get_item_data(session, item: str):
             id_to_del.remove(article_for_check)
 
         result.append(book_dict)
-        print(f"\rDone - {count}", end="")
+        print(
+            f"\rDone - {count} | Book errors - {len(item_error)} | Page errors - {len(page_error)}",
+            end="",
+        )
         count += 1
     except Exception as e:
         item_error.append(link)

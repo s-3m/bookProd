@@ -15,7 +15,6 @@ from tg_sender import tg_send_files
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import give_me_sample, fetch_request
 
-
 DEBUG = True if sys.platform.startswith("win") else False
 BASE_URL = "https://www.moscowbooks.ru/"
 USER_AGENT = UserAgent()
@@ -29,11 +28,14 @@ headers = {
 }
 
 excel.ExcelFormatter.header_style = None
+
 count = 1
+error_count = 0
 
 
 async def to_check_item(item, session):
     global count
+    global error_count
     link = f"{BASE_URL}/book/{item["article"][:-2]}"
     try:
         response = await fetch_request(session, link, headers=headers, sleep=None)
@@ -59,10 +61,11 @@ async def to_check_item(item, session):
             stock = need_data_dict["Stock"]
             item["stock"] = stock
 
-        print(f"\r{count}", end="")
+        print(f"\r{count} | Error book - {error_count}", end="")
         count += 1
     except Exception as e:
         item["stock"] = "error"
+        error_count += 1
         logger.exception(f"ERROR with {link}")
         with open(
             f"{PATH_TO_FILES}/error.txt",
