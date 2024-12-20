@@ -88,6 +88,7 @@ with open(f"{proxy_path}/proxy.json") as f:
 
 
 def sync_fetch_request(url, headers):
+    response_status_code = None
     for _ in range(10):
         response = requests.get(url, headers=headers)
         time.sleep(2)
@@ -96,7 +97,8 @@ def sync_fetch_request(url, headers):
         elif response.status_code == 404:
             return "404"
         else:
-            return response.status_code
+            response_status_code = response.status_code
+    return response_status_code
 
 
 async def fetch_request(session, url, headers: dict, sleep=4, proxy=None):
@@ -139,9 +141,7 @@ def write_result_files(
 
     df_not_in_sale = pd.DataFrame().from_dict(not_in_sale, orient="index")
     df_not_in_sale = df_not_in_sale.loc[df_not_in_sale["on sale"] == "да"][["article"]]
-    df_not_in_sale.to_excel(
-        f"{base_dir}/result/{prefix}_not_in_sale2.xlsx", index=False
-    )
+    df_not_in_sale.to_excel(f"{base_dir}/result/{prefix}_not_in_sale.xlsx", index=False)
 
     for price_item in prices:
         df_result = pd.DataFrame().from_dict(prices[price_item], orient="index")

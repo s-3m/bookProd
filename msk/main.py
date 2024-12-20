@@ -64,7 +64,7 @@ async def check_empty_element(session, item, check_price=False):
         item_status = soup.find("div", class_="book__buy")
         under_order = soup.find("div", class_="underorder")
 
-        if item_status:
+        if item_status and not under_order:
             item["Статус"] = "В продаже"
         else:
             item["Статус"] = "Не в продаже"
@@ -279,7 +279,7 @@ async def get_gather_data():
             "https://www.moscowbooks.ru/books/",
             "https://www.moscowbooks.ru/books/exclusive-and-collective-editions/",
         ]
-        for cat in all_categories:
+        for cat in all_categories[:1]:
             response = await fetch_request(session, cat, headers)
             soup = bs(response, "lxml")
             max_pagination = (
@@ -287,7 +287,7 @@ async def get_gather_data():
             )
             tasks = []
             logger.info(f"Page find - {max_pagination}")
-            max_pagination = 30
+            max_pagination = 10
             for page in range(1, int(max_pagination) + 1):
                 page_link = f"{cat}?page={page}"
                 await get_page_data(session, page_link, tasks)
