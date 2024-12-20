@@ -89,6 +89,30 @@ async def get_item_data(session, item, error_items, semaphore):
                 f.write(f"{today} --- {item['link']} --- {e}\n")
 
 
+async def get_link_from_ajax(session, id):
+    params = {
+        "query": id[:-2],
+        "locale": "ru",
+        "client": "bookbridge.ru",
+    }
+    try:
+        async with session.get(
+            "https://api.searchbooster.net/api/6097963d-ae4c-4620-ae3d-0ae0fc8387f8/completions",
+            params=params,
+            headers=headers,
+        ) as response:
+            data = await response.json()
+            for i in data["searchBox"]:
+                if i.get("offer_code") == id[:-2]:
+                    if i.get("url"):
+                        print(i["url"])
+                        return i["url"]
+                    return
+            return
+    except Exception as e:
+        logger.exception(id)
+
+
 async def get_gather_data():
     sample = give_me_sample(base_dir=PATH_TO_FILES, prefix="bb")
 
@@ -99,6 +123,10 @@ async def get_gather_data():
         connector=aiohttp.TCPConnector(ssl=False, limit=10, limit_per_host=10),
         trust_env=True,
     ) as session:
+        for item in sample:
+            if not item["link"]:
+                item["link"] = await get_link_from_ajax(session, item["article"])
+
         for item in sample:
             if not item["link"]:
                 item["stock"] = "del"
