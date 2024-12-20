@@ -72,7 +72,7 @@ async def get_main_data(session, book):
             f.write(f"{book['article'][:-2]} --- {e}\n")
     finally:
         global count
-        print(f"\rDone - {count}", end="")
+        print(f"\rDone - {count} | Error books - {len(error_book)}", end="")
         count += 1
 
 
