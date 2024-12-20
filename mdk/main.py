@@ -192,7 +192,10 @@ async def get_item_data(session, book: str):
             if article in id_to_del and stock > 0:
                 id_to_del.remove(article)
 
-            print(f"\rDone - {count}", end="")
+            print(
+                f"Done - {count} | Item error - {len(item_error)} | Page errors - {len(page_error)} | Category errors - {len(category_error)}",
+                end="",
+            )
             count += 1
             unique_book_links.add(book)
             all_books_result.append(book_data)
@@ -278,27 +281,27 @@ async def get_gather_data():
         )
 
         if category_error:
-            logger.warning("Start reparse categories errors")
+            logger.warning(
+                f"Start reparse categories errors. Find ---> {len(category_error)} error category"
+            )
             cat_error_copy = category_error.copy()
             category_error.clear()
-            cat_tasks = [
-                asyncio.create_task(get_category_data(session, cat))
-                for cat in cat_error_copy
-            ]
-            await asyncio.gather(*cat_tasks)
+            for cat in cat_error_copy:
+                await get_category_data(session, cat)
 
         if page_error:
-            logger.warning("Start reparse page errors")
+            logger.warning(
+                f"Start reparse page errors. Find ---> {len(page_error)} error page"
+            )
             page_error_copy = page_error.copy()
             page_error.clear()
-            page_err = [
-                asyncio.create_task(get_page_data(session, page))
-                for page in page_error_copy
-            ]
-            await asyncio.gather(*page_err)
+            for page in page_error_copy:
+                await get_page_data(session, page)
 
         if item_error:
-            logger.warning("Start reparse item errors")
+            logger.warning(
+                f"Start reparse item errors. Find ---> {len(item_error)} errors"
+            )
             item_error_copy = item_error.copy()
             item_error.clear()
             item_err = [
