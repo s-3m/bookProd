@@ -68,7 +68,7 @@ def to_write_file(temporary=False, final_result=False):
         df_result.to_excel(f"{filepath}/bb_price_{price_item}.xlsx", index=True)
 
     df_not_in_sale = pd.DataFrame().from_dict(not_in_sale, orient="index")
-    df_not_in_sale.index.name = "article"
+    df_not_in_sale = df_not_in_sale.loc[df_not_in_sale["on sale"] == "да"][["article"]]
     df_not_in_sale.to_excel(f"{filepath}/bb_not_in_sale.xlsx")
 
     df_add = pd.DataFrame(id_to_add)
@@ -229,7 +229,7 @@ async def get_item_data(item, session, main_category=None):
         elif article + ".0" not in sample and quantity != "Нет в наличии":
             res_dict["Артикул"] = article + ".0"
             id_to_add.append(res_dict)
-        elif article + ".0" in id_to_del and quantity != "Нет в наличии":
+        if article + ".0" in id_to_del and quantity != "Нет в наличии":
             id_to_del.remove(article + ".0")
 
         if count % 50 == 0:
@@ -282,21 +282,21 @@ async def check_empty_price(session):
 
     empty_price_tasks = []
     df_empty_price_one = pd.read_excel(
-        f"{BASE_LINUX_DIR}/result/price_one.xlsx",
+        f"{BASE_LINUX_DIR}/result/price_1.xlsx",
         converters={"article": str, "price": str},
     )
     df_empty_price_one = df_empty_price_one.where(df_empty_price_one.notnull(), None)
     price_one = df_empty_price_one.to_dict(orient="records")
 
     df_empty_price_two = pd.read_excel(
-        f"{BASE_LINUX_DIR}/result/price_two.xlsx",
+        f"{BASE_LINUX_DIR}/result/price_2.xlsx",
         converters={"article": str, "price": str},
     )
     df_empty_price_two = df_empty_price_two.where(df_empty_price_two.notnull(), None)
     price_two = df_empty_price_two.to_dict(orient="records")
 
     df_empty_price_three = pd.read_excel(
-        f"{BASE_LINUX_DIR}/result/price_three.xlsx",
+        f"{BASE_LINUX_DIR}/result/price_3.xlsx",
         converters={"article": str, "price": str},
     )
     df_empty_price_three = df_empty_price_three.where(
@@ -316,13 +316,13 @@ async def check_empty_price(session):
     logger.info(f"Start wright files")
 
     pd.DataFrame(price_one).to_excel(
-        f"{BASE_LINUX_DIR}/result/price_one.xlsx", index=False
+        f"{BASE_LINUX_DIR}/result/price_1.xlsx", index=False
     )
     pd.DataFrame(price_two).to_excel(
-        f"{BASE_LINUX_DIR}/result/price_two.xlsx", index=False
+        f"{BASE_LINUX_DIR}/result/price_2.xlsx", index=False
     )
     pd.DataFrame(price_three).to_excel(
-        f"{BASE_LINUX_DIR}/result/price_three.xlsx", index=False
+        f"{BASE_LINUX_DIR}/result/price_3.xlsx", index=False
     )
 
 
