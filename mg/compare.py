@@ -111,9 +111,6 @@ def main():
     df_result = pd.DataFrame(sample)
     df_result.drop_duplicates(inplace=True, keep="last", subset="article")
 
-    result_file = f"{BASE_LINUX_DIR}/mg_all_result.xlsx"
-    df_result.to_excel(result_file, index=False)
-
     df_del = df_result.loc[df_result["stock"] == "del"][["article"]]
     del_file = f"{BASE_LINUX_DIR}/mg_del.xlsx"
     df_del.to_excel(del_file, index=False)
