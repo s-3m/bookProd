@@ -57,7 +57,7 @@ count = 1
 book_error = 0
 
 logger.add("mdk_error.log", format="{time} {level} {message}", level="ERROR")
-semaphore = asyncio.Semaphore(10)
+semaphore = asyncio.Semaphore(50)
 unique_book_links = set()
 last_isbn = None
 
@@ -213,8 +213,12 @@ async def get_page_data(session, page_url):
             for i in soup.find_all("div", {"class": "tg-postbook"})
         ]
 
-        for book in all_books_on_page:
-            await get_item_data(session, book)
+        tasks = [
+            asyncio.create_task(get_item_data(session, book))
+            for book in all_books_on_page
+        ]
+        await asyncio.gather(*tasks)
+
     except Exception as e:
         page_error.append(page_url)
         logger.exception(f"Error on page - {page_url}")
@@ -256,9 +260,8 @@ def get_all_catalogs():
 @logger.catch
 async def get_gather_data():
     logger.info("Начинаю сбор данных МДК")
-    tasks = []
     async with aiohttp.ClientSession(
-        headers=headers, connector=aiohttp.TCPConnector(ssl=False, limit_per_host=10)
+        headers=headers, connector=aiohttp.TCPConnector(ssl=False, limit_per_host=30)
     ) as session:
 
         logger.info("Формирование списка категорий")
@@ -267,9 +270,7 @@ async def get_gather_data():
         logger.info(f"Начался сбор данных по категориям")
 
         for main_category in all_categories:
-            task = asyncio.create_task(get_category_data(session, main_category))
-            tasks.append(task)
-        await asyncio.gather(*tasks)
+            await get_category_data(session, main_category)
 
         logger.info(f"Main data was collected")
         logger.warning(
