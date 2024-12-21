@@ -269,7 +269,7 @@ def get_page_data(page_number=1, reparse_url=False):
 
 
 async def get_gather_data():
-    logger.info("Начинаю сбор данных БИБЛИО-ГЛОБУС")
+    logger.info("Начинаю сбор данных")
     timeout = aiohttp.ClientTimeout(total=800)
     async with aiohttp.ClientSession(
         headers=headers,
@@ -277,18 +277,20 @@ async def get_gather_data():
         timeout=timeout,
         trust_env=True,
     ) as session:
-        async with session.get(
-            f"{BASE_URL}/catalog/books-18030?page=1", headers=headers
-        ) as resp:
-            soup = bs(await resp.text(), "lxml")
-            parse_city = soup.find("span", class_="header-city__title").text.strip()
-            logger.info(f"City - {parse_city}")
-            max_pages = int(soup.find_all("a", class_="pagination__button")[-2].text)
-            with ThreadPoolExecutor(max_workers=5) as executor:
-                for page in range(1, max_pages + 1):
-                    if page > page_to_stop:
-                        break
-                    executor.submit(get_page_data, page, False)
+        for i in [f"{BASE_URL}/catalog/books-18030?page=1", f"{BASE_URL}/sales"]:
+            logger.info(f"Start parsing {i}")
+            async with session.get(i, headers=headers) as resp:
+                soup = bs(await resp.text(), "lxml")
+                parse_city = soup.find("span", class_="header-city__title").text.strip()
+                logger.info(f"City - {parse_city}")
+                max_pages = int(
+                    soup.find_all("a", class_="pagination__button")[-2].text
+                )
+                with ThreadPoolExecutor(max_workers=5) as executor:
+                    for page in range(1, max_pages + 1):
+                        if page > page_to_stop:
+                            break
+                        executor.submit(get_page_data, page, False)
 
             print()
             logger.success("Main data was collected")
