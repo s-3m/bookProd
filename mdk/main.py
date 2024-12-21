@@ -193,7 +193,7 @@ async def get_item_data(session, book: str):
                 id_to_del.remove(article)
 
             print(
-                f"Done - {count} | Item error - {len(item_error)} | Page errors - {len(page_error)} | Category errors - {len(category_error)}",
+                f"\rDone - {count} | Item error - {len(item_error)} | Page errors - {len(page_error)} | Category errors - {len(category_error)}",
                 end="",
             )
             count += 1
