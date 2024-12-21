@@ -76,11 +76,12 @@ def get_book_data(book_url: str):
             author = "Нет автора"
 
         try:
-            category = soup.find_all("li", class_="product-breadcrumbs__item")[
-                -1
-            ].text.strip()
+            category_area = soup.find_all("li", class_="breadcrumbs__item")
+            category = category_area[1].text.strip()
+            sub_category = category_area[2].text.strip()
         except:
             category = "Категория не указана"
+            sub_category = "Категория не указана"
 
         try:
             description = soup.find(
@@ -140,6 +141,7 @@ def get_book_data(book_url: str):
             "Название": title,
             "Автор": author,
             "Категория": category,
+            "Подкатегория": sub_category,
             "Описание": description,
             "Фото": photo,
             "Цена": price,
@@ -276,7 +278,7 @@ async def get_gather_data():
         trust_env=True,
     ) as session:
         async with session.get(
-            f"{BASE_URL}/catalog/books-18030?page=1&sortPreset=newness", headers=headers
+            f"{BASE_URL}/catalog/books-18030?page=1", headers=headers
         ) as resp:
             soup = bs(await resp.text(), "lxml")
             parse_city = soup.find("span", class_="header-city__title").text.strip()
