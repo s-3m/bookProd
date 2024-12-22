@@ -45,25 +45,37 @@ id_to_add = []
 
 semaphore = asyncio.Semaphore(10)
 count = 1
+item_error = []
+cat_error = []
 
 
-async def get_item_data(session, link, main_category):
-    link = f"{BASE_URL}{link}"
+async def get_item_data(session, link: str):
+    link = link if link.startswith("http") else f"{BASE_URL}{link}"
     global semaphore
     try:
         item_data = {"Ссылка": link}
         async with semaphore:
             response = await fetch_request(session, link, headers)
             soup = bs(response, "lxml")
-            item_data["category"] = main_category
+            try:
+                category_area = soup.find("div", class_="way")
+                if category_area:
+                    all_cat_items = category_area.find_all("a")
+                    category = all_cat_items[-2].text.strip()
+                    sub_category = all_cat_items[-1].text.strip()
+                item_data["Категория"] = category
+                item_data["Подкатегория"] = sub_category
+            except:
+                item_data["Категория"] = "Нет категории"
+                item_data["Подкатегория"] = "Нет подкатегории"
             try:
                 title = soup.find("h1").text.strip()
                 title = await check_danger_string(title, "title")
                 if not title:
                     return
-                item_data["title"] = title
+                item_data["Название"] = title
             except:
-                item_data["title"] = "Нет названия"
+                item_data["Название"] = "Нет названия"
             try:
                 options = soup.find("div", class_="item_basket_cont").find_all("tr")
                 for option in options:
@@ -83,7 +95,7 @@ async def get_item_data(session, link, main_category):
                 except:
                     pass
             except:
-                item_data["Характеристика"] = "Характиристики не указаны"
+                pass
             try:
                 info = soup.find("div", class_="content_sm_2").find("h4")
                 if info.text.strip() == "Аннотация":
@@ -115,9 +127,9 @@ async def get_item_data(session, link, main_category):
                 item_data["id"] = item_id
             try:
                 quantity = soup.find("div", class_="wish_list_poz").text.strip()
-                item_data["quantity"] = quantity
+                item_data["Наличие"] = quantity
             except:
-                item_data["quantity"] = "Наличие не указано"
+                item_data["Наличие"] = "Наличие не указано"
             try:
                 photo = soup.find("a", class_="highslide")["href"]
                 photo = BASE_URL + photo
@@ -126,9 +138,9 @@ async def get_item_data(session, link, main_category):
                         "https://zapobedu21.ru/images/26.07.2017/kniga.jpg"
                     )
                 else:
-                    item_data["photo"] = photo
+                    item_data["Фото"] = photo
             except:
-                item_data["photo"] = "Нет изображения"
+                item_data["Фото"] = "Нет изображения"
 
             item_data["Артикул_OZ"] = isbn + ".0"
 
@@ -165,10 +177,14 @@ async def get_item_data(session, link, main_category):
 
             result.append(item_data)
             global count
-            print(f"\rDONE - {count}", end="")
+            print(
+                f"\rDONE - {count} | Error item - {len(item_error)} | Page error - {len(cat_error)}",
+                end="",
+            )
             count += 1
     except Exception as e:
         logger.exception(link)
+        item_error.append(link)
         with open(f"{BASE_LINUX_DIR}/error.txt", "a+", encoding="utf-8") as f:
             f.write(f"{link} ----- {e}\n")
 
@@ -183,7 +199,6 @@ async def get_gather_data():
         soup = bs(response_text, "lxml")
         cat_list = soup.find_all("h4")
         cat_list = [item.find("a")["href"] for item in cat_list[:8]]
-        cat_error = []
         for cat_link in cat_list:
             try:
                 url = BASE_URL + cat_link
@@ -211,9 +226,7 @@ async def get_gather_data():
                     items_on_page = soup.find_all("div", class_="product_img")
                     items_links = [item.find("a")["href"] for item in items_on_page]
                     for link in items_links:
-                        task = asyncio.create_task(
-                            get_item_data(session, link, main_category)
-                        )
+                        task = asyncio.create_task(get_item_data(session, link))
                         tasks.append(task)
             except Exception as e:
                 cat_error.append(f"{BASE_URL}{cat_link}?page={page_numb}&orderNew=asc")
@@ -221,6 +234,11 @@ async def get_gather_data():
                     f.write(f"{BASE_URL}{cat_link} ----- {e}\n")
                     continue
         await asyncio.gather(*tasks)
+
+        if item_error:
+            for link in item_error:
+                item_error_tasks = [asyncio.create_task(get_item_data(session, link))]
+            await asyncio.gather(*item_error_tasks)
 
         if cat_error:
             reparse_tasks = []
@@ -231,9 +249,7 @@ async def get_gather_data():
                     items_on_page = soup.find_all("div", class_="product_img")
                     items_links = [item.find("a")["href"] for item in items_on_page]
                     for item_link in items_links:
-                        task = asyncio.create_task(
-                            get_item_data(session, item_link, main_category)
-                        )
+                        task = asyncio.create_task(get_item_data(session, item_link))
                         reparse_tasks.append(task)
                 except Exception as e:
                     continue
