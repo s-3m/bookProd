@@ -134,7 +134,7 @@ async def get_item_data(session, link: str):
                 photo = soup.find("a", class_="highslide")["href"]
                 photo = BASE_URL + photo
                 if photo == "https://www.dkmg.ru/goods_img/no_photo.png":
-                    item_data["photo"] = (
+                    item_data["Фото"] = (
                         "https://zapobedu21.ru/images/26.07.2017/kniga.jpg"
                     )
                 else:
