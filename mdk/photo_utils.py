@@ -9,8 +9,7 @@ BASE_API_URL = "https://cloud-api.yandex.net"
 
 def crop_image(image):
     image = Image.open(BytesIO(image))
-    # image.show()
-    im_crop = image.crop((300, 300, 700, 700))
+    im_crop = image.crop((0, 0, image.width, image.height - 300))
     path_photo = "cropped.png"
     im_crop.save(path_photo, "PNG")
     full_path = os.path.abspath(path_photo)
