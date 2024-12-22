@@ -260,6 +260,34 @@ def get_all_catalogs():
     return cat_list
 
 
+async def checker_del(session, book):
+    book_url = f"{BASE_URL}/book/{book['article'][:-2]}"
+    try:
+        # async with semaphore:
+        response = await fetch_request(session, book_url, headers)
+        if response == "404":
+            book["stock"] = "del"
+        else:
+            soup = bs(response, "lxml")
+            try:
+                stock = soup.find("div", {"class": "tg-quantityholder"}).get(
+                    "data-maxqty"
+                )
+            except:
+                stock = "del"
+
+            book["stock"] = stock
+    except Exception as e:
+        book["stock"] = "del"
+        logger.exception(f"ERROR with {book['article'][:-2]}")
+        with open(f"{BASE_LINUX_DIR}/error.txt", "a") as f:
+            f.write(f"{book['article'][:-2]} --- {e}\n")
+    finally:
+        global count
+        print(f"\rDone - {count}", end="")
+        count += 1
+
+
 @logger.catch
 async def get_gather_data():
     logger.info("Начинаю сбор данных МДК")
@@ -309,6 +337,14 @@ async def get_gather_data():
                 for book_url in item_error_copy
             ]
             await asyncio.gather(*item_err)
+
+        # Check del position
+        global id_to_del
+        logger.info(f"Start check del file - {len(id_to_del)}pc")
+        check_del = [{"article": i, "stock": ""} for i in id_to_del]
+        del_tasks = [asyncio.create_task(checker_del(session, i)) for i in check_del]
+        await asyncio.gather(*del_tasks)
+        id_to_del = [i["article"] for i in check_del if i["stock"] == "del"]
 
         logger.info(f"Data was collected")
         logger.warning(
