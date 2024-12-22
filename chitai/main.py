@@ -221,7 +221,10 @@ def get_book_data(book_url: str):
 
         global done_count
         done_count += 1
-        print(f"\rDone - {done_count}", end="")
+        print(
+            f"\rDone - {done_count} | Item error - {len(item_error)} | Page error - {len(page_error)}",
+            end="",
+        )
     except Exception as e:
         logger.exception(f"Error - {link}")
         item_error.append(link)
