@@ -7,6 +7,7 @@ import aiohttp
 import asyncio
 from loguru import logger
 from filter import filtering_cover
+from mdk.photo_utils import replace_photo
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import (
@@ -68,137 +69,132 @@ async def get_item_data(session, book: str):
         return
     link = book if book.startswith("http") else f"{BASE_URL}{book}"
     try:
-        async with semaphore:
-            response = await fetch_request(session, link, headers)
-            soup = bs(response, "lxml")
+        response = await fetch_request(session, link, headers)
+        soup = bs(response, "lxml")
 
-            in_arbat = soup.find("div", {"class": "shop_on_map", "data-id": "1"})
-            if not in_arbat:
+        in_arbat = soup.find("div", {"class": "shop_on_map", "data-id": "1"})
+        if not in_arbat:
+            return
+
+        # Название книги
+        try:
+            title = soup.find("h1").text
+            title = await check_danger_string(title, "title")
+            if not title:
                 return
+        except:
+            title = "Нет названия"
 
-            # Название книги
-            try:
-                title = soup.find("h1").text
-                title = await check_danger_string(title, "title")
-                if not title:
-                    return
-            except:
-                title = "Нет названия"
+        # Артикул
+        try:
+            article = f"{link.split("/")[-1]}.0"
+        except:
+            article = "Нет артикла"
 
-            # Артикул
-            try:
-                article = f"{link.split("/")[-1]}.0"
-            except:
-                article = "Нет артикла"
+        # Фото
+        try:
+            photo = soup.find("figure").get("href")
+        except:
+            photo = "Нет фото"
 
-            # Фото
-            try:
-                photo = soup.find("figure").get("href")
-            except:
-                photo = "Нет фото"
+        # Авторы
+        try:
+            author_list = [
+                i.text for i in soup.find_all("a", {"class": "itempage-author"})
+            ]
+            author = " ".join(author_list)
+        except:
+            author = "Нет автора"
 
-            # Авторы
-            try:
-                author_list = [
-                    i.text for i in soup.find_all("a", {"class": "itempage-author"})
-                ]
-                author = " ".join(author_list)
-            except:
-                author = "Нет автора"
+        # Цена
+        try:
+            price = soup.find("span", {"class": "itempage-price_inet"}).text[:-1]
+        except:
+            price = "Нет цены"
 
-            # Цена
-            try:
-                price = soup.find("span", {"class": "itempage-price_inet"}).text[:-1]
-            except:
-                price = "Нет цены"
+        # Описание
+        try:
+            description = soup.find("p", {"class": "itempage-text"}).text.strip()
+            description = await check_danger_string(description, "description")
+        except:
+            description = "Нет описания"
 
-            # Описание
-            try:
-                description = soup.find("p", {"class": "itempage-text"}).text.strip()
-                description = await check_danger_string(description, "description")
-            except:
-                description = "Нет описания"
+        # Наличие
+        try:
+            stock = soup.find("div", {"class": "tg-quantityholder"}).get("data-maxqty")
+            stock = int(stock)
+        except:
+            stock = 0
 
-            # Наличие
-            try:
-                stock = soup.find("div", {"class": "tg-quantityholder"}).get(
-                    "data-maxqty"
-                )
-                stock = int(stock)
-            except:
-                stock = 0
+        book_data = {
+            "Ссылка": link,
+            "Название": title,
+            "Артикул_OZ": article,
+            "Фото": photo,
+            "Автор": author,
+            "Цена": price,
+            "Описание": description,
+            "Наличие": str(stock),
+        }
+        # Характеристики
+        try:
+            all_char = soup.find("ul", class_="tg-productinfo").find_all("li")
+            for i in all_char:
+                row = i.find_all("span")
+                book_data[row[0].text.strip().replace(":", "")] = row[1].text.strip()
+        except:
+            pass
+        # Cover filter
+        cover = book_data.get("Переплет")
+        if cover:
+            cover = filtering_cover(cover)
+            book_data["Переплет"] = cover
+        else:
+            book_data["Переплет"] = "Мягкая обложка"
 
-            book_data = {
-                "Ссылка": link,
-                "Название": title,
-                "Артикул_OZ": article,
-                "Фото": photo,
-                "Автор": author,
-                "Цена": price,
-                "Описание": description,
-                "Наличие": str(stock),
-            }
-            # Характеристики
-            try:
-                all_char = soup.find("ul", class_="tg-productinfo").find_all("li")
-                for i in all_char:
-                    row = i.find_all("span")
-                    book_data[row[0].text.strip().replace(":", "")] = row[
-                        1
-                    ].text.strip()
-            except:
-                pass
-            # Cover filter
-            cover = book_data.get("Переплет")
-            if cover:
-                cover = filtering_cover(cover)
-                book_data["Переплет"] = cover
-            else:
-                book_data["Переплет"] = "Мягкая обложка"
+        # ISBN filter
+        global last_isbn
+        isbn = book_data.get("ISBN")
+        if isbn:
+            last_isbn = isbn
+        else:
+            book_data["ISBN"] = last_isbn
 
-            # ISBN filter
-            global last_isbn
-            isbn = book_data.get("ISBN")
-            if isbn:
-                last_isbn = isbn
-            else:
-                book_data["ISBN"] = last_isbn
+        # Year filter
+        publish_year = book_data.get("Год издания")
+        if publish_year:
+            if (
+                "<2018" in publish_year
+                or "< 2018" in publish_year
+                or ">2024" in publish_year
+                or "> 2024" in publish_year
+                or len(publish_year) < 4
+            ):
+                book_data["Год издания"] = "2018"
 
-            # Year filter
-            publish_year = book_data.get("Год издания")
-            if publish_year:
-                if (
-                    "<2018" in publish_year
-                    or "< 2018" in publish_year
-                    or ">2024" in publish_year
-                    or "> 2024" in publish_year
-                    or len(publish_year) < 4
-                ):
-                    book_data["Год издания"] = "2018"
+        # Publisher filter
+        publisher = book_data.get("Издательство")
+        if not publisher:
+            book_data["Издательство"] = "АСТ"
 
-            # Publisher filter
-            publisher = book_data.get("Издательство")
-            if not publisher:
-                book_data["Издательство"] = "АСТ"
+        for d in prices:
+            if article in prices[d] and stock > 0:
+                prices[d][article]["price"] = price
 
-            for d in prices:
-                if article in prices[d] and stock > 0:
-                    prices[d][article]["price"] = price
+        if article in not_in_sale and stock > 0:
+            not_in_sale[article]["on sale"] = "да"
+        elif article not in sample and stock > 0:
+            id_to_add.append(book_data)
+        if article in id_to_del and stock > 0:
+            id_to_del.remove(article)
 
-            if article in not_in_sale and stock > 0:
-                not_in_sale[article]["on sale"] = "да"
-            elif article not in sample and stock > 0:
-                id_to_add.append(book_data)
-            if article in id_to_del and stock > 0:
-                id_to_del.remove(article)
-
-            print(
-                f"\rDone - {count} | Item error - {len(item_error)} | Page errors - {len(page_error)} | Category errors - {len(category_error)}",
-                end="",
-            )
-            count += 1
-            unique_book_links.add(book)
-            all_books_result.append(book_data)
+        print(
+            f"\rDone - {count} | Item error - {len(item_error)} | Page errors - {len(page_error)} | Category errors - {len(category_error)}",
+            end="",
+        )
+        count += 1
+        unique_book_links.add(book)
+        all_books_result.append(book_data)
 
     except (BaseException, Exception) as e:
         logger.exception(f"Error - {link}")
@@ -244,9 +240,17 @@ async def get_category_data(session, category: str):
             pagination = int(pagination.find_all("li")[-2].text)
         else:
             pagination = 1
-        for page in range(1, pagination + 1):
-            page_url = f"{BASE_URL}{category}&pid={page}"
-            await get_page_data(session, page_url)
+
+        page_tasks = [
+            asyncio.create_task(
+                get_page_data(session, f"{BASE_URL}{category}&pid={page}")
+            )
+            for page in range(1, pagination + 1)
+        ]
+        await asyncio.gather(*page_tasks)
+        # for page in range(1, pagination + 1):
+        #     page_url = f"{BASE_URL}{category}&pid={page}"
+        #     await get_page_data(session, page_url)
 
     except (BaseException, Exception) as e:
         logger.exception(f"Category Error with --- {cat_url}")
@@ -292,7 +296,7 @@ async def checker_del(session, book):
 async def get_gather_data():
     logger.info("Начинаю сбор данных МДК")
     async with aiohttp.ClientSession(
-        headers=headers, connector=aiohttp.TCPConnector(ssl=False, limit_per_host=30)
+        headers=headers, connector=aiohttp.TCPConnector(ssl=False, limit_per_host=20)
     ) as session:
 
         logger.info("Формирование списка категорий")
@@ -300,7 +304,7 @@ async def get_gather_data():
         logger.info(f"Найдено {len(all_categories)} категорий")
         logger.info(f"Начался сбор данных по категориям")
 
-        for main_category in all_categories:
+        for main_category in all_categories[:3]:
             await get_category_data(session, main_category)
 
         logger.info(f"Main data was collected")
@@ -346,10 +350,12 @@ async def get_gather_data():
         await asyncio.gather(*del_tasks)
         id_to_del = [i["article"] for i in check_del if i["stock"] == "del"]
 
-        logger.info(f"Data was collected")
-        logger.warning(
-            f"Not reparse:\nCategory - {len(category_error)}\nPage - {len(page_error)}\nItem - {len(item_error)}"
+        # Replace photo
+        global id_to_add
+        new_id_to_add = await replace_photo(
+            os.path.join(BASE_LINUX_DIR, ".."), id_to_add
         )
+        id_to_add = new_id_to_add
 
 
 if __name__ == "__main__":
@@ -363,5 +369,6 @@ if __name__ == "__main__":
         id_to_del=id_to_del,
         not_in_sale=not_in_sale,
         prices=prices,
+        replace_photo=True,
     )
     logger.success("Script finished successfully")
