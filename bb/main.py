@@ -22,8 +22,21 @@ BASE_URL = "https://bookbridge.ru"
 BASE_LINUX_DIR = "/media/source/bb" if not DEBUG else "source"
 USER_AGENT = UserAgent()
 headers = {
-    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
-    "user-agent": USER_AGENT.random,
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    "Accept-Language": "ru,en;q=0.9",
+    "Connection": "keep-alive",
+    # 'Cookie': 'prefers-color-scheme=dark; prefers-color-scheme=dark; prefers-color-scheme=dark; BITRIX_SM_SALE_UID=7967bf36fc7c5d5e22b4600e4f7dae21; _ym_uid=1724661849534829824; BX_USER_ID=763c7ee549f842ec42314fdbb95c00b7; BITRIX_SM_AG_SMSE_H=9781035130788%7C9781380069023%7C9781035100293_U1%7C9780521000581%7C9780230452732_U1%7C9780230438002%7C9780521123006_U1%7C9781380065957%7C9788466810609%7C9780141361673; searchbooster_v2_user_id=glNjupFeTeGqkFusruIRM_y1PB0QuX93qk80IBtFfq8%7C9.21.16.14; _ym_d=1731071225; ageCheckPopupRedirectUrl=%2Fv2-mount-input; BITRIX_SM_GUEST_ID=2154513; MAX_VIEWED_ITEMS_s1=%7B%2218124%22%3A%5B%221734696115572%22%2C%222775075%22%5D%2C%2218139%22%3A%5B%221734696437890%22%2C%222696566%22%5D%2C%2293381%22%3A%5B%221734698246348%22%2C%222720166%22%5D%2C%22106761%22%3A%5B%221734597607282%22%2C%222806558%22%5D%7D; PHPSESSID=VZ6UTwXfoee3ZST6II36M9GvovUq0hLy; ASPRO_MAX_USE_MODIFIER=Y; prefers-color-scheme=dark; _ym_debug=null; BITRIX_CONVERSION_CONTEXT_s1=%7B%22ID%22%3A2%2C%22EXPIRE%22%3A1734987540%2C%22UNIQUE%22%3A%5B%22conversion_visit_day%22%5D%7D; _ym_isad=2; BITRIX_SM_LAST_VISIT=23.12.2024%2009%3A26%3A51',
+    "Referer": "https://bookbridge.ru/catalog/angliyskiy/uchebnaya_literatura/",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "same-origin",
+    "Sec-Fetch-User": "?1",
+    "Upgrade-Insecure-Requests": "1",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 YaBrowser/24.12.0.0 Safari/537.36",
+    "cache-control": "no-cache",
+    "sec-ch-ua": '"Chromium";v="130", "YaBrowser";v="24.12", "Not?A_Brand";v="99", "Yowser";v="2.5"',
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": '"Windows"',
 }
 
 prices = filesdata_to_dict(f"{BASE_LINUX_DIR}/prices")
@@ -46,6 +59,7 @@ result = []
 
 id_to_del = set(sample.keys())
 id_to_add = []
+page_error = []
 
 
 def to_write_file(temporary=False, final_result=False):
@@ -352,16 +366,23 @@ async def get_gather_data():
 
         tasks = []
         for link in all_need_links:
-            response = await session.get(f"{BASE_URL}{link}", headers=headers)
-            await asyncio.sleep(10)
-            soup = bs(await response.text(), "lxml")
+            try:
+                for _ in range(10):
+                    response = await session.get(f"{BASE_URL}{link}", headers=headers)
+                    await asyncio.sleep(10)
+                    if response.status == 200:
+                        soup = bs(await response.text(), "lxml")
 
-            pagination = soup.find("div", class_="nums")
-            if pagination:
-                pagination = int(pagination.find_all("a")[-1].text.strip())
-            else:
-                pagination = 1
-            # pagination = 3
+                        pagination = soup.find("div", class_="nums")
+                        if pagination:
+                            pagination = int(pagination.find_all("a")[-1].text.strip())
+                        else:
+                            pagination = 1
+                        break
+                    # pagination = 3
+            except Exception as e:
+                page_error.append(f"{BASE_URL}{link}")
+
             for page in range(1, pagination + 1):
                 await asyncio.sleep(2)
 
@@ -373,7 +394,7 @@ async def get_gather_data():
                         ) as response:
                             await asyncio.sleep(10)
                             if response.status == 200:
-                                soup = bs(await response.text(), "html.parser")
+                                soup = bs(await response.text(), "lxml")
                                 page_items = soup.find_all("div", class_="item-title")
                                 items = [item.find("a")["href"] for item in page_items]
                                 main_category = soup.find("h1").text.strip()
