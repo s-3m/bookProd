@@ -81,12 +81,6 @@ async def check_danger_string(
     return base_string
 
 
-# proxy = "http://4XRUpQ:cKCEtZ@46.161.45.111:9374"
-proxy_path = os.path.abspath(os.path.dirname(__file__))
-with open(f"{proxy_path}/proxy.json") as f:
-    proxy_list = json.load(f)
-
-
 def sync_fetch_request(url, headers):
     response_status_code = None
     for _ in range(10):
@@ -101,10 +95,15 @@ def sync_fetch_request(url, headers):
     return response_status_code
 
 
+with open("proxy.txt") as f:
+    proxy_list_test = [i.strip() for i in f.readlines()]
+    proxy_list_test.append(None)
+
+
 async def fetch_request(session, url, headers: dict, sleep=4, proxy=None):
     if proxy:
-        if not type(proxy) == str:
-            proxy = "http://" + random.choice(proxy_list)
+        if not type(proxy) is str:
+            proxy = random.choice(proxy_list_test)
     for _ in range(20):
         try:
             async with session.get(url, headers=headers, proxy=proxy) as resp:

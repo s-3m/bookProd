@@ -51,7 +51,7 @@ async def get_main_data(session, book):
     book_url = f"{BASE_URL}/book/{book['article'][:-2]}"
     try:
         # async with semaphore:
-        response = await fetch_request(session, book_url, headers)
+        response = await fetch_request(session, book_url, headers, sleep=1, proxy=True)
         if response == "404":
             book["stock"] = "del"
         else:
@@ -81,7 +81,7 @@ async def get_gather_data(sample, proxy):
     timeout = aiohttp.ClientTimeout(total=800)
     async with aiohttp.ClientSession(
         headers=headers,
-        connector=aiohttp.TCPConnector(ssl=False, limit_per_host=5),
+        connector=aiohttp.TCPConnector(ssl=False, limit_per_host=4),
         timeout=timeout,
         trust_env=True,
     ) as session:
@@ -135,7 +135,7 @@ def main():
 
 def super_main():
     load_dotenv("../.env")
-    schedule.every().day.at("22:50").do(main)
+    schedule.every().day.at("19:10").do(main)
 
     while True:
         schedule.run_pending()
