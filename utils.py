@@ -98,15 +98,15 @@ def sync_fetch_request(url, headers):
     return response_status_code
 
 
-with open("proxy.txt") as f:
-    proxy_list_test = ["http://" + i.strip() for i in f.readlines()]
-    proxy_list_test.append(None)
+with open(f"{os.path.split(os.path.abspath(__file__))[0]}/proxy.txt") as f:
+    proxy_list = ["http://" + i.strip() for i in f.readlines()]
+    proxy_list.append(None)
 
 
 async def fetch_request(session, url, headers: dict, sleep=4, proxy=None):
     if proxy:
         if not type(proxy) is str:
-            proxy = random.choice(proxy_list_test)
+            proxy = random.choice(proxy_list)
     for _ in range(20):
         try:
             async with session.get(url, headers=headers, proxy=proxy) as resp:
