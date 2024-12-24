@@ -84,7 +84,10 @@ async def check_danger_string(
 def sync_fetch_request(url, headers):
     response_status_code = None
     for _ in range(10):
-        response = requests.get(url, headers=headers)
+        response = requests.get(
+            url,
+            headers=headers,
+        )
         time.sleep(2)
         if response.status_code == 200:
             return response.text
