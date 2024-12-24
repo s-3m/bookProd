@@ -1,4 +1,3 @@
-import os.path
 import sys
 import os
 import time
@@ -9,12 +8,10 @@ import pandas.io.formats.excel
 import unicodedata
 from fake_useragent import UserAgent
 from bs4 import BeautifulSoup as bs
-import aiohttp
 import asyncio
 import pandas as pd
 from loguru import logger
 
-from mg.mg import item_error
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import (
@@ -360,7 +357,7 @@ async def get_gather_data():
         except:
             continue
 
-    for link in all_need_links[:5]:
+    for link in all_need_links:
         response = sync_fetch_request(f"{BASE_URL}{link}", headers=headers)
         await asyncio.sleep(10)
         soup = bs(response, "lxml")
@@ -370,8 +367,6 @@ async def get_gather_data():
             pagination = int(pagination.find_all("a")[-1].text.strip())
         else:
             pagination = 1
-        pagination = 2
-
         for page in range(1, pagination + 1):
             await asyncio.sleep(2)
 
@@ -439,7 +434,7 @@ async def get_gather_data():
     to_write_file(final_result=True)
 
     logger.info("Start check empty price field")
-    # await check_empty_price()
+    await check_empty_price()
 
     logger.success("All done successfully!!!")
 
