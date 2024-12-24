@@ -96,7 +96,7 @@ def sync_fetch_request(url, headers):
 
 
 with open("proxy.txt") as f:
-    proxy_list_test = [i.strip() for i in f.readlines()]
+    proxy_list_test = ["http://" + i.strip() for i in f.readlines()]
     proxy_list_test.append(None)
 
 
