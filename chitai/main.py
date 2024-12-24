@@ -272,7 +272,7 @@ def get_page_data(page_number=1, reparse_url=False):
 
 
 async def get_gather_data():
-    logger.info("Начинаю сбор данных БИБЛИО-ГЛОБУС")
+    logger.info("Начинаю сбор данных")
     timeout = aiohttp.ClientTimeout(total=800)
     async with aiohttp.ClientSession(
         headers=headers,

@@ -47,7 +47,7 @@ count = 1
 async def get_main_data(session, book_item):
     try:
         response = await fetch_request(
-            session, book_item["link"], headers, proxy=os.getenv("PROXY")
+            session, book_item["link"], headers, proxy=os.getenv("PROXY"), sleep=2
         )
         if response == "404":
             book_item["stock"] = "del"
@@ -59,7 +59,7 @@ async def get_main_data(session, book_item):
 
         unavailable_status = soup.find("div", class_="product-unavailable-info")
 
-        if unavailable_status:
+        if unavailable_status or not stock:
             book_item["stock"] = "del"
             return
         book_item["stock"] = stock
@@ -113,18 +113,12 @@ async def get_gather_data(sample):
     timeout = aiohttp.ClientTimeout(total=800)
     async with aiohttp.ClientSession(
         headers=headers,
-        connector=aiohttp.TCPConnector(ssl=False, limit=2, limit_per_host=2),
+        connector=aiohttp.TCPConnector(ssl=False, limit=4, limit_per_host=4),
         timeout=timeout,
         trust_env=True,
     ) as session:
         await get_auth_token(session)
         for i in sample:
-            # try:
-            #     if not i["link"]:
-            #         i_link = await get_link_from_ajax(session, i["article"])
-            #         i["link"] = f"{BASE_URL}/{i_link}"
-            # except Exception as e:
-            #     i["stock"] = "del"
             if i["link"]:
                 task = asyncio.create_task(get_main_data(session, i))
                 tasks.append(task)
