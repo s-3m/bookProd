@@ -304,7 +304,7 @@ async def get_gather_data():
         logger.info(f"Найдено {len(all_categories)} категорий")
         logger.info(f"Начался сбор данных по категориям")
 
-        for main_category in all_categories[:3]:
+        for main_category in all_categories:
             await get_category_data(session, main_category)
 
         logger.info(f"Main data was collected")
