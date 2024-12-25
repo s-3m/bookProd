@@ -296,21 +296,21 @@ async def check_empty_price(session):
 
     empty_price_tasks = []
     df_empty_price_one = pd.read_excel(
-        f"{BASE_LINUX_DIR}/result/price_1.xlsx",
+        f"{BASE_LINUX_DIR}/result/bb_price_1.xlsx",
         converters={"article": str, "price": str},
     )
     df_empty_price_one = df_empty_price_one.where(df_empty_price_one.notnull(), None)
     price_one = df_empty_price_one.to_dict(orient="records")
 
     df_empty_price_two = pd.read_excel(
-        f"{BASE_LINUX_DIR}/result/price_2.xlsx",
+        f"{BASE_LINUX_DIR}/result/bb_price_2.xlsx",
         converters={"article": str, "price": str},
     )
     df_empty_price_two = df_empty_price_two.where(df_empty_price_two.notnull(), None)
     price_two = df_empty_price_two.to_dict(orient="records")
 
     df_empty_price_three = pd.read_excel(
-        f"{BASE_LINUX_DIR}/result/price_3.xlsx",
+        f"{BASE_LINUX_DIR}/result/bb_price_3.xlsx",
         converters={"article": str, "price": str},
     )
     df_empty_price_three = df_empty_price_three.where(

@@ -235,13 +235,9 @@ def get_book_data(book_url: str):
 page_to_stop = 4600
 
 
-def get_page_data(page_number=1, reparse_url=False):
+def get_page_data(book_category_link, page_number=1, reparse_url=False):
     global page_to_stop
-    url = (
-        f"{BASE_URL}/catalog/books-18030?page={page_number}"
-        if not reparse_url
-        else reparse_url
-    )
+    url = f"{book_category_link}?page={page_number}" if not reparse_url else reparse_url
     try:
         response = sync_fetch_request(url, headers)
         soup = bs(response, "lxml")
@@ -280,7 +276,7 @@ async def get_gather_data():
         timeout=timeout,
         trust_env=True,
     ) as session:
-        for i in [f"{BASE_URL}/catalog/books-18030?page=1", f"{BASE_URL}/sales"]:
+        for i in [f"{BASE_URL}/catalog/books-18030", f"{BASE_URL}/sales"][-1]:
             logger.info(f"Start parsing {i}")
             async with session.get(i, headers=headers) as resp:
                 soup = bs(await resp.text(), "lxml")
@@ -293,34 +289,32 @@ async def get_gather_data():
                     for page in range(1, max_pages + 1):
                         if page > page_to_stop:
                             break
-                        executor.submit(get_page_data, page, False)
+                        executor.submit(get_page_data, i, page, False)
 
-            print()
-            logger.success("Main data was collected")
+        print()
+        logger.success("Main data was collected")
 
-            # Reparse item errors
-            if item_error:
-                logger.warning(f"Start reparse {len(item_error)} errors")
-                new_item_list = item_error.copy()
-                item_error.clear()
-                with ThreadPoolExecutor(max_workers=5) as executor:
-                    for item in new_item_list:
-                        executor.submit(get_book_data, item)
+        # Reparse item errors
+        if item_error:
+            logger.warning(f"Start reparse {len(item_error)} errors")
+            new_item_list = item_error.copy()
+            item_error.clear()
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                for item in new_item_list:
+                    executor.submit(get_book_data, item)
 
-            # Reparse page errors
-            if page_error:
-                logger.warning(f"Start reparse {len(item_error)} pages errors")
-                new_page_list = page_error.copy()
-                page_error.clear()
-                with ThreadPoolExecutor(max_workers=5) as executor:
-                    for url in new_page_list:
-                        executor.submit(get_page_data, 1, url)
+        # Reparse page errors
+        if page_error:
+            logger.warning(f"Start reparse {len(item_error)} pages errors")
+            new_page_list = page_error.copy()
+            page_error.clear()
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                for url in new_page_list:
+                    executor.submit(get_page_data, False, 1, url)
 
-            logger.warning(
-                f"Datas was collected. Not reparse: item errors - {len(item_error)} --- page errors - {len(page_error)}"
-            )
-
-            pd.DataFrame(all_books_result).to_excel("chitai_gorod.xlsx", index=False)
+        logger.warning(
+            f"Datas was collected. Not reparse: item errors - {len(item_error)} --- page errors - {len(page_error)}"
+        )
 
 
 @logger.catch

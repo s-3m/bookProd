@@ -87,7 +87,7 @@ async def get_item_data(session, book: str):
 
         # Артикул
         try:
-            article = f"{link.split("/")[-1]}.0"
+            article = f"{link.split("/")[-1].strip()}.0"
         except:
             article = "Нет артикла"
 
