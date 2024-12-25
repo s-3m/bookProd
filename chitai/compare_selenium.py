@@ -85,21 +85,21 @@ def get_main_data(book_item):
 
         online_option = soup.find("div", class_="product-offer-price")
         online_option_2 = soup.find("span", class_="offer-availability-status--green")
-        in_shop_option = soup.find("p", class_="product-offer-header__title")
+        # in_shop_option = soup.find("p", class_="product-offer-header__title")
         not_in_option = soup.find("div", class_="detail-product__unavailable")
-        if in_shop_option:
-            moscow_shop_check = soup.find(
-                "div", class_="product-offer-shops__title"
-            ).text
-            if "В наличии в" in moscow_shop_check:
-                in_shop_option = True
-            else:
-                in_shop_option = False
-                book_item["stock"] = "del"
+        # if in_shop_option:
+        #     moscow_shop_check = soup.find(
+        #         "div", class_="product-offer-shops__title"
+        #     ).text
+        #     if "В наличии в" in moscow_shop_check:
+        #         in_shop_option = True
+        #     else:
+        #         in_shop_option = False
+        #         book_item["stock"] = "del"
 
         stock = soup.find("link", attrs={"itemprop": "availability", "href": "InStock"})
 
-        if online_option or in_shop_option:
+        if online_option:
             if stock:
                 stock = stock.next.strip()
                 book_item["stock"] = stock
