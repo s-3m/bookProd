@@ -89,8 +89,8 @@ async def get_gather_data(sample):
 
     with ThreadPoolExecutor(max_workers=10) as executor:
         for i in sample:
-            if book["stock"] == "error":
-                executor.submit(get_main_data, book)
+            if i["stock"] == "error":
+                executor.submit(get_main_data, i)
 
     # Note all not reparse item to del
     for book in sample:
