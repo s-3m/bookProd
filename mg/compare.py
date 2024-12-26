@@ -22,6 +22,22 @@ headers = {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
     "user-agent": USER_AGENT.random,
 }
+ajax_headers = {
+    "Accept": "application/json, text/javascript, */*; q=0.01",
+    "Accept-Language": "ru,en;q=0.9",
+    "Connection": "keep-alive",
+    # 'Cookie': '_ym_uid=1724136084781768402; _ym_d=1724136084; BITRIX_SM_mguser=972aa2e5-c315-416b-88b3-92f79b453510; BX_USER_ID=ed697227b63725fef1d378c8253f2c14; PHPSESSID=vrf57rm4u3ioipl9cgotmjgec6; _ym_isad=2; _ym_visorc=w',
+    "Referer": "https://www.dkmg.ru/catalog/search/?Catalog_ID=0&search_word=978-5-9951-4898-2.0&Series_ID=&Publisher_ID=&Year_Biblio=",
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-origin",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 YaBrowser/24.12.0.0 Safari/537.36",
+    "X-Requested-With": "XMLHttpRequest",
+    "sec-ch-ua": '"Chromium";v="130", "YaBrowser";v="24.12", "Not?A_Brand";v="99", "Yowser";v="2.5"',
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": '"Windows"',
+}
+
 
 count = 1
 DEBUG = True if sys.platform.startswith("win") else False
@@ -32,20 +48,33 @@ logger.add(
 error_items = []
 
 
+async def get_id_from_ajax(session, item):
+    ajax_url = "https://www.dkmg.ru/ajax/ajax_search.php"
+    params = {"term": item["article"][:-2]}
+    async with session.get(ajax_url, params=params, headers=ajax_headers) as resp:
+        ajax_result = await resp.json(content_type=None)
+        item_id = ajax_result[0].get("value")
+        if item_id and item_id != "#":
+            item["id"] = item_id.split("/")[-1].strip()
+
+
 async def get_item_data(session, item, semaphore, sample, reparse=False):
     global count
 
     try:
         async with semaphore:
             if not item["id"]:
-                search_url = f"https://www.dkmg.ru/catalog/search/?search_word={item["article"][:-2]}"
-                search_response = await fetch_request(session, search_url, headers)
-                soup = bs(search_response, "lxml")
-                content = soup.find("div", {"id": "content"}).find("div", class_="item")
-                if content is None:
-                    item["stock"] = "del"
-                    return
-                item["id"] = content.find("a").get("href").split("/")[-1].strip()
+                await get_id_from_ajax(session, item)
+                # search_url = f"https://www.dkmg.ru/catalog/search/?search_word={item["article"][:-2]}"
+                # search_response = await fetch_request(session, search_url, headers)
+                # soup = bs(search_response, "lxml")
+                # content = soup.find("div", {"id": "content"}).find("div", class_="item")
+                # if content is None:
+                #     item["stock"] = "del"
+                #     return
+                # item["id"] = content.find("a").get("href").split("/")[-1].strip()
+            if not item["id"]:
+                item["stock"] = "del"
 
             full_url = f"{BASE_URL}/tovar/{item["id"]}"
             response = await fetch_request(session, full_url, headers)
