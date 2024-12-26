@@ -147,7 +147,7 @@ async def get_item_data(session, link: str):
             # Cover filter
             cover_type = item_data.get("Тип обложки:")
             if cover_type:
-                item_data["cover_type"] = filtering_cover(cover_type)
+                item_data["Тип обложки:"] = filtering_cover(cover_type)
 
             # Author filter
             item_data["Автор:"] = (
