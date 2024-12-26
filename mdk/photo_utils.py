@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 from loguru import logger
 import aiohttp
-from PIL import Image
+from PIL import Image, ImageFilter
 from io import BytesIO
 import pandas as pd
 
@@ -16,7 +16,7 @@ async def save_to_ya(session, img_path):
     }
     # Получение ссылки для закгрузки файла
     api_url = f"{BASE_API_URL}/v1/disk/resources/upload"
-    path_in_ya = f"/MDK_photo/mdk_{datetime.timestamp(datetime.now())}.jpeg"
+    path_in_ya = f"/MDK_photo/mdk_{datetime.timestamp(datetime.now())}.png"
     params = {"path": path_in_ya}
 
     async with session.get(api_url, params=params, headers=headers) as res:
@@ -64,9 +64,13 @@ async def save_to_ya(session, img_path):
 async def crop_image(image):
     image = Image.open(BytesIO(image))
     im_crop = image.crop((0, 0, image.width, image.height - 30))
+    scale_ = 2  # 300%
+    new_size = (int(im_crop.size[0] * scale_), int(im_crop.size[1] * scale_))
+    new_img = im_crop.resize(new_size)
+    img_filter = new_img.filter(ImageFilter.SHARPEN)
     timestamp_for_name = datetime.timestamp(datetime.now())
-    path_photo = f"mdk_{timestamp_for_name}.jpeg"
-    im_crop.save(path_photo, "JPEG")
+    path_photo = f"mdk_{timestamp_for_name}.png"
+    img_filter.save(path_photo, "PNG")
     full_path = os.path.abspath(path_photo)
     return full_path
 
@@ -124,3 +128,7 @@ async def replace_photo(add_list: list[dict]):
                 tasks.append(task)
         await asyncio.gather(*tasks)
     return result
+
+
+# sample = pd.read_excel("source/result/mdk_add.xlsx").to_dict(orient="records")
+# asyncio.run(replace_photo(sample))
