@@ -88,11 +88,16 @@ async def photo_processing(session, item):
 
 
 @logger.catch
-async def replace_photo(base_dir: str, add_list: list[dict]):
+async def replace_photo(add_list: list[dict]):
     print("Start process")
     path_to_chit = os.path.join(
-        base_dir, "..", "chitai/source/result/chit-gor_all.xlsx"
+        os.path.split(os.path.abspath(__file__))[0],
+        "..",
+        "chitai/source/result/chit-gor_all.xlsx",
     )
+    # path_to_chit = os.path.join(
+    #     base_dir, "..", "chitai/source/result/chit-gor_all.xlsx"
+    # )
     chit_gor_df = pd.read_excel(path_to_chit)[["ISBN", "Фото"]]
     chit_gor_df = chit_gor_df.where(chit_gor_df.notnull(), None)
 

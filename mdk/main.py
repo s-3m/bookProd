@@ -352,9 +352,7 @@ async def get_gather_data():
 
         # Replace photo
         global id_to_add
-        new_id_to_add = await replace_photo(
-            os.path.join(BASE_LINUX_DIR, ".."), id_to_add
-        )
+        new_id_to_add = await replace_photo(id_to_add)
         id_to_add = new_id_to_add
 
 
