@@ -246,15 +246,18 @@ def get_page_data(book_category_link, page_number=1, reparse_url=False):
             "article", class_="product-card product-card product"
         )
         stop_count = 0
-        for article in all_articles:
-            buy_possibility = article.find(
-                "span", class_="action-button__text"
-            ).text.strip()
-            book_link = article.find("a", class_="product-card__title")["href"].strip()
-            if buy_possibility == "Где купить?":
-                stop_count += 1
-            if buy_possibility == "Купить":
-                get_book_data(book_link)
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            for article in all_articles:
+                buy_possibility = article.find(
+                    "span", class_="action-button__text"
+                ).text.strip()
+                book_link = article.find("a", class_="product-card__title")[
+                    "href"
+                ].strip()
+                if buy_possibility == "Где купить?":
+                    stop_count += 1
+                if buy_possibility == "Купить":
+                    executor.submit(get_book_data, book_link)
 
         if not reparse_url:
             if stop_count >= 48:
@@ -276,7 +279,7 @@ async def get_gather_data():
         timeout=timeout,
         trust_env=True,
     ) as session:
-        for i in [f"{BASE_URL}/catalog/books-18030", f"{BASE_URL}/sales"][-1]:
+        for i in [f"{BASE_URL}/catalog/books-18030", f"{BASE_URL}/sales"]:
             logger.info(f"Start parsing {i}")
             async with session.get(i, headers=headers) as resp:
                 soup = bs(await resp.text(), "lxml")
