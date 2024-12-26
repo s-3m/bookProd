@@ -47,6 +47,7 @@ semaphore = asyncio.Semaphore(10)
 count = 1
 item_error = []
 cat_error = []
+unique_title = set()
 
 
 async def get_item_data(session, link: str):
@@ -71,7 +72,7 @@ async def get_item_data(session, link: str):
             try:
                 title = soup.find("h1").text.strip()
                 title = await check_danger_string(title, "title")
-                if not title:
+                if not title or title in unique_title:
                     return
                 item_data["Название"] = title
             except:
@@ -176,6 +177,7 @@ async def get_item_data(session, link: str):
                     prices[d][isbn + ".0"]["price"] = price
 
             result.append(item_data)
+            unique_title.add(title)
             global count
             print(
                 f"\rDONE - {count} | Error item - {len(item_error)} | Page error - {len(cat_error)}",
