@@ -2,7 +2,6 @@ import time
 import sys
 import os
 import pandas.io.formats.excel
-from IPython.core.release import author
 from bs4 import BeautifulSoup as bs
 from pprint import pprint
 from fake_useragent import UserAgent
