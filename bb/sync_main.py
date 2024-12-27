@@ -381,7 +381,7 @@ async def get_gather_data():
                     items = [item.find("a")["href"] for item in page_items]
                     main_category = soup.find("h1").text.strip()
 
-                    with ThreadPoolExecutor(max_workers=10) as executor:
+                    with ThreadPoolExecutor(max_workers=15) as executor:
                         for item in items:
                             executor.submit(get_item_data, item, main_category)
                     break
@@ -412,7 +412,7 @@ async def get_gather_data():
                     items = [item.find("a")["href"] for item in page_items]
                     main_category = soup.find("h1").text.strip()
 
-                    with ThreadPoolExecutor(max_workers=5) as executor:
+                    with ThreadPoolExecutor(max_workers=15) as executor:
                         for item in items:
                             executor.submit(get_item_data, item, main_category)
                 except Exception as e:
