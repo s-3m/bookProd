@@ -7,7 +7,7 @@ import aiohttp
 import asyncio
 from loguru import logger
 from filter import filtering_cover
-from mdk.photo_utils import replace_photo
+from photo_utils import replace_photo
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import (
