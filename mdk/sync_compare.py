@@ -125,6 +125,8 @@ def main():
     asyncio.run(tg_send_files([new_stock_path, del_path], "mdk"))
 
     logger.success("Script was finished successfully")
+    global count
+    count = 1
 
 
 def super_main():

@@ -296,7 +296,7 @@ async def checker_del(session, book):
 async def get_gather_data():
     logger.info("Начинаю сбор данных МДК")
     async with aiohttp.ClientSession(
-        headers=headers, connector=aiohttp.TCPConnector(ssl=False, limit_per_host=20)
+        headers=headers, connector=aiohttp.TCPConnector(ssl=False, limit=10)
     ) as session:
 
         logger.info("Формирование списка категорий")
