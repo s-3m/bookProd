@@ -254,7 +254,7 @@ async def get_item_data(session, item: str):
             file.write(f"{link} ---> {e}\n")
 
 
-async def get_page_data(session, page_link, tasks):
+async def get_page_data(session, page_link):
     async with semaphore:
         try:
             page_html = await fetch_request(session, page_link, headers)
@@ -262,9 +262,8 @@ async def get_page_data(session, page_link, tasks):
             soup = bs(page_html, "lxml")
             all_books_on_page = soup.find_all("div", class_="catalog__item")
             all_items = [book.find("a")["href"] for book in all_books_on_page]
-            for item in all_items:
-                task = asyncio.create_task(get_item_data(session, item))
-                tasks.append(task)
+            page_tasks = [asyncio.create_task(get_item_data(session, item)) for item in all_items]
+            await asyncio.gather(*page_tasks)
         except Exception as e:
             page_error.append(page_link)
             logger.exception(f"Exception on page {page_link} - {e}")
@@ -283,7 +282,7 @@ async def get_gather_data():
             "https://www.moscowbooks.ru/books/",
             "https://www.moscowbooks.ru/books/exclusive-and-collective-editions/",
         ]
-        for cat in all_categories[:1]:
+        for cat in all_categories:
             response = await fetch_request(session, cat, headers)
             soup = bs(response, "lxml")
             max_pagination = (
@@ -291,27 +290,22 @@ async def get_gather_data():
             )
             tasks = []
             logger.info(f"Page find - {max_pagination}")
-            max_pagination = 10
             for page in range(1, int(max_pagination) + 1):
                 page_link = f"{cat}?page={page}"
-                await get_page_data(session, page_link, tasks)
+                task = asyncio.create_task(get_page_data(session, page_link))
+                tasks.append(task)
             await asyncio.gather(*tasks)
 
         # Reparse page errors
-        page_error_tasks = []
         if page_error:
             logger.warning("Reparse page errors")
-            for i in page_error:
-                await get_page_data(session, i, page_error_tasks)
+            page_error_tasks = [asyncio.create_task(get_page_data(session, i)) for i in page_error]
             await asyncio.gather(*page_error_tasks)
 
         # Reparse item errors
-        items_error_tasks = []
         if item_error:
             logger.warning("Reparse item errors")
-            for i in item_error:
-                task = asyncio.create_task(get_item_data(session, i))
-                items_error_tasks.append(task)
+            items_error_tasks = [asyncio.create_task(get_item_data(session, i)) for i in item_error]
             await asyncio.gather(*items_error_tasks)
 
         # Reparse empty string
