@@ -262,7 +262,9 @@ async def get_page_data(session, page_link):
             soup = bs(page_html, "lxml")
             all_books_on_page = soup.find_all("div", class_="catalog__item")
             all_items = [book.find("a")["href"] for book in all_books_on_page]
-            page_tasks = [asyncio.create_task(get_item_data(session, item)) for item in all_items]
+            page_tasks = [
+                asyncio.create_task(get_item_data(session, item)) for item in all_items
+            ]
             await asyncio.gather(*page_tasks)
         except Exception as e:
             page_error.append(page_link)
@@ -299,13 +301,17 @@ async def get_gather_data():
         # Reparse page errors
         if page_error:
             logger.warning("Reparse page errors")
-            page_error_tasks = [asyncio.create_task(get_page_data(session, i)) for i in page_error]
+            page_error_tasks = [
+                asyncio.create_task(get_page_data(session, i)) for i in page_error
+            ]
             await asyncio.gather(*page_error_tasks)
 
         # Reparse item errors
         if item_error:
             logger.warning("Reparse item errors")
-            items_error_tasks = [asyncio.create_task(get_item_data(session, i)) for i in item_error]
+            items_error_tasks = [
+                asyncio.create_task(get_item_data(session, i)) for i in item_error
+            ]
             await asyncio.gather(*items_error_tasks)
 
         # Reparse empty string

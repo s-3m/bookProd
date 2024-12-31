@@ -119,6 +119,8 @@ async def fetch_request(session, url, headers: dict, sleep=4, proxy=None):
             continue
         except aiohttp.client_exceptions.ClientConnectorError:
             continue
+        except aiohttp.client_exceptions.ServerDisconnectedError:
+            continue
     return None
 
 
