@@ -93,7 +93,8 @@ async def photo_processing(session, item):
 
 @logger.catch
 async def replace_photo(add_list: list[dict]):
-    print("Start process")
+    print()
+    logger.info("Start replace photo")
     # path_to_chit = os.path.join(
     #     os.path.split(os.path.abspath(__file__))[0],
     #     "..",

@@ -70,6 +70,8 @@ async def get_item_data(session, book: str):
     link = book if book.startswith("http") else f"{BASE_URL}{book}"
     try:
         response = await fetch_request(session, link, headers)
+        if response == "503":
+            return
         soup = bs(response, "lxml")
 
         in_arbat = soup.find("div", {"class": "shop_on_map", "data-id": "1"})
@@ -206,6 +208,8 @@ async def get_item_data(session, book: str):
 async def get_page_data(session, page_url):
     try:
         response = await fetch_request(session, page_url, headers)
+        if response == "503":
+            return
         soup = bs(response, "lxml")
         all_books_on_page = [
             i.find("a").get("href")
