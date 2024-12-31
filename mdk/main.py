@@ -269,7 +269,7 @@ async def checker_del(session, book):
     try:
         # async with semaphore:
         response = await fetch_request(session, book_url, headers)
-        if response == "404":
+        if response in ("404", "503"):
             book["stock"] = "del"
         else:
             soup = bs(response, "lxml")

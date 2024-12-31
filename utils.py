@@ -115,6 +115,8 @@ async def fetch_request(session, url, headers: dict, sleep=4, proxy=None):
                     return await resp.text()
                 elif resp.status == 404:
                     return "404"
+                elif resp.status == 503:
+                    return "503"
         except TimeoutError:
             continue
         except aiohttp.client_exceptions.ClientConnectorError:
