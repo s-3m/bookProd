@@ -6,6 +6,7 @@ import random
 import time
 
 import pandas as pd
+import polars as pl
 from typing import Literal
 import aiohttp
 import requests
@@ -38,18 +39,26 @@ def filesdata_to_dict(folder_path: str, combined=False, return_df=False) -> dict
             for file in fileList:
                 template = r"\d+"
                 price_number = re.search(template, file).group()
-                df = pd.read_excel(
-                    f"{dirName}/{file}",
-                    converters={"Артикул": str},
-                    sheet_name=1,
-                    header=2,
-                )[["Артикул"]].drop_duplicates()
+
+                df: pd.DataFrame = pl.read_excel(
+                    f"{dirName}/{file}", sheet_id=2, read_options={"header_row": 2}
+                ).to_pandas()
+                df = df.astype({"Артикул": str})[["Артикул"]].drop_duplicates()
                 df["price"] = ""
+                # df = pd.read_excel(
+                #     f"{dirName}/{file}",
+                #     converters={"Артикул": str},
+                #     sheet_name=1,
+                #     header=2,
+                # )[["Артикул"]].drop_duplicates()
+                # df["price"] = ""
 
                 df = df.where(df.notnull(), None)
                 ready_dict = df.set_index("Артикул").to_dict(orient="index")
                 if None in ready_dict:
                     del ready_dict[None]
+                elif "None" in ready_dict:
+                    del ready_dict["None"]
                 df_dict[price_number] = ready_dict
         return df_dict
 
@@ -98,9 +107,9 @@ def sync_fetch_request(url, headers):
     return response_status_code
 
 
-with open(f"{os.path.split(os.path.abspath(__file__))[0]}/proxy.txt") as f:
-    proxy_list = ["http://" + i.strip() for i in f.readlines()]
-    proxy_list.append(None)
+# with open(f"{os.path.split(os.path.abspath(__file__))[0]}/proxy.txt") as f:
+#     proxy_list = ["http://" + i.strip() for i in f.readlines()]
+#     proxy_list.append(None)
 
 
 async def fetch_request(session, url, headers: dict, sleep=4, proxy=None):
