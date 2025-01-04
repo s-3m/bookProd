@@ -244,7 +244,6 @@ async def get_category_data(session, category: str):
             pagination = int(pagination.find_all("li")[-2].text)
         else:
             pagination = 1
-        pagination = 3
         page_tasks = [
             asyncio.create_task(
                 get_page_data(session, f"{BASE_URL}{category}&pid={page}")
@@ -308,7 +307,7 @@ async def get_gather_data():
         logger.info(f"Найдено {len(all_categories)} категорий")
         logger.info(f"Начался сбор данных по категориям")
 
-        for main_category in all_categories[:3]:
+        for main_category in all_categories:
             await get_category_data(session, main_category)
 
         logger.info(f"Main data was collected")
