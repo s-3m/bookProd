@@ -107,9 +107,9 @@ def sync_fetch_request(url, headers):
     return response_status_code
 
 
-# with open(f"{os.path.split(os.path.abspath(__file__))[0]}/proxy.txt") as f:
-#     proxy_list = ["http://" + i.strip() for i in f.readlines()]
-#     proxy_list.append(None)
+with open(f"{os.path.split(os.path.abspath(__file__))[0]}/proxy.txt") as f:
+    proxy_list = ["http://" + i.strip() for i in f.readlines()]
+    proxy_list.append(None)
 
 
 async def fetch_request(session, url, headers: dict, sleep=4, proxy=None):
