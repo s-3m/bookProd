@@ -16,6 +16,7 @@ from utils import (
     write_result_files,
 )
 from filter import filtering_cover
+from compare_selenium import get_main_data
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 logger.add("chitai_error.log", format="{time} {level} {message}", level="ERROR")
@@ -48,6 +49,7 @@ headers = {
 all_books_result = []
 id_to_add = []
 id_to_del = set(sample.keys())
+new_del = []
 
 done_count = 0
 item_error = []
@@ -315,6 +317,18 @@ async def get_gather_data():
                 for url in new_page_list:
                     executor.submit(get_page_data, False, 1, url)
 
+        # Check del file
+        logger.warning("Check del file")
+        del_dict = [{"article": i, "stock": None, "link": None} for i in id_to_del]
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            for item in del_dict:
+                executor.submit(get_main_data, item)
+
+        global new_del
+        for i in del_dict:
+            if not str(i["stock"]).isdigit():
+                new_del.append(i["article"])
+
         logger.warning(
             f"Datas was collected. Not reparse: item errors - {len(item_error)} --- page errors - {len(page_error)}"
         )
@@ -329,7 +343,7 @@ def main():
         prefix="chit-gor",
         all_books_result=all_books_result,
         id_to_add=id_to_add,
-        id_to_del=id_to_del,
+        id_to_del=new_del,
         not_in_sale=not_in_sale,
         prices=prices,
     )
