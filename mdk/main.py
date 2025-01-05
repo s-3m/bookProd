@@ -46,6 +46,7 @@ headers = {
 
 all_books_result = []
 id_to_add = []
+new_id_to_add = []
 id_to_del = set(sample.keys())
 
 done_count = 0
@@ -354,22 +355,34 @@ async def get_gather_data():
         id_to_del = [i["article"] for i in check_del if i["stock"] == "del"]
 
         # Replace photo
+        global new_id_to_add
         global id_to_add
         new_id_to_add = await replace_photo(id_to_add)
-        id_to_add = new_id_to_add
 
 
 if __name__ == "__main__":
     asyncio.run(get_gather_data())
     logger.info("Start write files")
-    write_result_files(
-        base_dir=BASE_LINUX_DIR,
-        prefix="mdk",
-        all_books_result=all_books_result,
-        id_to_add=id_to_add,
-        id_to_del=id_to_del,
-        not_in_sale=not_in_sale,
-        prices=prices,
-        replace_photo=True,
-    )
+    try:
+        write_result_files(
+            base_dir=BASE_LINUX_DIR,
+            prefix="mdk",
+            all_books_result=all_books_result,
+            id_to_add=new_id_to_add,
+            id_to_del=id_to_del,
+            not_in_sale=not_in_sale,
+            prices=prices,
+            replace_photo=True,
+        )
+    except Exception as e:
+        logger.exception(e)
+        write_result_files(
+            base_dir=BASE_LINUX_DIR,
+            prefix="mdk",
+            all_books_result=all_books_result,
+            id_to_add=id_to_add,
+            id_to_del=id_to_del,
+            not_in_sale=not_in_sale,
+            prices=prices,
+        )
     logger.success("Script finished successfully")

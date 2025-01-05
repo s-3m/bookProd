@@ -123,8 +123,9 @@ async def replace_photo(add_list: list[dict]):
             if i["Фото_y"]:
                 i["Фото_x"] = i["Фото_y"]
             else:
-                task = asyncio.create_task(photo_processing(session, i))
-                tasks.append(task)
+                if i["Фото_x"] is not None:
+                    task = asyncio.create_task(photo_processing(session, i))
+                    tasks.append(task)
         await asyncio.gather(*tasks)
     return result
 
