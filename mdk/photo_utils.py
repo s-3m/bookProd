@@ -79,16 +79,24 @@ count_replace_photo = 1
 
 
 async def photo_processing(session, item):
-    global count_replace_photo
-    async with session.get(item["Фото_x"]) as a:
-        await asyncio.sleep(3)
-        a = await a.content.read()
-        img_path = await crop_image(a)
-    new_url = await save_to_ya(session, img_path)
-    os.remove(img_path)
-    item["Фото_x"] = new_url
-    print(f"\rReplace photo done - {count_replace_photo}", end="")
-    count_replace_photo += 1
+    try:
+        global count_replace_photo
+        for _ in range(5):
+            try:
+                async with session.get(item["Фото_x"]) as resp:
+                    await asyncio.sleep(3)
+                    resp = await resp.content.read()
+                    break
+            except Exception:
+                continue
+        img_path = await crop_image(resp)
+        new_url = await save_to_ya(session, img_path)
+        os.remove(img_path)
+        item["Фото_x"] = new_url
+        print(f"\rReplace photo done - {count_replace_photo}", end="")
+        count_replace_photo += 1
+    except Exception:
+        item["Фото_x"] = "https://zapobedu21.ru/images/26.07.2017/kniga.jpg"
 
 
 @logger.catch
