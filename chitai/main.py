@@ -16,7 +16,7 @@ from utils import (
     write_result_files,
 )
 from filter import filtering_cover
-from compare_selenium import get_main_data
+from compare_selenium import get_gather_data as checker_del
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 logger.add("chitai_error.log", format="{time} {level} {message}", level="ERROR")
@@ -320,9 +320,8 @@ async def get_gather_data():
         # Check del file
         logger.warning("Check del file")
         del_dict = [{"article": i, "stock": None, "link": None} for i in id_to_del]
-        with ThreadPoolExecutor(max_workers=5) as executor:
-            for item in del_dict:
-                executor.submit(get_main_data, item)
+
+        await checker_del(del_dict)
 
         global new_del
         for i in del_dict:
