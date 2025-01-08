@@ -324,16 +324,21 @@ async def get_gather_data():
         await asyncio.gather(*reparse_del_tasks)
 
         # price files
-        logger.info("Reparse empty price")
-        for i_dict in prices:
-            prices_tasks = [
-                asyncio.create_task(
-                    check_empty_element(session, item, check_price=True)
-                )
-                for item in i_dict
-                if item["price"] == ""
-            ]
-            await asyncio.gather(*prices_tasks)
+        try:
+            logger.info("Reparse empty price")
+            for i_dict in prices:
+                prices_tasks = [
+                    asyncio.create_task(
+                        check_empty_element(session, item, check_price=True)
+                    )
+                    for item in prices[i_dict]
+                    if item["price"] == ""
+                ]
+                await asyncio.gather(*prices_tasks)
+        except Exception as e:
+            logger.exception(e)
+            pass
+
     print()
     logger.info("Start to write data in file")
     write_result_files(
