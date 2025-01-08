@@ -332,7 +332,7 @@ async def get_gather_data():
                         check_empty_element(session, item, check_price=True)
                     )
                     for item in prices[i_dict]
-                    if item["price"] == ""
+                    if prices[i_dict][item]["price"] == ""
                 ]
                 await asyncio.gather(*prices_tasks)
         except Exception as e:
