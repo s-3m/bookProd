@@ -329,7 +329,7 @@ async def get_gather_data():
             for i_dict in prices:
                 prices_tasks = [
                     asyncio.create_task(
-                        check_empty_element(session, item, check_price=True)
+                        check_empty_element(session, prices[i_dict][item], check_price=True)
                     )
                     for item in prices[i_dict]
                     if prices[i_dict][item]["price"] == ""
