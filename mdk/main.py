@@ -66,9 +66,13 @@ last_isbn = None
 
 async def get_item_data(session, book: str):
     global count
-    if book in unique_book_links:
-        return
+    if "?utm" in book:
+        book = book.split("?")[0]
     link = book if book.startswith("http") else f"{BASE_URL}{book}"
+
+    if link in unique_book_links:
+        return
+
     try:
         response = await fetch_request(session, link, headers)
         if response == "503":
@@ -87,12 +91,6 @@ async def get_item_data(session, book: str):
                 return
         except:
             title = "Нет названия"
-
-        # Артикул
-        try:
-            article = f"{link.split("/")[-1].strip()}.0"
-        except:
-            article = "Нет артикла"
 
         # Фото
         try:
@@ -129,6 +127,18 @@ async def get_item_data(session, book: str):
         except:
             stock = 0
 
+        # Характеристики
+        try:
+            all_char = soup.find("ul", class_="tg-productinfo").find_all("li")
+            char_data = {}
+            for i in all_char:
+                row = i.find_all("span")
+                char_data[row[0].text.strip().replace(":", "")] = row[1].text.strip()
+        except:
+            char_data = {}
+
+        article = char_data["Код товара"] + ".0"
+
         book_data = {
             "Ссылка": link,
             "Название": title,
@@ -139,14 +149,8 @@ async def get_item_data(session, book: str):
             "Описание": description,
             "Наличие": str(stock),
         }
-        # Характеристики
-        try:
-            all_char = soup.find("ul", class_="tg-productinfo").find_all("li")
-            for i in all_char:
-                row = i.find_all("span")
-                book_data[row[0].text.strip().replace(":", "")] = row[1].text.strip()
-        except:
-            pass
+        book_data.update(char_data)
+
         # Cover filter
         cover = book_data.get("Переплет")
         if cover:
@@ -196,7 +200,7 @@ async def get_item_data(session, book: str):
             end="",
         )
         count += 1
-        unique_book_links.add(book)
+        unique_book_links.add(link)
         all_books_result.append(book_data)
 
     except (BaseException, Exception) as e:
