@@ -88,9 +88,9 @@ def to_write_file(temporary=False, final_result=False):
     df_add = pd.DataFrame(id_to_add)
     df_add.to_excel(f"{filepath}/bb_add.xlsx", index=False)
 
-    df_del = pd.DataFrame(id_to_del)
-    df_del.columns = ["Артикул"]
-    df_del.to_excel(f"{filepath}/bb_del.xlsx", index=False)
+    # df_del = pd.DataFrame(id_to_del)
+    # df_del.columns = ["Артикул"]
+    # df_del.to_excel(f"{filepath}/bb_del.xlsx", index=False)
 
 
 semaphore = asyncio.Semaphore(8)
