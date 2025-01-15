@@ -57,7 +57,7 @@ count = 1
 empty_price_count = 1
 result = []
 
-id_to_del = set(sample.keys())
+# id_to_del = set(sample.keys())
 id_to_add = []
 page_error = []
 
