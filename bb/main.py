@@ -240,11 +240,15 @@ async def get_item_data(item, session, main_category=None):
 
         if article + ".0" in not_in_sale and quantity != "Нет в наличии":
             not_in_sale[article + ".0"]["on sale"] = "Да"
-        elif article + ".0" not in sample and quantity != "Нет в наличии":
+        elif article + ".0" not in not_in_sale and quantity != "Нет в наличии":
             res_dict["Артикул"] = article + ".0"
             id_to_add.append(res_dict)
-        if article + ".0" in id_to_del and quantity != "Нет в наличии":
-            id_to_del.remove(article + ".0")
+
+        # elif article + ".0" not in sample and quantity != "Нет в наличии":
+        #     res_dict["Артикул"] = article + ".0"
+        #     id_to_add.append(res_dict)
+        # if article + ".0" in id_to_del and quantity != "Нет в наличии":
+        #     id_to_del.remove(article + ".0")
 
         if count % 50 == 0:
             to_write_file(temporary=True)
