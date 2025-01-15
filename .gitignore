@@ -9,3 +9,9 @@ pyvenv.cfg
 .env
 *.xlsx
 .venv
+*.txt
+*.png
+*.log
+chromedriver
+*.json
+.python-version
