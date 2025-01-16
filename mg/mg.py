@@ -196,7 +196,7 @@ async def get_item_data(session, link: str):
             if not age or age == ":":
                 item_data["Возраст от:"] = "3+"
             elif "+" not in age:
-                    item_data["Возраст от:"] = age + "+"
+                item_data["Возраст от:"] = age + "+"
 
             if isbn + ".0" in not_in_sale and quantity == "есть в наличии":
                 not_in_sale[isbn + ".0"]["on sale"] = "да"
