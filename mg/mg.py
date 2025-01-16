@@ -178,6 +178,26 @@ async def get_item_data(session, link: str):
                 else "Не указано"
             )
 
+            # Year filter
+            publish_year = item_data.get("Год публикации:")
+            if publish_year:
+                try:
+                    int_publish_year = int(publish_year)
+                    if int_publish_year < 2018:
+                        item_data["Год публикации:"] = "2018"
+                except:
+                    item_data["Год публикации:"] = "2018"
+            else:
+                item_data["Год публикации:"] = "2018"
+
+            # Age filter
+            age = item_data.get("Возраст от:")
+
+            if not age or age == ":":
+                item_data["Возраст от:"] = "3+"
+            elif "+" not in age:
+                    item_data["Возраст от:"] = age + "+"
+
             if isbn + ".0" in not_in_sale and quantity == "есть в наличии":
                 not_in_sale[isbn + ".0"]["on sale"] = "да"
             elif isbn + ".0" not in sample and quantity == "есть в наличии":
