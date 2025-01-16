@@ -96,6 +96,20 @@ async def get_item_data(session, link: str):
                     pass
             except:
                 pass
+
+            count_edition: str = item_data.get("Тираж:")
+            quantity_page: str = item_data.get("Страниц:")
+
+            if not quantity_page:
+                item_data["Страниц:"] = "100"
+            elif not quantity_page.isdigit():
+                item_data["Страниц:"] = count_edition.split(" ")[0]
+
+            if not count_edition:
+                item_data["Тираж:"] = "1000"
+            elif not count_edition.isdigit():
+                item_data["Тираж:"] = count_edition.split(" ")[0]
+
             try:
                 info = soup.find("div", class_="content_sm_2").find("h4")
                 if info.text.strip() == "Аннотация":
