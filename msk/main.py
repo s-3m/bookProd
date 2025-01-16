@@ -177,6 +177,19 @@ async def get_item_data(session, item: str):
             age = details_dict.get("Возраст")
             publisher = details_dict.get("Издательство")
             cover_type = details_dict.get("Тип обложки")
+            count_edition: str = details_dict.get("Тираж")
+            quantity_page: str = details_dict.get("Страниц")
+
+            if not quantity_page:
+                details_dict["Страниц"] = "100"
+            elif not quantity_page.isdigit():
+                details_dict["Страниц"] = count_edition.split(" ")[0]
+
+            if not count_edition:
+                details_dict["Тираж"] = "1000"
+            elif not count_edition.isdigit():
+                details_dict["Тираж"] = count_edition.split(" ")[0]
+
             if not cover_type:
                 details_dict["Тип обложки"] = "Мягкая обложка"
             else:
