@@ -139,6 +139,9 @@ async def get_item_data(session, book: str):
 
         article = char_data["Код товара"] + ".0"
 
+        count_edition: str = char_data.get("Тираж")
+        quantity_page: str = char_data.get("Количество страниц")
+
         book_data = {
             "Ссылка": link,
             "Название": title,
@@ -150,6 +153,19 @@ async def get_item_data(session, book: str):
             "Наличие": str(stock),
         }
         book_data.update(char_data)
+
+        count_edition: str = book_data.get("Тираж")
+        quantity_page: str = book_data.get("Количество страниц")
+
+        if not quantity_page:
+            book_data["Количество страниц"] = "100"
+        elif not quantity_page.isdigit():
+            book_data["Количество страниц"] = count_edition.split(" ")[0]
+
+        if not count_edition:
+            book_data["Тираж"] = "1000"
+        elif not count_edition.isdigit():
+            book_data["Тираж"] = count_edition.split(" ")[0]
 
         # Cover filter
         cover = book_data.get("Переплет")
