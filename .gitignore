@@ -5,7 +5,7 @@ Scripts
 Lib
 pyvenv.cfg
 .xlsx
-.csv
+*.csv
 .env
 *.xlsx
 .venv
