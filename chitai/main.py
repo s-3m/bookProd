@@ -153,6 +153,20 @@ def get_book_data(book_url: str):
         if detail_dict:
             book_result.update(detail_dict)
 
+        # Filter on some piece
+        count_edition: str = book_result.get("Тираж")
+        quantity_page: str = book_result.get("Количество страниц")
+
+        if not quantity_page:
+            book_result["Количество страниц"] = "100"
+        elif not quantity_page.isdigit():
+            book_result["Количество страниц"] = count_edition.split(" ")[0]
+
+        if not count_edition:
+            book_result["Тираж"] = "1000"
+        elif not count_edition.isdigit():
+            book_result["Тираж"] = count_edition.split(" ")[0]
+
         # Cover filter
         cover_type = book_result.get("Тип обложки")
         book_result["Тип обложки"] = (
