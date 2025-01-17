@@ -6,59 +6,27 @@ import aiohttp
 from PIL import Image, ImageFilter
 from io import BytesIO
 import pandas as pd
+import yadisk
 
 BASE_API_URL = "https://cloud-api.yandex.net"
 
 
-async def save_to_ya(session, img_path):
-    headers = {
-        "Authorization": "y0_AgAAAAAAyABTAAzxJQAAAAEb9rrZAADaymYjvotLfbYhScJtd11u0UowZQ"
-    }
-    # Получение ссылки для закгрузки файла
-    api_url = f"{BASE_API_URL}/v1/disk/resources/upload"
-    path_in_ya = f"/MDK_photo/mdk_{datetime.timestamp(datetime.now())}.png"
-    params = {"path": path_in_ya}
-
-    async with session.get(api_url, params=params, headers=headers) as res:
-        res = await res.json()
-        await asyncio.sleep(2)
-
-    # Открытие файла и загрузка его по полученной ссылке
-    with open(img_path, "rb") as f:
+async def save_to_ya(ya_client: yadisk.AsyncClient, img_path, item):
+    try:
+        res = await ya_client.upload(
+            img_path, f"/MDK_photo/{str(item["Артикул_OZ"])[:-2]}.png", overwrite=True
+        )
+        await asyncio.sleep(3)
+        pub_file = await ya_client.publish(res.path, fields="public_url")
+        file_meta = await pub_file.get_meta()
         try:
-            async with session.put(res["href"], data=f) as response:
-                ...
+            public_url = file_meta["public_url"]
         except KeyError:
-            pass
+            public_url = None
 
-    # Открытие доступа к файлу по ссылке
-    publish_url = f"{BASE_API_URL}/v1/disk/resources/publish"
-    publish_params = {
-        "path": path_in_ya,
-        "fields": "public_url",
-    }
-    async with session.put(
-        publish_url, params=publish_params, headers=headers
-    ) as resp_pub:
-        resp_pub = await resp_pub.json(content_type=None)
-    await asyncio.sleep(2)
-
-    # Получение общей ссылки на файл
-    metadata_url = f"{BASE_API_URL}/v1/disk/resources"
-    metadata_params = {
-        "path": path_in_ya,
-        "fields": "public_url",
-    }
-    async with session.get(
-        metadata_url, params=metadata_params, headers=headers
-    ) as response:
-        await asyncio.sleep(2)
-        try:
-            ya_photo_url = await response.json()
-            ya_photo_url = ya_photo_url["public_url"]
-        except KeyError:
-            pass
-    return ya_photo_url
+        return public_url
+    except Exception as e:
+        logger.error(e)
 
 
 async def crop_image(image):
@@ -78,37 +46,34 @@ async def crop_image(image):
 count_replace_photo = 1
 
 
-async def photo_processing(session, item):
-    try:
-        global count_replace_photo
-        for _ in range(5):
-            try:
-                async with session.get(item["Фото_x"]) as resp:
-                    await asyncio.sleep(3)
-                    resp = await resp.content.read()
-                    break
-            except Exception:
-                continue
-        img_path = await crop_image(resp)
-        new_url = await save_to_ya(session, img_path)
-        os.remove(img_path)
-        item["Фото_x"] = new_url
-        print(f"\rReplace photo done - {count_replace_photo}", end="")
-        count_replace_photo += 1
-    except Exception:
-        item["Фото_x"] = "https://zapobedu21.ru/images/26.07.2017/kniga.jpg"
+async def photo_processing(session, ya_client, item):
+    global count_replace_photo
+    for _ in range(5):
+        try:
+            async with session.get(item["Фото_x"]) as resp:
+                await asyncio.sleep(3)
+                resp = await resp.content.read()
+                break
+        except Exception:
+            continue
+    img_path = await crop_image(resp)
+    new_url = await save_to_ya(ya_client, img_path, item)
+    os.remove(img_path)
+    item["Фото_x"] = new_url
+    print(f"\rReplace photo done - {count_replace_photo}", end="")
+    count_replace_photo += 1
 
 
 @logger.catch
 async def replace_photo(add_list: list[dict]):
     print()
     logger.info("Start replace photo")
-    # path_to_chit = os.path.join(
-    #     os.path.split(os.path.abspath(__file__))[0],
-    #     "..",
-    #     "chitai/source/result/chit-gor_all.xlsx",
-    # )
-    path_to_chit = "/media/source/chitai/result/chit-gor_all.xlsx"
+    path_to_chit = os.path.join(
+        os.path.split(os.path.abspath(__file__))[0],
+        "..",
+        "chitai/source/result/chit-gor_all.xlsx",
+    )
+    # path_to_chit = "/media/source/chitai/result/chit-gor_all.xlsx"
     chit_gor_df = pd.read_excel(path_to_chit)[["ISBN", "Фото"]]
     chit_gor_df = chit_gor_df.where(chit_gor_df.notnull(), None)
 
@@ -126,15 +91,21 @@ async def replace_photo(add_list: list[dict]):
     async with aiohttp.ClientSession(
         connector=aiohttp.TCPConnector(ssl=False, limit_per_host=4), trust_env=True
     ) as session:
-        tasks = []
-        for i in result:
-            if i["Фото_y"]:
-                i["Фото_x"] = i["Фото_y"]
-            else:
-                if i["Фото_x"] is not None:
-                    task = asyncio.create_task(photo_processing(session, i))
-                    tasks.append(task)
-        await asyncio.gather(*tasks)
+        async with yadisk.AsyncClient(
+            token="y0_AgAAAAAAyABTAAzxJQAAAAEb9rrZAADaymYjvotLfbYhScJtd11u0UowZQ",
+            session="aiohttp",
+        ) as ya_client:
+            tasks = []
+            for i in result:
+                if i["Фото_y"]:
+                    i["Фото_x"] = i["Фото_y"]
+                else:
+                    if i["Фото_x"] is not None:
+                        task = asyncio.create_task(
+                            photo_processing(session, ya_client, i)
+                        )
+                        tasks.append(task)
+            await asyncio.gather(*tasks)
     return result
 
 
