@@ -47,10 +47,6 @@ headers = {
 
 prices = filesdata_to_dict(f"{BASE_LINUX_DIR}/prices")
 
-# df_price_one = prices["1"]
-# df_price_two = prices["2"]
-# df_price_three = prices["3"]
-
 logger.add(
     f"{BASE_LINUX_DIR}/bb_error.log",
     format="{time} {level} {message}",
@@ -63,7 +59,7 @@ count = 1
 empty_price_count = 1
 result = []
 
-# id_to_del = set(sample.keys())
+id_to_del = set(sample.keys())
 id_to_add = []
 page_error = []
 
@@ -94,9 +90,9 @@ def to_write_file(temporary=False, final_result=False):
     df_add = pd.DataFrame(id_to_add)
     df_add.to_excel(f"{filepath}/bb_add.xlsx", index=False)
 
-    # df_del = pd.DataFrame(id_to_del)
-    # df_del.columns = ["Артикул"]
-    # df_del.to_excel(f"{filepath}/bb_del.xlsx", index=False)
+    df_del = pd.DataFrame(id_to_del)
+    df_del.columns = ["Артикул"]
+    df_del.to_excel(f"{filepath}/bb_del.xlsx", index=False)
 
 
 semaphore = asyncio.Semaphore(8)
@@ -182,12 +178,19 @@ def get_item_data(item, main_category=None):
         except:
             res_dict["description"] = "Нет описания"
 
+        # Block character
         try:
-            all_chars = soup.find(class_="char_block").find("table").find_all("tr")
+            names_of_chars = [
+                i.text.strip()
+                for i in soup.find_all("div", class_="properties-group__name-wrap")
+            ]
+            val_of_chars = [
+                i.text.strip()
+                for i in soup.find_all("div", class_="properties-group__value-wrap")
+            ]
+            all_chars = zip(names_of_chars, val_of_chars)
             for i in all_chars:
-                char = i.find_all("td")
-                res_dict[char[0].text.strip()] = char[1].text.strip()
-
+                res_dict[i[0]] = i[1]
         except:
             try:
                 all_chars = soup.find(class_="product-chars").find_all(
@@ -243,15 +246,18 @@ def get_item_data(item, main_category=None):
 
         if article + ".0" in not_in_sale and quantity != "Нет в наличии":
             not_in_sale[article + ".0"]["on sale"] = "Да"
-        elif article + ".0" not in not_in_sale and quantity != "Нет в наличии":
-            res_dict["Артикул"] = article + ".0"
-            id_to_add.append(res_dict)
 
-        # elif article + ".0" not in sample and quantity != "Нет в наличии":
+        # -- Block if all book in not_in_sale and don't need del file ---
+        # elif article + ".0" not in not_in_sale and quantity != "Нет в наличии":
         #     res_dict["Артикул"] = article + ".0"
         #     id_to_add.append(res_dict)
-        # if article + ".0" in id_to_del and quantity != "Нет в наличии":
-        #     id_to_del.remove(article + ".0")
+        # --- End block ---
+
+        elif article + ".0" not in sample and quantity != "Нет в наличии":
+            res_dict["Артикул"] = article + ".0"
+            id_to_add.append(res_dict)
+        if article + ".0" in id_to_del and quantity != "Нет в наличии":
+            id_to_del.remove(article + ".0")
 
         print(f"\rDone - {count}", end="")
         count = count + 1
@@ -348,7 +354,7 @@ async def get_gather_data():
     all_need_links = []
     logger.info("Start to collect data")
     async with aiohttp.ClientSession(
-        connector=aiohttp.TCPConnector(ssl=False, limit=50, limit_per_host=10),
+        connector=aiohttp.TCPConnector(ssl=False, limit=50, limit_per_host=7),
         trust_env=True,
         timeout=aiohttp.ClientTimeout(total=600),
     ) as session:
@@ -368,7 +374,6 @@ async def get_gather_data():
             except:
                 continue
 
-        tasks = []
         for link in all_need_links:
             try:
                 for _ in range(10):
