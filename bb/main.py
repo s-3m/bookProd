@@ -156,8 +156,11 @@ async def get_item_data(item, session, main_category=None):
             photo_link = soup.find(
                 class_="detail-gallery-big-slider-main__ratio-inner"
             ).find("img")["src"]
-            photo_path = BASE_URL + photo_link
-            res_dict["photo"] = photo_path
+            if photo_link.startswith("data:image"):
+                res_dict["photo"] = "https://zapobedu21.ru/images/26.07.2017/kniga.jpg"
+            else:
+                photo_path = BASE_URL + photo_link
+                res_dict["photo"] = photo_path
         except:
             res_dict["photo"] = "https://zapobedu21.ru/images/26.07.2017/kniga.jpg"
 
@@ -201,6 +204,11 @@ async def get_item_data(item, session, main_category=None):
                     ).text.strip()
             except:
                 pass
+
+        # Year filter
+        pub_year = res_dict.get("Дата издания")
+        if pub_year:
+            res_dict["Дата издания"] = pub_year.split(".")[-1]
 
         # Cover filter
         cover_type = res_dict.get("Тип обложки")
@@ -249,9 +257,6 @@ async def get_item_data(item, session, main_category=None):
         #     id_to_add.append(res_dict)
         # if article + ".0" in id_to_del and quantity != "Нет в наличии":
         #     id_to_del.remove(article + ".0")
-
-        if count % 50 == 0:
-            to_write_file(temporary=True)
 
         print(f"\rDone - {count}", end="")
         count = count + 1

@@ -110,15 +110,6 @@ def get_item_data(item, main_category=None):
     res_dict["Ссылка"] = link
     try:
         response = sync_fetch_request(link, headers=headers)
-        # async with session.get(link, headers=headers) as response:
-        #     await asyncio.sleep(10)
-        #     soup = bs(await response.text(), "lxml")
-        #
-        # if soup.find("h1").text.strip() == "Service Temporarily Unavailable":
-        #     await asyncio.sleep(500)
-        #     async with session.get(link, headers=headers) as response:
-        #         await asyncio.sleep(5)
-        #         soup = bs(await response.text(), "html.parser")
         soup = bs(response, "lxml")
 
         if not main_category:
@@ -160,8 +151,11 @@ def get_item_data(item, main_category=None):
             photo_link = soup.find(
                 class_="detail-gallery-big-slider-main__ratio-inner"
             ).find("img")["src"]
-            photo_path = BASE_URL + photo_link
-            res_dict["photo"] = photo_path
+            if photo_link.startswith("data:image"):
+                res_dict["photo"] = "https://zapobedu21.ru/images/26.07.2017/kniga.jpg"
+            else:
+                photo_path = BASE_URL + photo_link
+                res_dict["photo"] = photo_path
         except:
             res_dict["photo"] = "https://zapobedu21.ru/images/26.07.2017/kniga.jpg"
 
@@ -205,6 +199,11 @@ def get_item_data(item, main_category=None):
                     ).text.strip()
             except:
                 pass
+
+        # Year filter
+        pub_year = res_dict.get("Дата издания")
+        if pub_year:
+            res_dict["Дата издания"] = pub_year.split(".")[-1]
 
         # Cover filter
         cover_type = res_dict.get("Тип обложки")
@@ -253,9 +252,6 @@ def get_item_data(item, main_category=None):
         #     id_to_add.append(res_dict)
         # if article + ".0" in id_to_del and quantity != "Нет в наличии":
         #     id_to_del.remove(article + ".0")
-
-        if count % 50 == 0:
-            to_write_file(temporary=True)
 
         print(f"\rDone - {count}", end="")
         count = count + 1
@@ -407,7 +403,7 @@ async def get_gather_data():
                                 items = [item.find("a")["href"] for item in page_items]
                                 main_category = soup.find("h1").text.strip()
 
-                                with ThreadPoolExecutor(max_workers=20) as executor:
+                                with ThreadPoolExecutor(max_workers=15) as executor:
                                     for item in items:
                                         executor.submit(
                                             get_item_data, item, main_category
@@ -449,7 +445,7 @@ async def get_gather_data():
                         main_category = soup.find("h1").text.strip()
                         for item in items:
                             task = asyncio.create_task(
-                                get_item_data(item, session, main_category)
+                                get_item_data(item, main_category)
                             )
                             page_error_tasks.append(task)
                     except Exception as e:
