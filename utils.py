@@ -190,6 +190,7 @@ def give_me_sample(
         else:
             sample = df1[["Артикул"]]
             sample.columns = ["article"]
+        sample.drop_duplicates(subset="article", inplace=True)
         sale_files = os.listdir(f"{path_to_sample}/sale")
         for i in sale_files:
             os.remove(f"{path_to_sample}/sale/{i}")
