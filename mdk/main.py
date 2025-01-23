@@ -383,6 +383,7 @@ async def get_gather_data():
             logger.exception(e)
             new_id_to_add = id_to_add
 
+
 if __name__ == "__main__":
     asyncio.run(get_gather_data())
     logger.info("Start write files")
