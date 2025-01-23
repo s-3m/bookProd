@@ -331,6 +331,16 @@ async def get_gather_data():
                 for url in new_page_list:
                     executor.submit(get_page_data, False, 1, url)
 
+        write_result_files(
+            base_dir=BASE_LINUX_DIR,
+            prefix="chit-gor",
+            all_books_result=all_books_result,
+            id_to_add=id_to_add,
+            id_to_del=id_to_del,
+            not_in_sale=not_in_sale,
+            prices=prices,
+        )
+
         # Check del file
         logger.warning("Check del file")
         del_dict = [{"article": i, "stock": None, "link": None} for i in id_to_del]

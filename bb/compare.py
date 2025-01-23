@@ -42,6 +42,7 @@ headers = {
 count = 1
 DEBUG = True if sys.platform.startswith("win") else False
 PATH_TO_FILES = "/media/source/bb/every_day" if not DEBUG else "source/every_day"
+errors = []
 
 
 async def fetch_request(session, url):
@@ -56,7 +57,7 @@ async def fetch_request(session, url):
 
 
 @logger.catch
-async def get_item_data(session, item, error_items, semaphore):
+async def get_item_data(session, item, semaphore, item_index=None):
     async with semaphore:
         try:
             response = await fetch_request(session, item["link"])
@@ -77,13 +78,13 @@ async def get_item_data(session, item, error_items, semaphore):
                     else:
                         stock_quantity = "2"
             global count
-            print(f"\r{count}", end="")
+            print(f"\rDone - {count} | error - {len(errors)}", end="")
             count += 1
             item["stock"] = stock_quantity
         except Exception as e:
             logger.exception(item["link"])
-            item["stock"] = "2"
-            error_items.append(item)
+            item["stock"] = "del"
+            errors.append(item_index)
             today = datetime.date.today().strftime("%d-%m-%Y")
             with open(f"{PATH_TO_FILES}/error.txt", "a+") as f:
                 f.write(f"{today} --- {item['link']} --- {e}\n")
@@ -116,7 +117,6 @@ async def get_link_from_ajax(session, id):
 async def get_gather_data():
     sample = give_me_sample(base_dir=PATH_TO_FILES, prefix="bb")
 
-    error_items_list = []
     semaphore = asyncio.Semaphore(10)
     tasks = []
     async with aiohttp.ClientSession(
@@ -131,29 +131,31 @@ async def get_gather_data():
             if not item["link"]:
                 item["stock"] = "del"
                 continue
+            item_index = sample.index(item)
             task = asyncio.create_task(
-                get_item_data(session, item, error_items_list, semaphore)
+                get_item_data(
+                    session=session,
+                    item=item,
+                    item_index=item_index,
+                    semaphore=semaphore,
+                )
             )
             tasks.append(task)
 
         await asyncio.gather(*tasks)
 
         # Start reparse error
-        error_tasks = []
-        reparse_count = 0
-        while error_items_list and reparse_count < 4:
-            print()
+        if len(errors) > 0:
             logger.warning("Start reparse error")
-            reparse_count += 1
-            new_items_list = error_items_list.copy()
-            error_items_list.clear()
-            for item in new_items_list:
-                task = asyncio.create_task(
-                    get_item_data(session, item, error_items_list, semaphore)
+            tasks = [
+                asyncio.create_task(
+                    get_item_data(
+                        session=session, item=sample[error_index], semaphore=semaphore
+                    )
                 )
-                error_tasks.append(task)
-            await asyncio.gather(*error_tasks)
-            sample.extend(new_items_list)
+                for error_index in errors
+            ]
+            await asyncio.gather(*tasks)
 
     print()
     logger.success("Finished parser successfully")
