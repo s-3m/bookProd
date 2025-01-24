@@ -75,14 +75,14 @@ async def check_danger_string(
     base_string: str, place_to_check: Literal["title", "description"]
 ):
     if place_to_check == "title":
-        if any(x in base_string for x in hard_delete):
+        if any(x.lower() in base_string.lower() for x in hard_delete):
             return None
-        if any(x in base_string for x in in_title):
+        if any(x.lower() in base_string.lower() for x in in_title):
             for i in in_title:
                 if i in base_string:
                     base_string = base_string.replace(i, "")
     elif place_to_check == "description":
-        if any(x in base_string for x in in_description):
+        if any(x.lower() in base_string.lower() for x in in_description):
             for i in in_description:
                 if i in base_string:
                     base_string = base_string.replace(i, "")
