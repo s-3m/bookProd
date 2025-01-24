@@ -71,7 +71,7 @@ async def replace_photo(add_list: list[dict]):
     path_to_chit = os.path.join(
         os.path.split(os.path.abspath(__file__))[0],
         "..",
-        "chitai/source/result/chit-gor_all.xlsx",
+        "chitai/result/chit-gor_all.xlsx",
     )
     # path_to_chit = "/media/source/chitai/result/chit-gor_all.xlsx"
     chit_gor_df = pd.read_excel(path_to_chit)[["ISBN", "Фото"]]
