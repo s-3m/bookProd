@@ -377,7 +377,11 @@ async def get_gather_data():
         # Replace photo
         global new_id_to_add
         global id_to_add
-        new_id_to_add = await replace_photo(id_to_add)
+        try:
+            new_id_to_add = await replace_photo(id_to_add)
+        except Exception as e:
+            logger.exception(e)
+            new_id_to_add = id_to_add
 
 
 if __name__ == "__main__":
