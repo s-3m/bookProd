@@ -145,10 +145,17 @@ def write_result_files(
     prices: dict[str, dict],
     replace_photo: bool = False,
 ):
-    all_result_df = pd.DataFrame(all_books_result).drop_duplicates(subset="Артикул_OZ")
+    all_result_df = pd.DataFrame(all_books_result).drop_duplicates(
+        subset="Артикул_OZ"
+    )
     all_result_df.to_excel(f"{base_dir}/result/{prefix}_all.xlsx", index=False)
 
     df_add = pd.DataFrame(id_to_add).drop_duplicates(subset="Артикул_OZ")
+    df_add = (
+        df_add.sort_values("Наличие")
+        .drop_duplicates(subset="Название", keep="last")
+        .sort_values("Артикул_OZ")
+    )
     if replace_photo:
         del df_add["Фото_y"]
         df_add.rename(columns={"Фото_x": "Фото"}, inplace=True)

@@ -82,6 +82,11 @@ def to_write_file(temporary=False, final_result=False):
     df_not_in_sale.to_excel(f"{filepath}/bb_not_in_sale.xlsx")
 
     df_add = pd.DataFrame(id_to_add)
+    df_add = (
+        df_add.sort_values("Наличие")
+        .drop_duplicates(subset="Название", keep="last")
+        .sort_values("Артикул_OZ")
+    )
     df_add.to_excel(f"{filepath}/bb_add.xlsx", index=False)
 
     df_del = pd.DataFrame(id_to_del)
@@ -111,10 +116,10 @@ async def get_item_data(item, session, main_category=None):
             title = await check_danger_string(title, "title")
             if not title:
                 return
-            res_dict["title"] = title.strip()
+            res_dict["Название"] = title.strip()
         except:
             title = "Нет названия"
-            res_dict["title"] = title
+            res_dict["Название"] = title
 
         try:
             pattern = re.compile(r"setViewedProduct\((\d+, .+)'MIN_PRICE':([^'].+}),")
@@ -153,10 +158,10 @@ async def get_item_data(item, session, main_category=None):
                 .find(class_="value")
                 .text.strip()
             )
-            res_dict["quantity"] = quantity
+            res_dict["Наличие"] = quantity
         except:
             quantity = "Наличие не указано"
-            res_dict["quantity"] = quantity
+            res_dict["Наличие"] = quantity
 
         try:
             desc = (

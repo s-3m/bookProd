@@ -226,7 +226,7 @@ async def get_item_data(session, item: str):
         book_dict = {
             "Ссылка": link,
             "Артикул_OZ": article + ".0",
-            "title": title,
+            "Название": title,
             "author": author,
             "description": description,
             "Категория": category,
