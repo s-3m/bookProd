@@ -55,8 +55,8 @@ id_to_del = set(sample.keys())
 last_isbn = None
 
 
-async def check_empty_element(session, item, check_price=False):
-    link = f"{BASE_URL}/book/{item["Артикул"][:-2]}"
+async def check_empty_element(session, item_dict, item, check_price=False):
+    link = f"{BASE_URL}/book/{item[:-2]}"
     resp = await fetch_request(session, link, headers)
     soup = bs(resp, "lxml")
 
@@ -65,15 +65,15 @@ async def check_empty_element(session, item, check_price=False):
         under_order = soup.find("div", class_="underorder")
 
         if item_status and not under_order:
-            item["Статус"] = "В продаже"
+            item_dict["Статус"] = "В продаже"
         else:
-            item["Статус"] = "Не в продаже"
+            item_dict["Статус"] = "Не в продаже"
 
     if check_price:
         price = soup.find("div", class_="book__price")
         if price:
             price = price.text.strip()
-            item["price"] = price
+            item_dict["price"] = price
 
 
 async def get_item_data(session, item: str):
@@ -332,7 +332,8 @@ async def get_gather_data():
         logger.info("Reparse del file")
         del_list = [{"Артикул": i} for i in id_to_del]
         reparse_del_tasks = [
-            asyncio.create_task(check_empty_element(session, item)) for item in del_list
+            asyncio.create_task(check_empty_element(session, item, item["Артикул"]))
+            for item in del_list
         ]
         await asyncio.gather(*reparse_del_tasks)
 
@@ -343,7 +344,7 @@ async def get_gather_data():
                 prices_tasks = [
                     asyncio.create_task(
                         check_empty_element(
-                            session, prices[i_dict][item], check_price=True
+                            session, prices[i_dict][item], item, check_price=True
                         )
                     )
                     for item in prices[i_dict]

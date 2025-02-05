@@ -145,9 +145,7 @@ def write_result_files(
     prices: dict[str, dict],
     replace_photo: bool = False,
 ):
-    all_result_df = pd.DataFrame(all_books_result).drop_duplicates(
-        subset="Артикул_OZ"
-    )
+    all_result_df = pd.DataFrame(all_books_result).drop_duplicates(subset="Артикул_OZ")
     all_result_df.to_excel(f"{base_dir}/result/{prefix}_all.xlsx", index=False)
 
     df_add = pd.DataFrame(id_to_add).drop_duplicates(subset="Артикул_OZ")
