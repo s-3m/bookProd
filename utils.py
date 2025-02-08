@@ -63,6 +63,21 @@ def filesdata_to_dict(folder_path: str, combined=False, return_df=False) -> dict
         return df_dict
 
 
+def clear_caps_text(text):
+    sentense = text.split(".")
+    capitalized_text = ". ".join([i.strip().capitalize() for i in sentense])
+    splitting_caps_text = capitalized_text.split()
+
+    need_index = []
+    for item in splitting_caps_text:
+        if len(item) == 2 and "." in item:
+            need_index.append(splitting_caps_text.index(item))
+    if need_index:
+        for index in need_index:
+            splitting_caps_text[index] = splitting_caps_text[index].capitalize()
+    return " ".join(splitting_caps_text)
+
+
 DF_danger_string = pd.read_excel(
     f"{os.path.abspath(os.path.dirname(__file__))}/danger_string.xlsx"
 )
@@ -81,6 +96,7 @@ async def check_danger_string(
             for i in in_title:
                 if i in base_string:
                     base_string = base_string.replace(i, "")
+        base_string = clear_caps_text(base_string)
     elif place_to_check == "description":
         if any(x.lower() in base_string.lower() for x in in_description):
             for i in in_description:
