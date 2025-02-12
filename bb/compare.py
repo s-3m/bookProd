@@ -201,6 +201,5 @@ def super_main():
 
 if __name__ == "__main__":
     start_time = time.time()
-    main()
-    # super_main()
+    super_main()
     print(f"\n{time.time() - start_time}")
