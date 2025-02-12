@@ -45,6 +45,7 @@ PATH_TO_FILES = "/media/source/bb/every_day" if not DEBUG else "source/every_day
 errors = []
 
 
+@logger.catch
 async def fetch_request(session, url):
     for _ in range(20):
         async with session.get(url, headers=headers) as response:
@@ -147,15 +148,18 @@ async def get_gather_data():
         # Start reparse error
         if len(errors) > 0:
             logger.warning("Start reparse error")
-            tasks = [
-                asyncio.create_task(
-                    get_item_data(
-                        session=session, item=sample[error_index], semaphore=semaphore
+            try:
+                tasks = [
+                    asyncio.create_task(
+                        get_item_data(
+                            session=session, item=sample[error_index], semaphore=semaphore
+                        )
                     )
-                )
-                for error_index in errors
-            ]
-            await asyncio.gather(*tasks)
+                    for error_index in errors
+                ]
+                await asyncio.gather(*tasks)
+            except Exception as e:
+                logger.exception(e)
 
     print()
     logger.success("Finished parser successfully")
@@ -197,5 +201,6 @@ def super_main():
 
 if __name__ == "__main__":
     start_time = time.time()
-    super_main()
+    main()
+    # super_main()
     print(f"\n{time.time() - start_time}")
