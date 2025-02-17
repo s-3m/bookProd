@@ -45,18 +45,21 @@ async def save_to_ya(img_path, item):
             logger.exception(e)
 
 
-async def crop_image(image):
-    image = Image.open(BytesIO(image))
-    im_crop = image.crop((0, 0, image.width, image.height - 15))
-    scale_ = 2  # 300%
-    new_size = (int(im_crop.size[0] * scale_), int(im_crop.size[1] * scale_))
-    new_img = im_crop.resize(new_size)
-    img_filter = new_img.filter(ImageFilter.SHARPEN)
-    timestamp_for_name = datetime.timestamp(datetime.now())
-    path_photo = f"mdk_{timestamp_for_name}.png"
-    img_filter.save(path_photo, "PNG")
-    full_path = os.path.abspath(path_photo)
-    return full_path
+async def crop_image(image, img_name):
+    path_photo = f"mdk_{img_name}.png"
+    try:
+        image = Image.open(BytesIO(image))
+        im_crop = image.crop((0, 0, image.width, image.height - 20))
+        scale_ = 2  # 300%
+        new_size = (int(im_crop.size[0] * scale_), int(im_crop.size[1] * scale_))
+        new_img = im_crop.resize(new_size)
+        img_filter = new_img.filter(ImageFilter.SHARPEN)
+        img_filter.save(path_photo, "PNG")
+        full_path = os.path.abspath(path_photo)
+        return full_path
+    except ValueError:
+        image.save(path_photo, "PNG")
+        return os.path.abspath(path_photo)
 
 
 count_replace_photo = 1
@@ -74,7 +77,7 @@ async def photo_processing(session, item):
                 break
         except Exception:
             continue
-    img_path = await crop_image(resp)
+    img_path = await crop_image(resp, item["Фото_x"].split("/")[-1][:-4])
     async with sem:
         new_url = await save_to_ya(img_path, item)
         os.remove(img_path)
