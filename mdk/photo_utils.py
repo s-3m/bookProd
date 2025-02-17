@@ -11,27 +11,43 @@ import yadisk
 BASE_API_URL = "https://cloud-api.yandex.net"
 
 
-async def save_to_ya(ya_client: yadisk.AsyncClient, img_path, item):
-    try:
-        res = await ya_client.upload(
-            img_path, f"/MDK_photo/{str(item["Артикул_OZ"])[:-2]}.png", overwrite=True
-        )
-        await asyncio.sleep(3)
-        pub_file = await ya_client.publish(res.path, fields="public_url")
-        file_meta = await pub_file.get_meta()
+async def save_to_ya(img_path, item):
+    async with yadisk.AsyncClient(
+        token="y0_AgAAAAAAyABTAAzxJQAAAAEb9rrZAADaymYjvotLfbYhScJtd11u0UowZQ",
+        session="aiohttp",
+    ) as ya_client:
         try:
-            public_url = file_meta["public_url"]
-        except KeyError:
-            public_url = None
+            res = await ya_client.upload(
+                img_path,
+                f"/MDK_photo/{str(item["Артикул_OZ"])[:-2]}.png",
+                overwrite=True,
+                timeout=999,
+            )
+            await asyncio.sleep(4)
+            pub_file = await ya_client.publish(
+                res.path,
+                fields="public_url",
+                timeout=90,
+            )
+            await asyncio.sleep(4)
+            file_meta = await pub_file.get_meta()
+            print(file_meta["public_url"])
+            try:
+                public_url = file_meta["public_url"]
+            except KeyError:
+                public_url = None
 
-        return public_url
-    except Exception as e:
-        logger.error(e)
+            return public_url
+        except yadisk.exceptions.YaDiskConnectionError as e:
+            logger.exception(e)
+            return "not"
+        except Exception as e:
+            logger.exception(e)
 
 
 async def crop_image(image):
     image = Image.open(BytesIO(image))
-    im_crop = image.crop((0, 0, image.width, image.height - 30))
+    im_crop = image.crop((0, 0, image.width, image.height - 15))
     scale_ = 2  # 300%
     new_size = (int(im_crop.size[0] * scale_), int(im_crop.size[1] * scale_))
     new_img = im_crop.resize(new_size)
@@ -45,8 +61,10 @@ async def crop_image(image):
 
 count_replace_photo = 1
 
+sem = asyncio.Semaphore(3)
 
-async def photo_processing(session, ya_client, item):
+
+async def photo_processing(session, item):
     global count_replace_photo
     for _ in range(5):
         try:
@@ -57,11 +75,12 @@ async def photo_processing(session, ya_client, item):
         except Exception:
             continue
     img_path = await crop_image(resp)
-    new_url = await save_to_ya(ya_client, img_path, item)
-    os.remove(img_path)
-    item["Фото_x"] = new_url
-    print(f"\rReplace photo done - {count_replace_photo}", end="")
-    count_replace_photo += 1
+    async with sem:
+        new_url = await save_to_ya(img_path, item)
+        os.remove(img_path)
+        item["Фото_x"] = new_url
+        print(f"\rReplace photo done - {count_replace_photo}", end="")
+        count_replace_photo += 1
 
 
 async def replace_photo(add_list: list[dict]):
@@ -90,21 +109,16 @@ async def replace_photo(add_list: list[dict]):
     async with aiohttp.ClientSession(
         connector=aiohttp.TCPConnector(ssl=False, limit_per_host=4), trust_env=True
     ) as session:
-        async with yadisk.AsyncClient(
-            token="y0_AgAAAAAAyABTAAzxJQAAAAEb9rrZAADaymYjvotLfbYhScJtd11u0UowZQ",
-            session="aiohttp",
-        ) as ya_client:
-            tasks = []
-            for i in result:
-                if i["Фото_y"]:
-                    i["Фото_x"] = i["Фото_y"]
-                else:
-                    if i["Фото_x"] is not None:
-                        task = asyncio.create_task(
-                            photo_processing(session, ya_client, i)
-                        )
-                        tasks.append(task)
-            await asyncio.gather(*tasks)
+
+        tasks = []
+        for i in result:
+            if i["Фото_y"]:
+                i["Фото_x"] = i["Фото_y"]
+            else:
+                if i["Фото_x"] is not None:
+                    task = asyncio.create_task(photo_processing(session, i))
+                    tasks.append(task)
+        await asyncio.gather(*tasks)
     return result
 
 
