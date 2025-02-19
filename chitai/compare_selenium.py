@@ -57,6 +57,7 @@ def get_link_from_ajax(article):
         "https://web-gate.chitai-gorod.ru/api/v2/search/product",
         headers=headers,
         params=params,
+        timeout=5,
     )
     response = resp.json()
     link = response["included"][0]["attributes"]["url"]
@@ -73,7 +74,7 @@ def get_main_data(book_item):
 
         response_text = ""
         for _ in range(5):
-            response = requests.get(book_item["link"], headers=headers)
+            response = requests.get(book_item["link"], headers=headers, timeout=5)
             if response.status_code == 404:
                 book_item["stock"] = "del"
                 return
