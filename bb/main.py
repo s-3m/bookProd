@@ -187,8 +187,8 @@ async def get_item_data(item, session, main_category=None):
             all_chars = zip(names_of_chars, val_of_chars)
             for i in all_chars:
                 res_dict[i[0]] = i[1]
-        except:
-            try:
+
+            if not names_of_chars:
                 all_chars = soup.find(class_="product-chars").find_all(
                     class_="properties__item"
                 )
@@ -196,8 +196,8 @@ async def get_item_data(item, session, main_category=None):
                     res_dict[i.find(class_="properties__title").text.strip()] = i.find(
                         class_="properties__value"
                     ).text.strip()
-            except:
-                pass
+        except:
+           pass
 
         # Year filter
         pub_year = res_dict.get("Дата издания")
@@ -475,8 +475,8 @@ async def get_gather_data():
 
         to_write_file(final_result=True)
 
-        logger.info("Start check empty price field")
-        await check_empty_price(session)
+        # logger.info("Start check empty price field")
+        # await check_empty_price(session)
 
         logger.success("All done successfully!!!")
 
