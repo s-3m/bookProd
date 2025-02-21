@@ -78,7 +78,7 @@ def to_write_file(temporary=False, final_result=False):
         df_result.to_excel(f"{filepath}/bb_price_{price_item}.xlsx", index=True)
 
     df_not_in_sale = pd.DataFrame().from_dict(not_in_sale, orient="index")
-    df_not_in_sale = df_not_in_sale.loc[df_not_in_sale["on sale"] == "да"][["article"]]
+    df_not_in_sale = df_not_in_sale.loc[df_not_in_sale["on sale"] == "Да"][["article"]]
     df_not_in_sale.to_excel(f"{filepath}/bb_not_in_sale.xlsx")
 
     df_add = pd.DataFrame(id_to_add)
@@ -197,7 +197,7 @@ async def get_item_data(item, session, main_category=None):
                         class_="properties__value"
                     ).text.strip()
         except:
-           pass
+            pass
 
         # Year filter
         pub_year = res_dict.get("Дата издания")
@@ -378,7 +378,6 @@ async def get_gather_data():
                         else:
                             pagination = 1
                         break
-                    # pagination = 3
             except Exception as e:
                 logger.exception(e)
                 page_error.append(f"{BASE_URL}{link}")
