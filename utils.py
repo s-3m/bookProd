@@ -17,20 +17,26 @@ def filesdata_to_dict(folder_path: str, combined=False, return_df=False) -> dict
     if combined:
         for dirName, subdirList, fileList in os.walk(folder_path):
             for file in fileList:
+                match = re.search(r"seller-(\d+)-time", file)
+                seller_id = match.group(1)
                 df = pd.read_csv(
                     f"{dirName}/{file}", sep=";", converters={"Артикул": str}
                 )[["Артикул"]]
                 df["on sale"]: str = ""
+                df["seller_id"] = seller_id
                 frame_list.append(df)
         try:
             result_frame = (
-                pd.concat(frame_list).replace({"'": ""}, regex=True).drop_duplicates()
+                pd.concat(frame_list)
+                .replace({"'": ""}, regex=True)
+                .drop_duplicates(subset="Артикул")
             )
             result_dict = result_frame.set_index("Артикул").to_dict(orient="index")
             for i in result_dict:
                 result_dict[i]["article"] = i
             return result_frame if return_df else result_dict
-        except ValueError:
+        except ValueError as e:
+            print(e)
             return None
 
     else:
@@ -123,15 +129,7 @@ def sync_fetch_request(url, headers):
     return response_status_code
 
 
-with open(f"{os.path.split(os.path.abspath(__file__))[0]}/proxy.txt") as f:
-    proxy_list = ["http://" + i.strip() for i in f.readlines()]
-    proxy_list.append(None)
-
-
 async def fetch_request(session, url, headers: dict, sleep=4, proxy=None):
-    if proxy:
-        if not type(proxy) is str:
-            proxy = random.choice(proxy_list)
     for _ in range(20):
         try:
             async with session.get(url, headers=headers, proxy=proxy) as resp:
@@ -206,8 +204,10 @@ def give_me_sample(
             )[["Артикул_OZ", merge_obj]]
             df2.columns = ["Артикул", merge_obj]
 
-            sample = pd.merge(df1[["Артикул"]], df2, on="Артикул", how="left")
-            sample.columns = ["article", merge_obj_translate]
+            sample = pd.merge(
+                df1[["Артикул", "seller_id"]], df2, on="Артикул", how="left"
+            )
+            sample.columns = ["article", "seller_id", merge_obj_translate]
         else:
             sample = df1[["Артикул"]]
             sample.columns = ["article"]
