@@ -152,7 +152,9 @@ async def get_gather_data():
                 tasks = [
                     asyncio.create_task(
                         get_item_data(
-                            session=session, item=sample[error_index], semaphore=semaphore
+                            session=session,
+                            item=sample[error_index],
+                            semaphore=semaphore,
                         )
                     )
                     for error_index in errors
