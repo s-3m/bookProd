@@ -1,5 +1,20 @@
+import random
+
 import requests
 import os
+from concurrent.futures import ThreadPoolExecutor
+import time
+
+
+def separate_records_to_client_id(books_records: list[dict]) -> dict[str, list[dict]]:
+    result_dict = {}
+
+    for book in books_records:
+        if not result_dict.get(book["seller_id"]):
+            result_dict[book["seller_id"]] = []
+        result_dict[book["seller_id"]].append(book)
+
+    return result_dict
 
 
 class Ozon:
@@ -7,6 +22,7 @@ class Ozon:
         self.client_id = client_id
         self.api_key = api_key
         self.host = "https://api-seller.ozon.ru"
+        self.errors = {self.client_id: []}
 
         self.headers = {
             "Client-Id": self.client_id,
@@ -21,36 +37,57 @@ class Ozon:
             if i["name"] == "Волгоградка":
                 return int(i["warehouse_id"])
 
-    def update_stock(self, item_list: list[tuple[str, int]]):
+    def update_stock(self, item_list: list[dict]):
         warehouse_id = self._get_warehouse_id()
         stocks_list = [
             {
-                "offer_id": i[0],
-                "stock": i[1],
+                "offer_id": i["article"],
+                "stock": int(i["stock"]),
                 "warehouse_id": warehouse_id,
             }
             for i in item_list
         ]
 
-        body = {
-            "stocks": stocks_list,
-        }
+        for item in range(0, len(item_list), 100):
+            body = {
+                "stocks": stocks_list[item : item + 100],
+            }
 
-        response = requests.post(
-            f"{self.host}/v2/products/stocks", headers=self.headers, json=body
-        )
-        return response.json()
+            response = requests.post(
+                f"{self.host}/v2/products/stocks",
+                headers=self.headers,
+                json=body,
+            )
+            results = response.json().get("result")
+            for result in results:
+                if result.get("errors"):
+                    self.errors[self.client_id].append(result)
+            print(
+                f"---------------\n!!!!!{warehouse_id}!!!!!\n{response.json()}\n----------------\n"
+            )
+            time.sleep(30)
 
 
-ozon = Ozon(client_id=os.getenv("client_id"), api_key=os.getenv("api_key"))
+def start_push_to_ozon(separate_records: dict[str, list[dict]]):
+    with ThreadPoolExecutor(max_workers=20) as executor:
+        for item in separate_records:
+            seller_id = item
+            api_key = os.getenv(f"CLIENT_ID_{seller_id}")
+            ozon = Ozon(client_id=seller_id, api_key=api_key)
+            executor.submit(ozon.update_stock, separate_records[item])
 
-test = [
-    ("9781780742502.0", 22),
-    ("9780008374709.0", 33),
-    ("9781409181217.0", 44),
-    ("9781529053913.0", 13),
-    ("9780008437060.0", 11),
-    ("4343434555666.0", 100),
-]
 
-print(ozon.update_stock(test))
+# if __name__ == "__main__":
+#     load_dotenv(".env")
+#     from utils import give_me_sample
+#
+#     sample = give_me_sample("bb/source/every_day", "bb")
+#     for i in sample:
+#         i["stock"] = random.randint(3, 8)
+#
+#     sep_rec = separate_records_to_client_id(sample)
+#     # ozon = Ozon("2173296", "4fdc3d57-5f21-416f-b032-d7fce2332d90")
+#     # ozon.update_stock(sep_rec["2173296"])
+#
+#     #
+#     start_push_to_ozon(sep_rec)
