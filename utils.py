@@ -12,7 +12,9 @@ import aiohttp
 import requests
 
 
-def filesdata_to_dict(folder_path: str, combined=False, return_df=False) -> dict | None:
+def filesdata_to_dict(
+    folder_path: str, combined=False, return_df=False
+) -> dict | pd.DataFrame | None:
     frame_list = []
     if combined:
         for dirName, subdirList, fileList in os.walk(folder_path):
@@ -27,14 +29,15 @@ def filesdata_to_dict(folder_path: str, combined=False, return_df=False) -> dict
                 frame_list.append(df)
         try:
             result_frame = (
-                pd.concat(frame_list)
-                .replace({"'": ""}, regex=True)
-                .drop_duplicates(subset="Артикул")
+                pd.concat(frame_list).replace({"'": ""}, regex=True).drop_duplicates()
             )
-            result_dict = result_frame.set_index("Артикул").to_dict(orient="index")
-            for i in result_dict:
-                result_dict[i]["article"] = i
-            return result_frame if return_df else result_dict
+            if return_df:
+                return result_frame
+            else:
+                result_dict = result_frame.set_index("Артикул").to_dict(orient="index")
+                for i in result_dict:
+                    result_dict[i]["article"] = i
+                return result_dict
         except ValueError as e:
             print(e)
             return None
@@ -211,14 +214,14 @@ def give_me_sample(
         else:
             sample = df1[["Артикул"]]
             sample.columns = ["article"]
-        sample.drop_duplicates(subset="article", inplace=True)
+        sample = sample.drop_duplicates()
         sale_files = os.listdir(f"{path_to_sample}/sale")
         for i in sale_files:
             os.remove(f"{path_to_sample}/sale/{i}")
     else:
         sample = pd.read_excel(
             f"{base_dir}/{prefix}_new_stock.xlsx",
-            converters={"article": str, "link": str, merge_obj: str},
+            converters={"article": str, "link": str, merge_obj: str, "seller_id": str},
         )
     sample["stock"] = ""
     sample = sample.where(sample.notnull(), None)
