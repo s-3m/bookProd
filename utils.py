@@ -34,7 +34,7 @@ def filesdata_to_dict(
             if return_df:
                 return result_frame
             else:
-                result_frame = pd.concat(frame_list).drop_duplicates(subset="Артикул")
+                result_frame = result_frame.drop_duplicates(subset="Артикул")
                 result_dict = result_frame.set_index("Артикул").to_dict(orient="index")
                 for i in result_dict:
                     result_dict[i]["article"] = i
