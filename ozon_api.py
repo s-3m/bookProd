@@ -4,6 +4,7 @@ import requests
 import os
 from concurrent.futures import ThreadPoolExecutor
 import time
+from loguru import logger
 
 
 def separate_records_to_client_id(books_records: list[dict]) -> dict[str, list[dict]]:
@@ -62,10 +63,9 @@ class Ozon:
             for result in results:
                 if result.get("errors"):
                     self.errors[self.client_id].append(result)
-            print(
-                f"---------------\n!!!!!{warehouse_id}!!!!!\n{response.json()}\n----------------\n"
-            )
             time.sleep(30)
+        if self.errors[self.client_id]:
+            logger.warning(self.errors)
 
 
 def start_push_to_ozon(separate_records: dict[str, list[dict]]):
