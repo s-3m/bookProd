@@ -179,19 +179,18 @@ async def get_gather_data():
     logger.success("Data was pushed to ozon")
 
     df_result = pd.DataFrame(sample)
-    df_result = df_result.loc[df_result["stock"] != "0"]
-    df_result.to_excel(f"{PATH_TO_FILES}/bb_new_stock.xlsx", index=False)
-    # df_result.drop_duplicates(keep="last", inplace=True, subset="article")
-    #
-    # df_without_del = df_result.loc[df_result["stock"] != "del"]
-    # df_del = df_result.loc[df_result["stock"] == "del"][["article"]]
-    # del_path = f"{PATH_TO_FILES}/bb_del.xlsx"
-    # without_del_path = f"{PATH_TO_FILES}/bb_new_stock.xlsx"
-    # df_without_del.to_excel(without_del_path, index=False)
-    # df_del.to_excel(del_path, index=False)
+    # df_result = df_result.loc[df_result["stock"] != "0"]
+    # df_result.to_excel(f"{PATH_TO_FILES}/bb_new_stock.xlsx", index=False)
 
-    # await asyncio.sleep(10)
-    # logger.info("Start sending files")
+    df_without_del = df_result.loc[df_result["stock"] != "0"]
+    df_del = df_result.loc[df_result["stock"] == "0"][["article"]]
+    del_path = f"{PATH_TO_FILES}/bb_del.xlsx"
+    without_del_path = f"{PATH_TO_FILES}/bb_new_stock.xlsx"
+    df_without_del.to_excel(without_del_path, index=False)
+    df_del.to_excel(del_path, index=False)
+
+    await asyncio.sleep(10)
+    logger.info("Start sending files")
     # await tg_send_files([without_del_path, del_path], subject="бб")
 
 
