@@ -74,7 +74,7 @@ def get_main_data(book_item):
 
         response_text = ""
         for _ in range(5):
-            response = requests.get(book_item["link"], headers=headers, timeout=5)
+            response = requests.get(book_item["link"], headers=headers, timeout=30)
             if response.status_code == 404:
                 book_item["stock"] = "del"
                 return
