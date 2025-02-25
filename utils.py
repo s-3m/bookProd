@@ -122,6 +122,7 @@ def sync_fetch_request(url, headers):
         response = requests.get(
             url,
             headers=headers,
+            timeout=30
         )
         time.sleep(2)
         if response.status_code == 200:
