@@ -1,3 +1,4 @@
+import json
 import os
 import time
 import datetime
@@ -15,6 +16,7 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import give_me_sample
+from ozon_api import separate_records_to_client_id, start_push_to_ozon
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 
@@ -63,11 +65,11 @@ async def get_item_data(session, item, semaphore, item_index=None):
         try:
             response = await fetch_request(session, item["link"])
             if response == "del":
-                item["stock"] = "del"
+                item["stock"] = "0"
                 return
             soup = bs(response, "lxml")
             quantity_element = soup.find("span", class_="plus dark-color")
-            stock_quantity = "del"
+            stock_quantity = "0"
             if quantity_element:
                 stock_quantity = quantity_element.get("data-max")
                 if not stock_quantity:
@@ -84,7 +86,7 @@ async def get_item_data(session, item, semaphore, item_index=None):
             item["stock"] = stock_quantity
         except Exception as e:
             logger.exception(item["link"])
-            item["stock"] = "del"
+            item["stock"] = "0"
             errors.append(item_index)
             today = datetime.date.today().strftime("%d-%m-%Y")
             with open(f"{PATH_TO_FILES}/error.txt", "a+") as f:
@@ -130,7 +132,7 @@ async def get_gather_data():
 
         for item in sample:
             if not item["link"]:
-                item["stock"] = "del"
+                item["stock"] = "0"
                 continue
             item_index = sample.index(item)
             task = asyncio.create_task(
@@ -168,26 +170,39 @@ async def get_gather_data():
     global count
     count = 1
 
-    await asyncio.sleep(30)
-    logger.info("preparing files for sending")
+    logger.info("Preparing file")
+
+    # Push to OZON with API
+    separate_records = separate_records_to_client_id(sample)
+    logger.info("Start push to ozon")
+    start_push_to_ozon(separate_records)
+    logger.success("Data was pushed to ozon")
+
     df_result = pd.DataFrame(sample)
-    df_result.drop_duplicates(keep="last", inplace=True, subset="article")
+    df_result = df_result.loc[df_result["stock"] != "0"]
+    df_result.to_excel(f"{PATH_TO_FILES}/bb_new_stock.xlsx", index=False)
+    # df_result.drop_duplicates(keep="last", inplace=True, subset="article")
+    #
+    # df_without_del = df_result.loc[df_result["stock"] != "del"]
+    # df_del = df_result.loc[df_result["stock"] == "del"][["article"]]
+    # del_path = f"{PATH_TO_FILES}/bb_del.xlsx"
+    # without_del_path = f"{PATH_TO_FILES}/bb_new_stock.xlsx"
+    # df_without_del.to_excel(without_del_path, index=False)
+    # df_del.to_excel(del_path, index=False)
 
-    df_without_del = df_result.loc[df_result["stock"] != "del"]
-    df_del = df_result.loc[df_result["stock"] == "del"][["article"]]
-    del_path = f"{PATH_TO_FILES}/bb_del.xlsx"
-    without_del_path = f"{PATH_TO_FILES}/bb_new_stock.xlsx"
-    df_without_del.to_excel(without_del_path, index=False)
-    df_del.to_excel(del_path, index=False)
-
-    await asyncio.sleep(10)
-    logger.info("Start sending files")
-    await tg_send_files([without_del_path, del_path], subject="бб")
+    # await asyncio.sleep(10)
+    # logger.info("Start sending files")
+    # await tg_send_files([without_del_path, del_path], subject="бб")
 
 
 def main():
     logger.add(
         f"{PATH_TO_FILES}/error.log", format="{time} {level} {message}", level="ERROR"
+    )
+    logger.add(
+        f"{PATH_TO_FILES}/log.json",
+        level="WARNING",
+        serialize=True,
     )
     logger.info("Start parsing BookBridge.ru")
     asyncio.run(get_gather_data())
