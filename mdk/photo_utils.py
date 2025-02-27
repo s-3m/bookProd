@@ -69,21 +69,25 @@ sem = asyncio.Semaphore(3)
 
 async def photo_processing(session, item):
     global count_replace_photo
-    for _ in range(5):
-        try:
-            async with session.get(item["Фото_x"]) as resp:
-                await asyncio.sleep(3)
-                resp = await resp.content.read()
-                break
-        except Exception:
-            continue
-    img_path = await crop_image(resp, item["Фото_x"].split("/")[-1][:-4])
-    async with sem:
-        new_url = await save_to_ya(img_path, item)
-        os.remove(img_path)
-        item["Фото_x"] = new_url
-        print(f"\rReplace photo done - {count_replace_photo}", end="")
-        count_replace_photo += 1
+    try:
+        for _ in range(5):
+            try:
+                async with session.get(item["Фото_x"]) as resp:
+                    await asyncio.sleep(3)
+                    resp = await resp.content.read()
+                    break
+            except Exception:
+                continue
+        img_path = await crop_image(resp, item["Фото_x"].split("/")[-1][:-4])
+        async with sem:
+            new_url = await save_to_ya(img_path, item)
+            os.remove(img_path)
+            item["Фото_x"] = new_url
+            print(f"\rReplace photo done - {count_replace_photo}", end="")
+            count_replace_photo += 1
+    except Exception as e:
+        logger.exception(e)
+        item["Фото_x"] = "https://zapobedu21.ru/images/26.07.2017/kniga.jpg"
 
 
 async def replace_photo(add_list: list[dict]):
