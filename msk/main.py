@@ -329,31 +329,31 @@ async def get_gather_data():
 
         # Reparse empty string
         # del file
-        logger.info("Reparse del file")
+        # logger.info("Reparse del file")
         del_list = [{"Артикул": i} for i in id_to_del]
-        reparse_del_tasks = [
-            asyncio.create_task(check_empty_element(session, item, item["Артикул"]))
-            for item in del_list
-        ]
-        await asyncio.gather(*reparse_del_tasks)
+        # reparse_del_tasks = [
+        #     asyncio.create_task(check_empty_element(session, item, item["Артикул"]))
+        #     for item in del_list
+        # ]
+        # await asyncio.gather(*reparse_del_tasks)
 
         # price files
-        try:
-            logger.info("Reparse empty price")
-            for i_dict in prices:
-                prices_tasks = [
-                    asyncio.create_task(
-                        check_empty_element(
-                            session, prices[i_dict][item], item, check_price=True
-                        )
-                    )
-                    for item in prices[i_dict]
-                    if prices[i_dict][item]["price"] == ""
-                ]
-                await asyncio.gather(*prices_tasks)
-        except Exception as e:
-            logger.exception(e)
-            pass
+        # try:
+        #     logger.info("Reparse empty price")
+        #     for i_dict in prices:
+        #         prices_tasks = [
+        #             asyncio.create_task(
+        #                 check_empty_element(
+        #                     session, prices[i_dict][item], item, check_price=True
+        #                 )
+        #             )
+        #             for item in prices[i_dict]
+        #             if prices[i_dict][item]["price"] == ""
+        #         ]
+        #         await asyncio.gather(*prices_tasks)
+        # except Exception as e:
+        #     logger.exception(e)
+        #     pass
 
     print()
     logger.info("Start to write data in file")
