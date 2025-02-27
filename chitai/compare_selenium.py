@@ -60,7 +60,7 @@ def get_link_from_ajax(article):
         timeout=5,
     )
     response = resp.json()
-    link = response["included"][0]["attributes"]["url"]
+    link = response["included"][0]["attributes"].get("url")
     return link
 
 
@@ -69,6 +69,9 @@ def get_main_data(book_item):
         if not book_item["link"]:
             logger.info("Нет ссылки")
             i_link = get_link_from_ajax(book_item["article"])
+            if not i_link:
+                book_item["stock"] = "del"
+                return
             book_item["link"] = f"{BASE_URL}/{i_link}"
             logger.info(f"Нашёл ссылку - {book_item["link"]}")
 
