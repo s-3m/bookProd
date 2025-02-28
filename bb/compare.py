@@ -16,7 +16,8 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import give_me_sample
-from ozon_api import separate_records_to_client_id, start_push_to_ozon
+from ozon.ozon_api import separate_records_to_client_id, start_push_to_ozon
+from ozon.utils import logger_filter
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 
@@ -202,6 +203,7 @@ def main():
         f"{PATH_TO_FILES}/log.json",
         level="WARNING",
         serialize=True,
+        filter=logger_filter,
     )
     logger.info("Start parsing BookBridge.ru")
     asyncio.run(get_gather_data())
