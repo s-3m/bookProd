@@ -59,7 +59,7 @@ async def to_check_item(item, session):
             )
             need_data_dict = eval(a[:-1])["Products"][0]
             stock = need_data_dict["Stock"]
-            item["stock"] = stock
+            item["stock"] = stock if stock != "9999999" else "1"
 
         print(f"\r{count} | Error book - {error_count}", end="")
         count += 1
