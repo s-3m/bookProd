@@ -139,9 +139,6 @@ async def get_item_data(session, book: str):
 
         article = char_data["Код товара"] + ".0"
 
-        count_edition: str = char_data.get("Тираж")
-        quantity_page: str = char_data.get("Количество страниц")
-
         book_data = {
             "Ссылка": link,
             "Название": title,
@@ -207,7 +204,9 @@ async def get_item_data(session, book: str):
         if article in not_in_sale and stock > 0:
             not_in_sale[article]["on sale"] = "да"
         elif article not in sample and stock > 0:
-            id_to_add.append(book_data)
+            check_book_type = char_data.get("Вид товара")
+            if check_book_type == "Книги":
+                id_to_add.append(book_data)
         if article in id_to_del and stock > 0:
             id_to_del.remove(article)
 
