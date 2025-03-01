@@ -192,7 +192,7 @@ async def get_gather_data():
 
     await asyncio.sleep(10)
     logger.info("Start sending files")
-    # await tg_send_files([without_del_path, del_path], subject="бб")
+    await tg_send_files([without_del_path, del_path], subject="бб")
 
 
 def main():
