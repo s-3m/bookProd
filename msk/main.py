@@ -119,7 +119,9 @@ async def get_item_data(session, item: str):
         # Photo
         try:
             img = soup.find("div", class_="book__cover").find("a").get("href")
-            img = f"{BASE_URL}{img}"
+
+            if "capellabook" not in img:
+                img = f"{BASE_URL}{img}"
         except:
             img = "Нет фото"
 
