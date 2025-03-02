@@ -210,8 +210,8 @@ def give_me_sample(
             )
             sample.columns = ["article", "seller_id", merge_obj_translate]
         else:
-            sample = df1[["Артикул"]]
-            sample.columns = ["article"]
+            sample = df1[["Артикул", "seller_id"]]
+            sample.columns = ["article", "seller_id"]
         sample = sample.drop_duplicates()
         sale_files = os.listdir(f"{path_to_sample}/sale")
         for i in sale_files:
