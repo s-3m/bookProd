@@ -14,6 +14,9 @@ from tg_sender import tg_send_files
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import give_me_sample, fetch_request
+from ozon.ozon_api import separate_records_to_client_id, start_push_to_ozon
+from ozon.utils import logger_filter
+
 
 DEBUG = True if sys.platform.startswith("win") else False
 BASE_URL = "https://www.moscowbooks.ru/"
@@ -22,6 +25,13 @@ PATH_TO_FILES = "/media/source/msk/every_day" if not DEBUG else "source/every_da
 logger.add(
     f"{PATH_TO_FILES}/error.log", format="{time} {level} {message}", level="ERROR"
 )
+logger.add(
+    f"{PATH_TO_FILES}/log.json",
+    level="WARNING",
+    serialize=True,
+    filter=logger_filter,
+)
+
 headers = {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
     "user-agent": USER_AGENT.random,
@@ -48,7 +58,7 @@ async def to_check_item(item, session):
             script_index = 5
 
         if not soup.find("div", class_="book__buy"):
-            item["stock"] = "del"
+            item["stock"] = "0"
         else:
             need_element = soup.find_all("script")
             a = (
@@ -94,15 +104,22 @@ async def get_compare():
 
     for item in sample:
         if item["stock"] == "error":
-            item["stock"] = "del"
+            item["stock"] = "0"
 
+    # Push to OZON with API
+    separate_records = separate_records_to_client_id(sample)
+    logger.info("Start push to ozon")
+    start_push_to_ozon(separate_records)
+    logger.success("Data was pushed to ozon")
+
+    # TG send
     logger.info("Preparing files for sending")
     df_result = pd.DataFrame(sample)
-    df_without_del = df_result.loc[df_result["stock"] != "del"]
+    df_without_del = df_result.loc[df_result["stock"] != "0"]
     without_del_path = f"{PATH_TO_FILES}/msk_new_stock.xlsx"
     df_without_del.to_excel(without_del_path, index=False)
 
-    df_del = df_result.loc[df_result["stock"] == "del"][["article"]]
+    df_del = df_result.loc[df_result["stock"] == "0"][["article"]]
     del_path = f"{PATH_TO_FILES}/msk_del.xlsx"
     df_del.to_excel(del_path, index=False)
 
