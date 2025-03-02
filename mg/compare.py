@@ -13,6 +13,8 @@ from dotenv import load_dotenv
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files
 from utils import fetch_request, give_me_sample
+from ozon.ozon_api import separate_records_to_client_id, start_push_to_ozon
+from ozon.utils import logger_filter
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 
@@ -45,6 +47,12 @@ BASE_LINUX_DIR = "/media/source/mg/every_day" if not DEBUG else "source/every_da
 logger.add(
     f"{BASE_LINUX_DIR}/error.log", format="{time} {level} {message}", level="ERROR"
 )
+logger.add(
+    f"{BASE_LINUX_DIR}/log.json",
+    level="WARNING",
+    serialize=True,
+    filter=logger_filter,
+)
 error_items = []
 
 
@@ -74,14 +82,14 @@ async def get_item_data(session, item, semaphore, sample, reparse=False):
                 #     return
                 # item["id"] = content.find("a").get("href").split("/")[-1].strip()
             if not item["id"]:
-                item["stock"] = "del"
+                item["stock"] = "0"
 
             full_url = f"{BASE_URL}/tovar/{item["id"]}"
             response = await fetch_request(session, full_url, headers)
             soup = bs(response, "lxml")
             buy_btn = soup.find("a", class_="btn_red wish_list_btn add_to_cart")
             if not buy_btn:
-                item["stock"] = "del"
+                item["stock"] = "0"
             else:
                 item["stock"] = "2"
 
@@ -127,7 +135,7 @@ async def get_gather_data(semaphore, sample):
 
         for i in sample:
             if not i["stock"]:
-                i["stock"] = "del"
+                i["stock"] = "0"
 
 
 def main():
@@ -137,14 +145,20 @@ def main():
     semaphore = asyncio.Semaphore(10)
     asyncio.run(get_gather_data(semaphore, sample))
 
+    # Push to OZON with API
+    separate_records = separate_records_to_client_id(sample)
+    logger.info("Start push to ozon")
+    start_push_to_ozon(separate_records)
+    logger.success("Data was pushed to ozon")
+
     df_result = pd.DataFrame(sample)
     df_result.drop_duplicates(inplace=True, keep="last", subset="article")
 
-    df_del = df_result.loc[df_result["stock"] == "del"][["article"]]
+    df_del = df_result.loc[df_result["stock"] == "0"][["article"]]
     del_file = f"{BASE_LINUX_DIR}/mg_del.xlsx"
     df_del.to_excel(del_file, index=False)
 
-    df_without_del = df_result.loc[df_result["stock"] != "del"]
+    df_without_del = df_result.loc[df_result["stock"] != "0"]
     stock_file = f"{BASE_LINUX_DIR}/mg_new_stock.xlsx"
     df_without_del.to_excel(stock_file, index=False)
     global count
