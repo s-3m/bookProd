@@ -1,10 +1,13 @@
-import random
-
 import requests
 import os
 from concurrent.futures import ThreadPoolExecutor
 import time
+
+from dotenv import load_dotenv
 from loguru import logger
+
+
+load_dotenv("../.env")
 
 
 def separate_records_to_client_id(books_records: list[dict]) -> dict[str, list[dict]]:
@@ -67,6 +70,32 @@ class Ozon:
         if self.errors[self.client_id]:
             logger.warning(self.errors)
 
+    def _prepare_for_sample(self, raw_data: list[dict]):
+        ready_data = []
+        for item in raw_data:
+            ready_data.append(
+                {"article": item["offer_id"], "stock": "", "seller_id": self.client_id}
+            )
+        return ready_data
+
+    def in_sale(self):
+        result = []
+        body = {"filter": {"visibility": "IN_SALE"}, "limit": 1000, "last_id": ""}
+        while True:
+            response = requests.post(
+                f"{self.host}/v3/product/list", headers=self.headers, json=body
+            )
+            time.sleep(0.5)
+            items_list = response.json().get("result").get("items")
+            last_id = response.json().get("result").get("last_id")
+            body["last_id"] = last_id
+            if not items_list:
+                break
+            result.extend(items_list)
+        ready_data = self._prepare_for_sample(result)
+        print(len(ready_data))
+        return ready_data
+
 
 def start_push_to_ozon(separate_records: dict[str, list[dict]]):
     with ThreadPoolExecutor(max_workers=20) as executor:
@@ -75,6 +104,25 @@ def start_push_to_ozon(separate_records: dict[str, list[dict]]):
             api_key = os.getenv(f"CLIENT_ID_{seller_id}")
             ozon = Ozon(client_id=seller_id, api_key=api_key)
             executor.submit(ozon.update_stock, separate_records[item])
+
+
+def get_in_sale(prefix: str):
+    shop_list = []
+    ready_result = []
+    for key, value in os.environ.items():
+        if key.startswith(prefix.upper()):
+            shop_list.append((key.split("_")[-1], value))
+
+    with ThreadPoolExecutor(max_workers=20) as executor:
+        futures = []
+        for item in shop_list:
+            ozon = Ozon(client_id=item[0], api_key=item[1])
+            task = executor.submit(ozon.in_sale)
+            futures.append(task)
+        for i in futures:
+            ready_result.extend(i.result())
+
+    return ready_result
 
 
 # if __name__ == "__main__":
