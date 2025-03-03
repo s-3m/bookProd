@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files
 from utils import fetch_request, give_me_sample
-from ozon.ozon_api import separate_records_to_client_id, start_push_to_ozon
+from ozon.ozon_api import separate_records_to_client_id, start_push_to_ozon, get_in_sale
 from ozon.utils import logger_filter
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
@@ -140,7 +140,10 @@ async def get_gather_data(semaphore, sample):
 
 def main():
     logger.info("Start MG parsing")
-    sample = give_me_sample(BASE_LINUX_DIR, prefix="mg", merge_obj="id")
+    books_in_sale = get_in_sale("mg")
+    sample = give_me_sample(
+        BASE_LINUX_DIR, prefix="mg", merge_obj="id", ozon_in_sale=books_in_sale
+    )
 
     semaphore = asyncio.Semaphore(10)
     asyncio.run(get_gather_data(semaphore, sample))
@@ -148,7 +151,7 @@ def main():
     # Push to OZON with API
     separate_records = separate_records_to_client_id(sample)
     logger.info("Start push to ozon")
-    start_push_to_ozon(separate_records)
+    start_push_to_ozon(separate_records, prefix="mg")
     logger.success("Data was pushed to ozon")
 
     df_result = pd.DataFrame(sample)
