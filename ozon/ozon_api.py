@@ -74,7 +74,7 @@ class Ozon:
         ready_data = []
         for item in raw_data:
             ready_data.append(
-                {"article": item["offer_id"], "stock": "", "seller_id": self.client_id}
+                {"Артикул": item["offer_id"], "seller_id": self.client_id}
             )
         return ready_data
 
@@ -97,11 +97,11 @@ class Ozon:
         return ready_data
 
 
-def start_push_to_ozon(separate_records: dict[str, list[dict]]):
+def start_push_to_ozon(separate_records: dict[str, list[dict]], prefix: str):
     with ThreadPoolExecutor(max_workers=20) as executor:
         for item in separate_records:
             seller_id = item
-            api_key = os.getenv(f"CLIENT_ID_{seller_id}")
+            api_key = os.getenv(f"{prefix.upper()}_CLIENT_ID_{seller_id}")
             ozon = Ozon(client_id=seller_id, api_key=api_key)
             executor.submit(ozon.update_stock, separate_records[item])
 
