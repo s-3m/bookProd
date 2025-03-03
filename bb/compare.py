@@ -16,7 +16,7 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import give_me_sample
-from ozon.ozon_api import separate_records_to_client_id, start_push_to_ozon
+from ozon.ozon_api import separate_records_to_client_id, start_push_to_ozon, get_in_sale
 from ozon.utils import logger_filter
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
@@ -119,7 +119,10 @@ async def get_link_from_ajax(session, id):
 
 
 async def get_gather_data():
-    sample = give_me_sample(base_dir=PATH_TO_FILES, prefix="bb")
+    books_in_sale = get_in_sale("bb")
+    sample = give_me_sample(
+        base_dir=PATH_TO_FILES, prefix="bb", ozon_in_sale=books_in_sale
+    )
 
     semaphore = asyncio.Semaphore(10)
     tasks = []
@@ -176,7 +179,7 @@ async def get_gather_data():
     # Push to OZON with API
     separate_records = separate_records_to_client_id(sample)
     logger.info("Start push to ozon")
-    start_push_to_ozon(separate_records)
+    start_push_to_ozon(separate_records, prefix="bb")
     logger.success("Data was pushed to ozon")
 
     df_result = pd.DataFrame(sample)
