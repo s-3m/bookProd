@@ -15,6 +15,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files
 from utils import give_me_sample
 from concurrent.futures import ThreadPoolExecutor
+from ozon.ozon_api import get_in_sale, start_push_to_ozon, separate_records_to_client_id
+from ozon.utils import logger_filter
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 
@@ -43,6 +45,12 @@ logger.add(
     format="{time} {level} {message}",
     level="ERROR",
 )
+logger.add(
+    f"{BASE_LINUX_DIR}/log.json",
+    level="WARNING",
+    serialize=True,
+    filter=logger_filter,
+)
 error_book = []
 count = 1
 
@@ -70,7 +78,7 @@ def get_main_data(book_item):
             logger.info("Нет ссылки")
             i_link = get_link_from_ajax(book_item["article"])
             if not i_link:
-                book_item["stock"] = "del"
+                book_item["stock"] = "0"
                 return
             book_item["link"] = f"{BASE_URL}/{i_link}"
             logger.info(f"Нашёл ссылку - {book_item["link"]}")
@@ -79,7 +87,7 @@ def get_main_data(book_item):
         for _ in range(5):
             response = requests.get(book_item["link"], headers=headers, timeout=30)
             if response.status_code == 404:
-                book_item["stock"] = "del"
+                book_item["stock"] = "0"
                 return
             if response.status_code == 200:
                 response_text = response.text
@@ -99,7 +107,7 @@ def get_main_data(book_item):
         #         in_shop_option = True
         #     else:
         #         in_shop_option = False
-        #         book_item["stock"] = "del"
+        #         book_item["stock"] = "0"
 
         stock = soup.find("link", attrs={"itemprop": "availability", "href": "InStock"})
 
@@ -110,7 +118,7 @@ def get_main_data(book_item):
             else:
                 book_item["stock"] = "Только в магазине"
         elif not_in_option and online_option_2 is None:
-            book_item["stock"] = "del"
+            book_item["stock"] = "0"
 
     except Exception as e:
         book_item["stock"] = "error"
@@ -154,7 +162,7 @@ async def get_gather_data(sample):
 
     for i in sample:
         if i["stock"] == "error":
-            i["stock"] = "del"
+            i["stock"] = "0"
 
     print()
     global count
@@ -164,24 +172,33 @@ async def get_gather_data(sample):
 
 def main():
     # load_dotenv("../.env")
-    sample = give_me_sample(base_dir=BASE_LINUX_DIR, prefix="chit-gor")
+    books_in_sale = get_in_sale("chit_gor")
+    sample = give_me_sample(
+        base_dir=BASE_LINUX_DIR, prefix="chit_gor", ozon_in_sale=books_in_sale
+    )
     print(len(sample))
     asyncio.run(get_gather_data(sample))
+
+    # Push to OZON with API
+    separate_records = separate_records_to_client_id(sample)
+    logger.info("Start push to ozon")
+    start_push_to_ozon(separate_records, prefix="chit_gor")
+    logger.success("Data was pushed to ozon")
 
     logger.info("Start write to excel")
     df_result = pd.DataFrame(sample)
 
-    df_del = df_result.loc[df_result["stock"] == "del"][["article"]]
-    del_path = f"{BASE_LINUX_DIR}/chit-gor_del.xlsx"
+    df_del = df_result.loc[df_result["stock"] == "0"][["article"]]
+    del_path = f"{BASE_LINUX_DIR}/chit_gor_del.xlsx"
     df_del.to_excel(del_path, index=False)
 
-    df_without_del = df_result.loc[df_result["stock"] != "del"]
-    new_stock_path = f"{BASE_LINUX_DIR}/chit-gor_new_stock.xlsx"
+    df_without_del = df_result.loc[df_result["stock"] != "0"]
+    new_stock_path = f"{BASE_LINUX_DIR}/chit_gor_new_stock.xlsx"
     df_without_del.to_excel(new_stock_path, index=False)
 
     logger.success("Finish write to excel")
 
-    asyncio.run(tg_send_files([new_stock_path, del_path], "Chit-gor"))
+    asyncio.run(tg_send_files([new_stock_path, del_path], "Chit_gor"))
 
     logger.success("Script was finished successfully")
 
