@@ -14,7 +14,7 @@ from tg_sender import tg_send_files
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import give_me_sample, fetch_request
-from ozon.ozon_api import separate_records_to_client_id, start_push_to_ozon
+from ozon.ozon_api import separate_records_to_client_id, start_push_to_ozon, get_in_sale
 from ozon.utils import logger_filter
 
 
@@ -85,7 +85,13 @@ async def to_check_item(item, session):
 
 
 async def get_compare():
-    sample = give_me_sample(base_dir=PATH_TO_FILES, prefix="msk", without_merge=True)
+    books_in_sale = get_in_sale("msk")
+    sample = give_me_sample(
+        base_dir=PATH_TO_FILES,
+        prefix="msk",
+        without_merge=True,
+        ozon_in_sale=books_in_sale,
+    )
 
     async with aiohttp.ClientSession(
         connector=aiohttp.TCPConnector(ssl=False), trust_env=True
@@ -109,7 +115,7 @@ async def get_compare():
     # Push to OZON with API
     separate_records = separate_records_to_client_id(sample)
     logger.info("Start push to ozon")
-    start_push_to_ozon(separate_records)
+    start_push_to_ozon(separate_records, prefix="msk")
     logger.success("Data was pushed to ozon")
 
     # TG send
