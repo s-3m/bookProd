@@ -333,7 +333,7 @@ async def get_gather_data():
 
         write_result_files(
             base_dir=BASE_LINUX_DIR,
-            prefix="chit-gor",
+            prefix="chit_gor",
             all_books_result=all_books_result,
             id_to_add=id_to_add,
             id_to_del=id_to_del,
