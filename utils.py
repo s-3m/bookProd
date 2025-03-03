@@ -191,10 +191,18 @@ def write_result_files(
 
 
 def give_me_sample(
-    base_dir: str, prefix: str, without_merge=False, merge_obj="Ссылка"
+    base_dir: str,
+    prefix: str,
+    without_merge=False,
+    merge_obj="Ссылка",
+    ozon_in_sale=None,
 ) -> list[dict]:
     path_to_sample = os.path.join(base_dir, "..")
-    df1 = filesdata_to_dict(f"{path_to_sample}/sale", combined=True, return_df=True)
+    if not ozon_in_sale:
+        df1 = filesdata_to_dict(f"{path_to_sample}/sale", combined=True, return_df=True)
+    else:
+        df1 = pd.DataFrame(ozon_in_sale)
+
     merge_obj_translate = "link" if merge_obj == "Ссылка" else merge_obj
 
     if df1 is not None:
