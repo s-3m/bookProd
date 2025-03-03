@@ -12,7 +12,9 @@ import pandas as pd
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files
-from utils import filesdata_to_dict, fetch_request, give_me_sample, sync_fetch_request
+from utils import give_me_sample, sync_fetch_request
+from ozon.ozon_api import get_in_sale, start_push_to_ozon, separate_records_to_client_id
+from ozon.utils import logger_filter
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 
@@ -43,6 +45,13 @@ logger.add(
     format="{time} {level} {message}",
     level="ERROR",
 )
+logger.add(
+    f"{BASE_LINUX_DIR}/log.json",
+    level="WARNING",
+    serialize=True,
+    filter=logger_filter,
+)
+
 error_book = []
 count = 1
 
@@ -53,7 +62,7 @@ def get_main_data(book):
         # async with semaphore:
         response = sync_fetch_request(book_url, headers)
         if response == "404":
-            book["stock"] = "del"
+            book["stock"] = "0"
         else:
             soup = bs(response, "lxml")
             try:
@@ -61,7 +70,7 @@ def get_main_data(book):
                     "data-maxqty"
                 )
             except:
-                stock = "del"
+                stock = "0"
 
             book["stock"] = stock
     except Exception as e:
@@ -95,7 +104,7 @@ async def get_gather_data(sample):
     # Note all not reparse item to del
     for book in sample:
         if book["stock"] == "error":
-            book["stock"] = "del"
+            book["stock"] = "0"
 
     logger.warning(f"Error not reparse: {len(error_book)}")
 
@@ -105,18 +114,31 @@ async def get_gather_data(sample):
 
 def main():
     logger.info("Start script")
-    sample = give_me_sample(base_dir=BASE_LINUX_DIR, prefix="mdk", without_merge=True)
+    books_in_sale = get_in_sale("mdk")
+    sample = give_me_sample(
+        base_dir=BASE_LINUX_DIR,
+        prefix="mdk",
+        without_merge=True,
+        ozon_in_sale=books_in_sale,
+    )
     asyncio.run(get_gather_data(sample))
+
+    # Push to OZON with API
+    separate_records = separate_records_to_client_id(sample)
+    logger.info("Start push to ozon")
+    start_push_to_ozon(separate_records, prefix="mdk")
+    logger.success("Data was pushed to ozon")
+
     logger.info("Start write files")
 
     df = pd.DataFrame(sample)
     df.drop_duplicates(inplace=True, subset="article", keep="last")
 
-    df_del = df.loc[df["stock"] == "del"][["article"]]
+    df_del = df.loc[df["stock"] == "0"][["article"]]
     del_path = f"{BASE_LINUX_DIR}/mdk_del.xlsx"
     df_del.to_excel(del_path, index=False)
 
-    df_without_del = df.loc[df["stock"] != "del"]
+    df_without_del = df.loc[df["stock"] != "0"]
     new_stock_path = f"{BASE_LINUX_DIR}/mdk_new_stock.xlsx"
     df_without_del.to_excel(new_stock_path, index=False)
 
