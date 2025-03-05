@@ -60,15 +60,21 @@ def get_link_from_ajax(article):
         "phrase": article[:-2],
         "customerCityId": "213",
     }
-    resp = requests.get(
-        "https://web-gate.chitai-gorod.ru/api/v2/search/product",
-        headers=headers,
-        params=params,
-        timeout=5,
-    )
-    response = resp.json()
-    link = response["included"][0]["attributes"].get("url")
-    return link
+    request_count = 0
+    while request_count < 4:
+        try:
+            resp = requests.get(
+                "https://web-gate.chitai-gorod.ru/api/v2/search/product",
+                headers=headers,
+                params=params,
+                timeout=5,
+            )
+            response = resp.json()
+            link = response["included"][0]["attributes"].get("url")
+            return link
+        except KeyError:
+            continue
+    return None
 
 
 def get_main_data(book_item):
@@ -170,36 +176,39 @@ async def get_gather_data(sample):
 
 
 def main():
-    # load_dotenv("../.env")
-    books_in_sale = get_in_sale("chit_gor")
-    sample = give_me_sample(
-        base_dir=BASE_LINUX_DIR, prefix="chit_gor", ozon_in_sale=books_in_sale
-    )
-    print(len(sample))
-    asyncio.run(get_gather_data(sample))
+    try:
+        # load_dotenv("../.env")
+        books_in_sale = get_in_sale("chit_gor")
+        sample = give_me_sample(
+            base_dir=BASE_LINUX_DIR, prefix="chit_gor", ozon_in_sale=books_in_sale
+        )
+        print(len(sample))
+        asyncio.run(get_gather_data(sample))
 
-    # Push to OZON with API
-    separate_records = separate_records_to_client_id(sample)
-    logger.info("Start push to ozon")
-    start_push_to_ozon(separate_records, prefix="chit_gor")
-    logger.success("Data was pushed to ozon")
+        # Push to OZON with API
+        separate_records = separate_records_to_client_id(sample)
+        logger.info("Start push to ozon")
+        start_push_to_ozon(separate_records, prefix="chit_gor")
+        logger.success("Data was pushed to ozon")
 
-    logger.info("Start write to excel")
-    df_result = pd.DataFrame(sample)
+        logger.info("Start write to excel")
+        df_result = pd.DataFrame(sample)
 
-    df_del = df_result.loc[df_result["stock"] == "0"][["article"]]
-    del_path = f"{BASE_LINUX_DIR}/chit_gor_del.xlsx"
-    df_del.to_excel(del_path, index=False)
+        df_del = df_result.loc[df_result["stock"] == "0"][["article"]]
+        del_path = f"{BASE_LINUX_DIR}/chit_gor_del.xlsx"
+        df_del.to_excel(del_path, index=False)
 
-    df_without_del = df_result.loc[df_result["stock"] != "0"]
-    new_stock_path = f"{BASE_LINUX_DIR}/chit_gor_new_stock.xlsx"
-    df_without_del.to_excel(new_stock_path, index=False)
+        df_without_del = df_result.loc[df_result["stock"] != "0"]
+        new_stock_path = f"{BASE_LINUX_DIR}/chit_gor_new_stock.xlsx"
+        df_without_del.to_excel(new_stock_path, index=False)
 
-    logger.success("Finish write to excel")
+        logger.success("Finish write to excel")
 
-    asyncio.run(tg_send_files([new_stock_path, del_path], "Chit_gor"))
+        asyncio.run(tg_send_files([new_stock_path, del_path], "Chit_gor"))
 
-    logger.success("Script was finished successfully")
+        logger.success("Script was finished successfully")
+    except Exception as e:
+        logger.exception(e)
 
 
 def super_main():
