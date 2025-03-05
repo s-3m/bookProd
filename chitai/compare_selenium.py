@@ -7,7 +7,6 @@ import schedule
 from loguru import logger
 import pandas.io.formats.excel
 from bs4 import BeautifulSoup as bs
-import aiohttp
 import asyncio
 import pandas as pd
 
@@ -96,9 +95,9 @@ def get_main_data(book_item):
         soup = bs(response_text, "lxml")
 
         online_option = soup.find("div", class_="product-offer-price")
-        online_option_2 = soup.find("span", class_="offer-availability-status--green")
+        # online_option_2 = soup.find("span", class_="offer-availability-status--green")
         # in_shop_option = soup.find("p", class_="product-offer-header__title")
-        not_in_option = soup.find("div", class_="detail-product__unavailable")
+        # not_in_option = soup.find("div", class_="detail-product__unavailable")
         # if in_shop_option:
         #     moscow_shop_check = soup.find(
         #         "div", class_="product-offer-shops__title"
@@ -116,8 +115,8 @@ def get_main_data(book_item):
                 stock = stock.next.strip()
                 book_item["stock"] = stock
             else:
-                book_item["stock"] = "Только в магазине"
-        elif not_in_option and online_option_2 is None:
+                book_item["stock"] = "0"
+        else:
             book_item["stock"] = "0"
 
     except Exception as e:
