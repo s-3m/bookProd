@@ -46,7 +46,7 @@ class Ozon:
         stocks_list = [
             {
                 "offer_id": i["article"],
-                "stock": int(i["stock"]),
+                "stock": int(i["stock"]) if i["stock"].isdigit() else 0,
                 "warehouse_id": warehouse_id,
             }
             for i in item_list
