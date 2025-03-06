@@ -29,7 +29,7 @@ class Ozon:
         self.errors = {self.client_id: []}
 
         self.headers = {
-            "Client-Id": self.client_id,
+            "Client-Id": str(self.client_id),
             "Api-Key": self.api_key,
             "Content-Type": "application/json",
         }
@@ -45,8 +45,8 @@ class Ozon:
         warehouse_id = self._get_warehouse_id()
         stocks_list = [
             {
-                "offer_id": i["article"],
-                "stock": int(i["stock"]) if i["stock"].isdigit() else 0,
+                "offer_id": str(i["article"]),
+                "stock": int(i["stock"]) if str(i["stock"]).isdigit() else 0,
                 "warehouse_id": warehouse_id,
             }
             for i in item_list
@@ -99,11 +99,19 @@ class Ozon:
 
 def start_push_to_ozon(separate_records: dict[str, list[dict]], prefix: str):
     with ThreadPoolExecutor(max_workers=20) as executor:
+        futures = []
         for item in separate_records:
             seller_id = item
             api_key = os.getenv(f"{prefix.upper()}_CLIENT_ID_{seller_id}")
             ozon = Ozon(client_id=seller_id, api_key=api_key)
-            executor.submit(ozon.update_stock, separate_records[item])
+            future = executor.submit(ozon.update_stock, separate_records[item])
+            futures.append(future)
+
+        for future in futures:
+            try:
+                future.result()
+            except Exception as e:
+                logger.critical(f"Ошибка в задаче: {e}")
 
 
 def get_in_sale(prefix: str):
@@ -120,7 +128,10 @@ def get_in_sale(prefix: str):
             task = executor.submit(ozon.in_sale)
             futures.append(task)
         for i in futures:
-            ready_result.extend(i.result())
+            try:
+                ready_result.extend(i.result())
+            except Exception as e:
+                logger.critical(e)
 
     return ready_result
 
