@@ -22,6 +22,23 @@ async def tg_send_files(files:list[str], subject):
     logger.success(f"Sending was finished successfully ({subject})")
 
 
+@logger.catch
+async def tg_send_msg(prefix):
+    bot = Bot(os.getenv("BOT_TOKEN"))
+    await bot.send_message(
+        os.getenv("CHAT_ID"),
+        f"После парсинга {prefix} обнаружено слишком много позиций с остатком 0."
+        f" Данные автоматически не загружены на OZON. Необходимо проверить данные вручную!",
+    )
+
+    await bot.send_message(
+        os.getenv("CHAT_ID_TEST"),
+        f"После парсинга {prefix} обнаружено слишком много позиций с остатком 0."
+        f" Данные автоматически не загружены на OZON. Необходимо проверить данные вручную!",
+    )
+
+    await bot.session.close()
+
 if __name__ == '__main__':
     a = []
     for dirpath, _, filenames in os.walk('mg/compare'):

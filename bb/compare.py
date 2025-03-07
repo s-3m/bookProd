@@ -11,10 +11,10 @@ from fake_useragent import UserAgent
 import aiohttp
 import asyncio
 import pandas as pd
+from .tg_sender import tg_send_files, tg_send_msg
 import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from tg_sender import tg_send_files, tg_send_msg
 from utils import give_me_sample, quantity_checker
 from ozon.ozon_api import separate_records_to_client_id, start_push_to_ozon, get_in_sale
 from ozon.utils import logger_filter
