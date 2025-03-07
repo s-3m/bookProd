@@ -11,8 +11,8 @@ import asyncio
 import pandas as pd
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from tg_sender import tg_send_files
-from utils import give_me_sample
+from tg_sender import tg_send_files, tg_send_msg
+from utils import give_me_sample, quantity_checker
 from concurrent.futures import ThreadPoolExecutor
 from ozon.ozon_api import get_in_sale, start_push_to_ozon, separate_records_to_client_id
 from ozon.utils import logger_filter
@@ -185,15 +185,21 @@ def main():
         print(len(sample))
         asyncio.run(get_gather_data(sample))
 
-        # Push to OZON with API
-        separate_records = separate_records_to_client_id(sample)
-        logger.info("Start push to ozon")
-        start_push_to_ozon(separate_records, prefix="chit_gor")
-        logger.success("Data was pushed to ozon")
+        checker = quantity_checker(sample)
+        if checker:
+            # Push to OZON with API
+            separate_records = separate_records_to_client_id(sample)
+            logger.info("Start push to ozon")
+            start_push_to_ozon(separate_records, prefix="chit_gor")
+            logger.success("Data was pushed to ozon")
+        else:
+            logger.warning("Detected too many ZERO items")
+            asyncio.run(tg_send_msg("'Читай-Город'"))
 
         logger.info("Start write to excel")
         df_result = pd.DataFrame(sample)
 
+        # TG send
         df_del = df_result.loc[df_result["stock"] == "0"][["article"]]
         del_path = f"{BASE_LINUX_DIR}/chit_gor_del.xlsx"
         df_del.to_excel(del_path, index=False)
