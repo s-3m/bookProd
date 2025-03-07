@@ -57,16 +57,20 @@ class Ozon:
                 "stocks": stocks_list[item : item + 100],
             }
 
-            response = requests.post(
-                f"{self.host}/v2/products/stocks",
-                headers=self.headers,
-                json=body,
-            )
-            results = response.json().get("result")
-            for result in results:
-                if result.get("errors"):
-                    self.errors[self.client_id].append(result)
-            time.sleep(30)
+            try:
+                response = requests.post(
+                    f"{self.host}/v2/products/stocks",
+                    headers=self.headers,
+                    json=body,
+                )
+                results = response.json().get("result")
+                for result in results:
+                    if result.get("errors"):
+                        self.errors[self.client_id].append(result)
+                time.sleep(30)
+            except Exception as e:
+                logger.error(e)
+                continue
         if self.errors[self.client_id]:
             logger.warning(self.errors)
 
