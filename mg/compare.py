@@ -11,8 +11,8 @@ from loguru import logger
 from dotenv import load_dotenv
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from tg_sender import tg_send_files
-from utils import fetch_request, give_me_sample
+from tg_sender import tg_send_files, tg_send_msg
+from utils import fetch_request, give_me_sample, quantity_checker
 from ozon.ozon_api import separate_records_to_client_id, start_push_to_ozon, get_in_sale
 from ozon.utils import logger_filter
 
@@ -148,11 +148,16 @@ def main():
     semaphore = asyncio.Semaphore(10)
     asyncio.run(get_gather_data(semaphore, sample))
 
-    # Push to OZON with API
-    separate_records = separate_records_to_client_id(sample)
-    logger.info("Start push to ozon")
-    start_push_to_ozon(separate_records, prefix="mg")
-    logger.success("Data was pushed to ozon")
+    checker = quantity_checker(sample)
+    if checker:
+        # Push to OZON with API
+        separate_records = separate_records_to_client_id(sample)
+        logger.info("Start push to ozon")
+        start_push_to_ozon(separate_records, prefix="mg")
+        logger.success("Data was pushed to ozon")
+    else:
+        logger.warning("Detected too many ZERO items")
+        asyncio.run(tg_send_msg("'Гвардия'"))
 
     df_result = pd.DataFrame(sample)
     df_result.drop_duplicates(inplace=True, keep="last", subset="article")
