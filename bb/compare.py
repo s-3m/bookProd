@@ -11,7 +11,7 @@ from fake_useragent import UserAgent
 import aiohttp
 import asyncio
 import pandas as pd
-from .tg_sender import tg_send_files, tg_send_msg
+from tg_sender import tg_send_files, tg_send_msg
 import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
