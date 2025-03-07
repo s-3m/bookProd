@@ -11,8 +11,8 @@ import asyncio
 import pandas as pd
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from tg_sender import tg_send_files
-from utils import give_me_sample, sync_fetch_request
+from tg_sender import tg_send_files, tg_send_msg
+from utils import give_me_sample, sync_fetch_request, quantity_checker
 from ozon.ozon_api import get_in_sale, start_push_to_ozon, separate_records_to_client_id
 from ozon.utils import logger_filter
 
@@ -123,11 +123,16 @@ def main():
     )
     asyncio.run(get_gather_data(sample))
 
-    # Push to OZON with API
-    separate_records = separate_records_to_client_id(sample)
-    logger.info("Start push to ozon")
-    start_push_to_ozon(separate_records, prefix="mdk")
-    logger.success("Data was pushed to ozon")
+    checker = quantity_checker(sample)
+    if checker:
+        # Push to OZON with API
+        separate_records = separate_records_to_client_id(sample)
+        logger.info("Start push to ozon")
+        start_push_to_ozon(separate_records, prefix="mdk")
+        logger.success("Data was pushed to ozon")
+    else:
+        logger.warning("Detected too many ZERO items")
+        asyncio.run(tg_send_msg("'МДК'"))
 
     logger.info("Start write files")
 
