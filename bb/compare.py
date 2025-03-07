@@ -11,11 +11,11 @@ from fake_useragent import UserAgent
 import aiohttp
 import asyncio
 import pandas as pd
-from tg_sender import tg_send_files
+from tg_sender import tg_send_files, tg_send_msg
 import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from utils import give_me_sample
+from utils import give_me_sample, quantity_checker
 from ozon.ozon_api import separate_records_to_client_id, start_push_to_ozon, get_in_sale
 from ozon.utils import logger_filter
 
@@ -176,11 +176,16 @@ async def get_gather_data():
 
     logger.info("Preparing file")
 
-    # Push to OZON with API
-    separate_records = separate_records_to_client_id(sample)
-    logger.info("Start push to ozon")
-    start_push_to_ozon(separate_records, prefix="bb")
-    logger.success("Data was pushed to ozon")
+    checker = quantity_checker(sample)
+    if checker:
+        # Push to OZON with API
+        separate_records = separate_records_to_client_id(sample)
+        logger.info("Start push to ozon")
+        start_push_to_ozon(separate_records, prefix="bb")
+        logger.success("Data was pushed to ozon")
+    else:
+        logger.warning("Detected too many ZERO items")
+        await tg_send_msg("'Букбридж'")
 
     df_result = pd.DataFrame(sample)
     # df_result = df_result.loc[df_result["stock"] != "0"]
