@@ -233,3 +233,16 @@ def give_me_sample(
     sample = sample.where(sample.notnull(), None)
     sample = sample.to_dict("records")
     return sample
+
+
+def quantity_checker(sample: list[dict]) -> bool:
+    zero_count = 0
+    for i in sample:
+        if i["stock"] in (0, "0"):
+            zero_count += 1
+
+    percent = (len(sample) * 10) / 100
+    if zero_count > percent:
+        return False
+    else:
+        return True
