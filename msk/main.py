@@ -333,11 +333,11 @@ async def get_gather_data():
         # del file
         # logger.info("Reparse del file")
         del_list = [{"Артикул": i} for i in id_to_del]
-        # reparse_del_tasks = [
-        #     asyncio.create_task(check_empty_element(session, item, item["Артикул"]))
-        #     for item in del_list
-        # ]
-        # await asyncio.gather(*reparse_del_tasks)
+        reparse_del_tasks = [
+            asyncio.create_task(check_empty_element(session, item, item["Артикул"]))
+            for item in del_list
+        ]
+        await asyncio.gather(*reparse_del_tasks)
 
         # price files
         # try:
