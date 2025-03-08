@@ -221,9 +221,9 @@ def give_me_sample(
             sample = df1[["Артикул", "seller_id"]]
             sample.columns = ["article", "seller_id"]
         sample = sample.drop_duplicates()
-        sale_files = os.listdir(f"{path_to_sample}/sale")
-        for i in sale_files:
-            os.remove(f"{path_to_sample}/sale/{i}")
+        # sale_files = os.listdir(f"{path_to_sample}/sale")
+        # for i in sale_files:
+        #     os.remove(f"{path_to_sample}/sale/{i}")
     else:
         sample = pd.read_excel(
             f"{base_dir}/{prefix}_new_stock.xlsx",
