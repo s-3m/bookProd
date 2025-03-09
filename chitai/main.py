@@ -115,9 +115,7 @@ def get_book_data(book_url: str):
             stock_status = None
 
         try:
-            stock = soup.find(
-                "link", attrs={"itemprop": "availability", "href": "InStock"}
-            )
+            stock = soup.find("link", attrs={"itemprop": "availability"})
             if stock:
                 stock = stock.next.strip()
         except:
