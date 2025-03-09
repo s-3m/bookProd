@@ -349,7 +349,7 @@ async def get_gather_data():
 
         global new_del
         for i in del_dict:
-            if not str(i["stock"]).isdigit():
+            if i["stock"] in (0, "0"):
                 new_del.append(i["article"])
 
         logger.warning(
