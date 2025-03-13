@@ -43,35 +43,44 @@ async def get_item_data(session, book):
     sku = book.get("attributes").get("sku")
     await asyncio.sleep(random.randint(2, 8))
 
-    # Find stock
-    async with session.get(
-        f"https://api.respublica.ru/api/v1/items/get/{sku}/delivery_points?query=",
-        headers=headers,
-    ) as resp:
-        resp = await resp.json()
-        pick_list = resp.get("points").get("pickup")
-        stock = None
-        for i in pick_list:
-            if "Маяковская" in i["title"]:
-                stock = i["available"]
-        if not stock:
-            print(f"\rDone - {count}", end="")
-            count += 1
-            return
+    try:
+        # Find stock
+        async with session.get(
+            f"https://api.respublica.ru/api/v1/items/get/{sku}/delivery_points?query=",
+            headers=headers,
+        ) as resp:
+            resp = await resp.json()
+            pick_list = resp.get("points").get("pickup")
+            stock = None
+            if pick_list:
+                for i in pick_list:
+                    if "Маяковская" in i["title"]:
+                        stock = i["available"]
+                if not stock:
+                    print(f"\rDone - {count}", end="")
+                    count += 1
+                    return
+            else:
+                print(f"\rDone - {count}", end="")
+                count += 1
+                return
 
-    async with session.get(
-        f"https://api.respublica.ru/api/v1/items/get/{sku}", headers=headers
-    ) as resp:
-        book_data = await resp.json()
-        pure_data = book_data.get("item").get("data").get("attributes")
-        title = pure_data.get("title")
-        img = pure_data.get("image").get("media").get("url")
+        async with session.get(
+            f"https://api.respublica.ru/api/v1/items/get/{sku}", headers=headers
+        ) as resp:
+            book_data = await resp.json()
+            pure_data = book_data.get("item").get("data").get("attributes")
+            title = pure_data.get("title")
+            img = pure_data.get("image").get("media").get("url")
 
-    book_data = {"Название": title, "Фото": img, "Наличие": stock}
-    result.append(book_data)
+        book_data = {"Название": title, "Фото": img, "Наличие": stock}
+        result.append(book_data)
 
-    print(f"\rDone - {count}", end="")
-    count += 1
+    except Exception as e:
+        logger.error(e)
+    finally:
+        print(f"\rDone - {count}", end="")
+        count += 1
 
 
 async def get_main_data(session, category):
