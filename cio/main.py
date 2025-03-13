@@ -56,13 +56,15 @@ async def get_cat_data(category):
         # async with session.get(f"{BASE_URL}/{i}?tag={category[1]}") as resp:
         resp = requests.get(f"{BASE_URL}/{i}?tag={category[1]}", headers=headers)
         soup = bs(resp.text, "lxml")
-        all_books = soup.find_all("table")[1].find_all("tr", {"height": False})
-        all_book_links = [
-            f"{BASE_URL}/{i.find("a").get("href").split("/")[-1]}" for i in all_books
-        ]
-        with ThreadPoolExecutor(max_workers=10) as executor:
-            threads = [executor.submit(get_item_data, link) for link in all_book_links]
-
+        try:
+            all_books = soup.find_all("table")[1].find_all("tr", {"height": False})
+            all_book_links = [
+                f"{BASE_URL}/{i.find("a").get("href").split("/")[-1]}" for i in all_books
+            ]
+            with ThreadPoolExecutor(max_workers=10) as executor:
+                threads = [executor.submit(get_item_data, link) for link in all_book_links]
+        except IndexError as e:
+            logger.exception(e)
 
 async def get_gather_data():
     # async with aiohttp.ClientSession(
