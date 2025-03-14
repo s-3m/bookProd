@@ -36,7 +36,6 @@ count = 1
 
 def get_item_data(link):
     global count
-    time.sleep(random.randint(1,5))
     try:
         response = get_book_data(f"https://primusversus.com{link}")
         # async with session.get(
@@ -77,7 +76,7 @@ async def get_gather_data():
                     == "В наличии"
                 ]
 
-            with ThreadPoolExecutor(max_workers=3) as executor:
+            with ThreadPoolExecutor(max_workers=1) as executor:
                 threads = [
                     executor.submit(get_item_data, link)
                     for link in all_products_on_page
