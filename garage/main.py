@@ -36,32 +36,30 @@ result = []
 count = 1
 
 
-async def get_item_data(session, link):
+def get_item_data(link):
     global count
     book_res = {}
     try:
-        async with session.get(f"{BASE_URL}{link}", headers=headers) as resp:
-            soup = bs(await resp.text(), "lxml")
-            title = soup.find("h1").text.strip()
-            img = (
-                soup.find("div", attrs={"class": "block gallery"})
-                .find("img")
-                .get("src")
-            )
-            book_res["Название"] = title
-            book_res["Фото"] = img
+        # async with session.get(f"{BASE_URL}{link}", headers=headers) as resp:
+        resp = requests.get(f"{BASE_URL}{link}", headers=headers)
+        time.sleep(random.randint(2, 10))
+        soup = bs(resp.text, "lxml")
+        title = soup.find("h1").text.strip()
+        img = soup.find("div", attrs={"class": "block gallery"}).find("img").get("src")
+        book_res["Название"] = title
+        book_res["Фото"] = img
 
-            stock_area = soup.find("div", {"class": "stock-cities__column"}).select(
-                "div.stock-cities__city:not(.out)"
-            )
+        stock_area = soup.find("div", {"class": "stock-cities__column"}).select(
+            "div.stock-cities__city:not(.out)"
+        )
 
-            for i in stock_area:
-                if i.text.startswith("Москва"):
-                    book_res[i] = "да"
+        for i in stock_area:
+            if i.text.startswith("Москва"):
+                book_res[i] = "да"
 
-            result.append(book_res)
-            print(f"\rDone - {count}", end="")
-            count += 1
+        result.append(book_res)
+        print(f"\rDone - {count}", end="")
+        count += 1
 
     except Exception as e:
         logger.exception(f"{BASE_URL}{link}")
@@ -86,11 +84,20 @@ async def get_gather_data():
                 .text.strip()
                 .startswith("ПРЕДЗАКАЗ")
             ]
+            print(f"Len - {len(all_links)}")
 
-            tasks = [
-                asyncio.create_task(get_item_data(session, link)) for link in all_links
-            ]
-            await asyncio.gather(*tasks)
+            with ThreadPoolExecutor(max_workers=3) as executor:
+                threads = [executor.submit(get_item_data, link) for link in all_links]
+                for i in threads:
+                    try:
+                        i.result()
+                    except Exception as e:
+                        logger.error(e)
+
+            # tasks = [
+            #     asyncio.create_task(get_item_data(session, link)) for link in all_links
+            # ]
+            # await asyncio.gather(*tasks)
 
 
 def main():
