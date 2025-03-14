@@ -8,15 +8,21 @@ import undetected_chromedriver as uc
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from contextlib import contextmanager
 
-caps = DesiredCapabilities.CHROME
-caps["pageLoadStrategy"] = "none"
+
+@contextmanager
+def get_driver():
+    driver = uc.Chrome(headless=True, use_subprocess=False, version_main=134)
+    try:
+        yield driver
+    finally:
+        driver.quit()
 
 
 def get_book_data(link):
-    driver = uc.Chrome(headless=True, use_subprocess=False, version_main=131)
 
-    try:
+    with get_driver() as driver:
         driver.get(link)
 
         # WebDriverWait(driver, 10).until(
@@ -29,10 +35,4 @@ def get_book_data(link):
             )
         )
 
-        page_source = driver.page_source
-
-    finally:
-        driver.close()
-        driver.quit()
-
-    return page_source
+        return driver.page_source
