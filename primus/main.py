@@ -76,16 +76,18 @@ async def get_gather_data():
                     == "В наличии"
                 ]
 
-            with ThreadPoolExecutor(max_workers=1) as executor:
-                threads = [
-                    executor.submit(get_item_data, link)
-                    for link in all_products_on_page
-                ]
-                for i in threads:
-                    try:
-                        i.result()
-                    except Exception as e:
-                        logger.error(e)
+            for link in all_products_on_page:
+                get_item_data(link)
+            # with ThreadPoolExecutor(max_workers=1) as executor:
+            #     threads = [
+            #         executor.submit(get_item_data, link)
+            #         for link in all_products_on_page
+            #     ]
+            #     for i in threads:
+            #         try:
+            #             i.result()
+            #         except Exception as e:
+            #             logger.error(e)
 
 
 def main():
