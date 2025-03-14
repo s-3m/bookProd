@@ -69,7 +69,7 @@ async def get_item_data(session, link):
 
 async def get_gather_data():
     async with aiohttp.ClientSession(
-        connector=aiohttp.TCPConnector(ssl=False, limit=3), headers=headers
+        connector=aiohttp.TCPConnector(ssl=False, limit=2), headers=headers
     ) as session:
         async with session.get(
             f"https://shop.garagemca.org/ru/books/?per_page=all"
