@@ -13,7 +13,7 @@ from contextlib import contextmanager
 
 @contextmanager
 def get_driver():
-    driver = uc.Chrome(headless=True, use_subprocess=False, version_main=134)
+    driver = uc.Chrome(headless=True, use_subprocess=False, version_main=131)
     try:
         yield driver
     finally:
