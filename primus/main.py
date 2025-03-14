@@ -33,24 +33,29 @@ headers = {
 result = []
 count = 1
 
+
 def get_item_data(link):
     global count
-    response = get_book_data(f"https://primusversus.com{link}")
-    # async with session.get(
-    #     f"https://primusversus.com{link}", headers=headers
-    # ) as response:
-    soup = bs(response, "lxml")
+    try:
+        response = get_book_data(f"https://primusversus.com{link}")
+        # async with session.get(
+        #     f"https://primusversus.com{link}", headers=headers
+        # ) as response:
+        soup = bs(response, "lxml")
 
-    title = soup.find("h1").text.strip()
-    img = soup.find("picture").find("img").get("data-src")
-    stock = soup.find("div", attrs={"class": "add-cart-counter"}).get(
-        "data-add-cart-counter-max-quantity"
-    )
-    book_res = {"Название": title, "Фото": img, "В наличии": stock}
-    print(book_res)
-    result.append(book_res)
-    print(f"\rDone - {count}", end="")
-    count += 1
+        title = soup.find("h1").text.strip()
+        img = soup.find("picture").find("img").get("data-src")
+        stock = soup.find("div", attrs={"class": "add-cart-counter"}).get(
+            "data-add-cart-counter-max-quantity"
+        )
+        book_res = {"Название": title, "Фото": img, "В наличии": stock}
+        print(book_res)
+        result.append(book_res)
+        print(f"\rDone - {count}", end="")
+        count += 1
+    except Exception as e:
+        logger.exception(e)
+
 
 async def get_gather_data():
     async with aiohttp.ClientSession(
@@ -71,14 +76,16 @@ async def get_gather_data():
                     == "В наличии"
                 ]
 
-            for link in all_products_on_page:
-                get_item_data(link)
-
-            # with ThreadPoolExecutor(max_workers=1) as executor:
-            #     threads = [
-            #         executor.submit(get_item_data, link)
-            #         for link in all_products_on_page
-            #     ]
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                threads = [
+                    executor.submit(get_item_data, link)
+                    for link in all_products_on_page
+                ]
+                for i in threads:
+                    try:
+                        i.result()
+                    except Exception as e:
+                        logger.error(e)
 
 
 def main():
