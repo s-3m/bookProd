@@ -39,10 +39,14 @@ count = 1
 def get_item_data(link):
     global count
     book_res = {}
+    if count % 200 == 0:
+        print()
+        print("Sleeping...")
+        time.sleep(180)
     try:
         # async with session.get(f"{BASE_URL}{link}", headers=headers) as resp:
-        resp = requests.get(f"{BASE_URL}{link}", headers=headers)
-        time.sleep(random.randint(2, 10))
+        resp = requests.get(f"{BASE_URL}{link}", headers=headers, timeout=20)
+        # time.sleep(random.randint(2, 5))
         soup = bs(resp.text, "lxml")
         title = soup.find("h1").text.strip()
         img = soup.find("div", attrs={"class": "block gallery"}).find("img").get("src")
@@ -67,7 +71,7 @@ def get_item_data(link):
 
 async def get_gather_data():
     async with aiohttp.ClientSession(
-        connector=aiohttp.TCPConnector(ssl=False, limit=2), headers=headers
+        connector=aiohttp.TCPConnector(ssl=False, limit=3), headers=headers
     ) as session:
         async with session.get(
             f"https://shop.garagemca.org/ru/books/?per_page=all"
