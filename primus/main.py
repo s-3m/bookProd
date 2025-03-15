@@ -1,3 +1,4 @@
+import json
 import random
 import sys
 import os
@@ -34,32 +35,33 @@ result = []
 count = 1
 
 
-def get_item_data(link):
+async def get_item_data(session, link):
     global count
     try:
-        response = get_book_data(f"https://primusversus.com{link}")
-        # async with session.get(
-        #     f"https://primusversus.com{link}", headers=headers
-        # ) as response:
-        soup = bs(response, "lxml")
+        async with session.get(
+            f"https://primusversus.com{link}", headers=headers
+        ) as response:
 
-        title = soup.find("h1").text.strip()
-        img = soup.find("picture").find("img").get("data-src")
-        stock = soup.find("div", attrs={"class": "add-cart-counter"}).get(
-            "data-add-cart-counter-max-quantity"
-        )
-        book_res = {"Название": title, "Фото": img, "В наличии": stock}
-        print(book_res)
-        result.append(book_res)
-        print(f"\rDone - {count}", end="")
-        count += 1
+            soup = bs(await response.text(), "lxml")
+
+            title = soup.find("h1").text.strip()
+            img = soup.find("picture").find("img").get("data-src")
+            regex_string = soup.find("div", {"data-product-json": True}).get(
+                "data-product-json"
+            )
+            dict_stock = json.loads(regex_string)
+            stock = dict_stock.get("variants")[0].get("quantity")
+            book_res = {"Название": title, "Фото": img, "В наличии": stock}
+            result.append(book_res)
+            print(f"\rDone - {count}", end="")
+            count += 1
     except Exception as e:
         logger.exception(e)
 
 
 async def get_gather_data():
     async with aiohttp.ClientSession(
-        connector=aiohttp.TCPConnector(ssl=False, limit=1), headers=headers
+        connector=aiohttp.TCPConnector(ssl=False, limit=3), headers=headers
     ) as session:
         for i in range(1, 152):
             async with session.get(f"{BASE_URL}?page={i}") as resp:
@@ -76,18 +78,11 @@ async def get_gather_data():
                     == "В наличии"
                 ]
 
-            for link in all_products_on_page:
-                get_item_data(link)
-            # with ThreadPoolExecutor(max_workers=1) as executor:
-            #     threads = [
-            #         executor.submit(get_item_data, link)
-            #         for link in all_products_on_page
-            #     ]
-            #     for i in threads:
-            #         try:
-            #             i.result()
-            #         except Exception as e:
-            #             logger.error(e)
+            tasks = [
+                asyncio.create_task(get_item_data(session, link))
+                for link in all_products_on_page
+            ]
+            await asyncio.gather(*tasks)
 
 
 def main():
