@@ -23,20 +23,32 @@ headers = {
 }
 
 result = []
+count = 1
 
 
 def get_item_data(link):
+    global count
     # async with session.get(link, headers=headers) as resp:
-    resp = requests.get(link, headers=headers)
-    soup = bs(resp.text, "lxml")
-    all_char = soup.find_all("h3")
-    title = all_char[1].text
-    img = soup.find_all("table")[1].find("img").get("src")
-    img = f"http://primuzee.ru/files/{img.split('/')[-1]}"
-    book_data = {"Название": title, "Изображение": img}
-    result.append(book_data)
-
-    print(f"{title} - {img}")
+    try:
+        resp = requests.get(link, headers=headers)
+        soup = bs(resp.text, "lxml")
+        all_char = soup.find_all("h3")
+        title = all_char[1].text
+        isbn = all_char[-2].text.split(": ")
+        img = soup.find_all("table")[1].find("img").get("src")
+        img = f"http://primuzee.ru/files/{img.split('/')[-1]}"
+        book_data = {
+            "Ссылка": link,
+            "Название": title,
+            "ISBN": isbn,
+            "Изображение": img,
+        }
+        result.append(book_data)
+    except Exception as e:
+        logger.exception(link)
+    finally:
+        print(f"\rDone - {count}", end="")
+        count += 1
 
 
 async def get_cat_data(category):
