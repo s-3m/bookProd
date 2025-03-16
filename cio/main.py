@@ -34,7 +34,7 @@ def get_item_data(link):
         soup = bs(resp.text, "lxml")
         all_char = soup.find_all("h3")
         title = all_char[1].text
-        isbn = all_char[-2].text.split(": ")
+        isbn = all_char[-2].text.split(": ")[-1]
         img = soup.find_all("table")[1].find("img").get("src")
         img = f"http://primuzee.ru/files/{img.split('/')[-1]}"
         book_data = {
