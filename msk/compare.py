@@ -1,6 +1,8 @@
 import asyncio
 import sys
 import os
+
+import schedule
 from loguru import logger
 import aiohttp
 import pandas as pd
@@ -59,6 +61,9 @@ async def to_check_item(item, session):
 
         if not soup.find("div", class_="book__buy"):
             item["stock"] = "0"
+            item["price"] = None
+            return
+
         else:
             need_element = soup.find_all("script")
             a = (
@@ -70,6 +75,13 @@ async def to_check_item(item, session):
             need_data_dict = eval(a[:-1])["Products"][0]
             stock = need_data_dict["Stock"]
             item["stock"] = stock if stock != 9999999 else "1"
+
+        price = soup.find("div", class_="book__price")
+        if price:
+            price = price.text.strip().replace("\xa0", "")
+            item["price"] = price
+        else:
+            item["price"] = None
 
         print(f"\r{count} | Error book - {error_count}", end="")
         count += 1
@@ -111,6 +123,7 @@ async def get_compare():
     for item in sample:
         if item["stock"] == "error":
             item["stock"] = "0"
+            item["price"] = None
 
     checker = quantity_checker(sample)
     if checker:
@@ -136,6 +149,7 @@ async def get_compare():
 
     logger.info("Start sending files")
     await tg_send_files([without_del_path, del_path], subject="Москва")
+    print(f"\n{"----------" * 5}\n")
 
 
 def main():
@@ -145,7 +159,10 @@ def main():
 
 
 def super_main():
-    main()
+    schedule.every().day.at("23:00").do(main)
+
+    while True:
+        schedule.run_pending()
 
 
 if __name__ == "__main__":
