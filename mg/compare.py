@@ -83,7 +83,7 @@ async def get_item_data(session, item, semaphore, sample, reparse=False):
                 # item["id"] = content.find("a").get("href").split("/")[-1].strip()
             if not item["id"]:
                 item["stock"] = "0"
-                item["price"] = "0"
+                item["price"] = None
                 return
 
             full_url = f"{BASE_URL}/tovar/{item["id"]}"
