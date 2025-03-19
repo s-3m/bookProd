@@ -45,16 +45,17 @@ class Ozon:
                 return int(i["warehouse_id"])
 
     def update_price(self, item_list: list[dict]) -> None:
-        list_for_price_update = [
-            {
+        list_for_price_update = []
+        for i in item_list:
+            if i["price"] is not None:
+                i["price"] = i["price"].replace(",", ".")
+            item_body = {
                 "offer_id": i["article"],
                 "old_price": str(int(int(i["price"]) * 5.5)),
                 "price": str(int(int(i["price"]) * 2.75)),
                 "min_price": str(int(int(i["price"]) * 2.75 * self.discount)),
             }
-            for i in item_list
-            if i["price"]
-        ]
+            list_for_price_update.append(item_body)
 
         for item in range(0, len(list_for_price_update), 1000):
             body = {"prices": list_for_price_update[item : item + 1000]}
