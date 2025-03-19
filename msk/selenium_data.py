@@ -8,7 +8,7 @@ import undetected_chromedriver as uc
 
 
 def get_book_data(link):
-    driver = uc.Chrome(headless=True, use_subprocess=False, version_main=131)
+    driver = uc.Chrome(headless=True, use_subprocess=False, version_main=134)
 
     try:
         driver.get(link)
