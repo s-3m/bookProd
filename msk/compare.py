@@ -155,7 +155,6 @@ async def get_compare():
 def main():
     logger.info("Start parsing Moscow")
     asyncio.run(get_compare())
-    time.sleep(10)
 
 
 def super_main():
