@@ -48,7 +48,7 @@ class Ozon:
         list_for_price_update = []
         for i in item_list:
             if i["price"] is not None:
-                i["price"] = i["price"].replace(",", ".")
+                i["price"] = round(i["price"].replace(",", "."))
                 item_body = {
                     "offer_id": i["article"],
                     "old_price": str(int(int(i["price"]) * 5.5)),
