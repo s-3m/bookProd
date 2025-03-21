@@ -111,7 +111,7 @@ async def get_item_data(session, item, semaphore, sample, reparse=False):
             count += 1
     except Exception as e:
         error_items.append(item)
-        logger.exception(e)
+        logger.exception(item)
         with open(f"{BASE_LINUX_DIR}/error.txt", "a+") as file:
             file.write(f"{item['article']} --- {e}\n")
 
