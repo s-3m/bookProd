@@ -217,9 +217,11 @@ def give_me_sample(
                 df1[["Артикул", "seller_id"]], df2, on="Артикул", how="left"
             )
             sample.columns = ["article", "seller_id", merge_obj_translate]
+            sample["price"] = None
         else:
             sample = df1[["Артикул", "seller_id"]]
             sample.columns = ["article", "seller_id"]
+            sample["price"] = None
         sample = sample.drop_duplicates()
         # sale_files = os.listdir(f"{path_to_sample}/sale")
         # for i in sale_files:
