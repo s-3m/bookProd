@@ -67,7 +67,7 @@ def get_link_from_ajax(article):
                 "https://web-gate.chitai-gorod.ru/api/v2/search/product",
                 headers=headers,
                 params=params,
-                timeout=5,
+                timeout=15,
             )
             response = resp.json()
             link = response["included"][0]["attributes"].get("url")
@@ -80,19 +80,19 @@ def get_link_from_ajax(article):
 def get_main_data(book_item):
     try:
         if not book_item["link"]:
-            logger.info("Нет ссылки")
             i_link = get_link_from_ajax(book_item["article"])
             if not i_link:
                 book_item["stock"] = "0"
+                book_item["price"] = None
                 return
             book_item["link"] = f"{BASE_URL}/{i_link}"
-            logger.info(f"Нашёл ссылку - {book_item["link"]}")
 
         response_text = ""
         for _ in range(5):
             response = requests.get(book_item["link"], headers=headers, timeout=30)
             if response.status_code == 404:
                 book_item["stock"] = "0"
+                book_item["price"] = None
                 return
             if response.status_code == 200:
                 response_text = response.text
@@ -101,27 +101,25 @@ def get_main_data(book_item):
         soup = bs(response_text, "lxml")
 
         online_option = soup.find("div", class_="product-offer-price")
-        # online_option_2 = soup.find("span", class_="offer-availability-status--green")
-        # in_shop_option = soup.find("p", class_="product-offer-header__title")
-        # not_in_option = soup.find("div", class_="detail-product__unavailable")
-        # if in_shop_option:
-        #     moscow_shop_check = soup.find(
-        #         "div", class_="product-offer-shops__title"
-        #     ).text
-        #     if "В наличии в" in moscow_shop_check:
-        #         in_shop_option = True
-        #     else:
-        #         in_shop_option = False
-        #         book_item["stock"] = "0"
+
+        if not online_option:
+            book_item["stock"] = "0"
+            book_item["price"] = None
+            return
 
         stock = soup.find("link", attrs={"itemprop": "availability"})
 
-        if online_option:
-            if stock:
-                stock = stock.next.strip()
-                book_item["stock"] = stock
-            else:
-                book_item["stock"] = "0"
+        sale = soup.find("span", class_="product-offer-price__old-price")
+        if sale:
+            price = sale.text.strip()[:-1].strip().replace("\xa0", "")
+        else:
+            price = soup.find("span", attrs={"itemprop": "price"}).get("content")
+
+        book_item["price"] = price
+
+        if stock:
+            stock = stock.next.strip()
+            book_item["stock"] = stock
         else:
             book_item["stock"] = "0"
 

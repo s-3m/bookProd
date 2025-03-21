@@ -217,9 +217,11 @@ def give_me_sample(
                 df1[["Артикул", "seller_id"]], df2, on="Артикул", how="left"
             )
             sample.columns = ["article", "seller_id", merge_obj_translate]
+            sample["price"] = None
         else:
             sample = df1[["Артикул", "seller_id"]]
             sample.columns = ["article", "seller_id"]
+            sample["price"] = None
         sample = sample.drop_duplicates()
         # sale_files = os.listdir(f"{path_to_sample}/sale")
         # for i in sale_files:
@@ -241,7 +243,7 @@ def quantity_checker(sample: list[dict]) -> bool:
         if i["stock"] in (0, "0"):
             zero_count += 1
 
-    percent = (len(sample) * 10) / 100
+    percent = (len(sample) * 50) / 100
     if zero_count > percent:
         return False
     else:

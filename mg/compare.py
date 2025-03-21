@@ -83,6 +83,8 @@ async def get_item_data(session, item, semaphore, sample, reparse=False):
                 # item["id"] = content.find("a").get("href").split("/")[-1].strip()
             if not item["id"]:
                 item["stock"] = "0"
+                item["price"] = None
+                return
 
             full_url = f"{BASE_URL}/tovar/{item["id"]}"
             response = await fetch_request(session, full_url, headers)
@@ -93,6 +95,15 @@ async def get_item_data(session, item, semaphore, sample, reparse=False):
             else:
                 item["stock"] = "2"
 
+            price = (
+                soup.find_all("div", class_="product_item_price")[1]
+                .text.strip()
+                .split(".")[0]
+                .replace(" ", "")
+            )
+
+            item["price"] = price
+
             if reparse:
                 sample.append(item)
 
@@ -100,7 +111,7 @@ async def get_item_data(session, item, semaphore, sample, reparse=False):
             count += 1
     except Exception as e:
         error_items.append(item)
-        logger.exception(e)
+        logger.exception(item)
         with open(f"{BASE_LINUX_DIR}/error.txt", "a+") as file:
             file.write(f"{item['article']} --- {e}\n")
 
@@ -134,7 +145,7 @@ async def get_gather_data(semaphore, sample):
             sample.extend(errors_copy)
 
         for i in sample:
-            if not i["stock"]:
+            if not i.get("stock"):
                 i["stock"] = "0"
 
 
@@ -149,9 +160,15 @@ def main():
     asyncio.run(get_gather_data(semaphore, sample))
 
     checker = quantity_checker(sample)
+    sample_without_duplicates = pd.DataFrame(sample).drop_duplicates(
+        keep="last", subset="article"
+    )
+    sample_without_duplicates = sample_without_duplicates.where(
+        sample_without_duplicates.notnull(), None
+    ).to_dict(orient="records")
     if checker:
         # Push to OZON with API
-        separate_records = separate_records_to_client_id(sample)
+        separate_records = separate_records_to_client_id(sample_without_duplicates)
         logger.info("Start push to ozon")
         start_push_to_ozon(separate_records, prefix="mg")
         logger.success("Data was pushed to ozon")
@@ -159,7 +176,7 @@ def main():
         logger.warning("Detected too many ZERO items")
         asyncio.run(tg_send_msg("'Гвардия'"))
 
-    df_result = pd.DataFrame(sample)
+    df_result = pd.DataFrame(sample_without_duplicates)
     df_result.drop_duplicates(inplace=True, keep="last", subset="article")
 
     df_del = df_result.loc[df_result["stock"] == "0"][["article"]]
@@ -172,14 +189,13 @@ def main():
     global count
     count = 1
     time.sleep(10)
-    print()
-    logger.success("Parse end successfully")
     asyncio.run(tg_send_files([stock_file, del_file], subject="Гвардия"))
+    print(f"\n{"----------" * 5}\n")
 
 
 def super_main():
     load_dotenv("../.env")
-    schedule.every().day.at("22:40").do(main)
+    schedule.every().day.at("22:00").do(main)
 
     while True:
         schedule.run_pending()
