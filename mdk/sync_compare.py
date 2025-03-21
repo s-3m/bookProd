@@ -63,16 +63,29 @@ def get_main_data(book):
         response = sync_fetch_request(book_url, headers)
         if response == "404":
             book["stock"] = "0"
+            book["price"] = None
+            return
+        elif response == 503:
+            book["stock"] = "error"
+            return
         else:
             soup = bs(response, "lxml")
-            try:
-                stock = soup.find("div", {"class": "tg-quantityholder"}).get(
-                    "data-maxqty"
-                )
-            except:
-                stock = "0"
+            quantity_area = soup.find("div", {"class": "tg-quantityholder"})
+            if not quantity_area:
+                book["stock"] = "0"
+                book["price"] = None
+                return
+            stock = quantity_area.get("data-maxqty")
+            book["stock"] = stock if stock else "0"
 
-            book["stock"] = stock
+            price = (
+                soup.find("span", {"class": "itempage-price_inet"})
+                .text[:-1]
+                .strip()
+                .replace("\xa0", "")
+            )
+            book["price"] = price
+
     except Exception as e:
         book["stock"] = "error"
         error_book.append(book)
