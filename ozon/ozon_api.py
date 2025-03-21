@@ -6,7 +6,6 @@ import time
 from dotenv import load_dotenv
 from loguru import logger
 
-
 load_dotenv("../.env")
 
 
@@ -22,9 +21,12 @@ def separate_records_to_client_id(books_records: list[dict]) -> dict[str, list[d
 
 
 class Ozon:
-    def __init__(self, client_id: str, api_key: str):
+    max_discount = {"mg": 0.68, "msk": 0.72, "mdk": 0.75, "chit_gor": 0.80}
+
+    def __init__(self, client_id: str, api_key: str, prefix: str):
         self.client_id = client_id
         self.api_key = api_key
+        self.discount = self.max_discount[prefix]
         self.host = "https://api-seller.ozon.ru"
         self.errors = {self.client_id: []}
 
@@ -41,7 +43,39 @@ class Ozon:
             if i["name"] == "Волгоградка":
                 return int(i["warehouse_id"])
 
+    def update_price(self, item_list: list[dict]) -> None:
+        list_for_price_update = []
+        for i in item_list:
+            if i["price"] is not None:
+                i["price"] = round(float(i["price"].replace(",", ".")))
+                item_body = {
+                    "offer_id": i["article"],
+                    "old_price": str(int(i["price"]) * 5.5),
+                    "price": str(int(i["price"]) * 2.75),
+                    "min_price": str(int(i["price"] * 2.75 * self.discount)),
+                }
+                list_for_price_update.append(item_body)
+
+        for item in range(0, len(list_for_price_update), 1000):
+            body = {"prices": list_for_price_update[item : item + 1000]}
+            try:
+                response = requests.post(
+                    "https://api-seller.ozon.ru/v1/product/import/prices",
+                    headers=self.headers,
+                    json=body,
+                )
+                results = response.json().get("result")
+                for result in results:
+                    if result["errors"]:
+                        logger.warning(result["errors"])
+            except Exception as e:
+                logger.error(e)
+                continue
+
     def update_stock(self, item_list: list[dict]):
+        self.update_price(
+            item_list
+        )  # Сначала обновляем цены, чтобы не вывелись товары со старыми ценами
         warehouse_id = self._get_warehouse_id()
         stocks_list = [
             {
@@ -84,7 +118,11 @@ class Ozon:
 
     def in_sale(self):
         result = []
-        body = {"filter": {"visibility": "IN_SALE"}, "limit": 1000, "last_id": ""}
+        body = {
+            "filter": {"visibility": "VISIBLE"},
+            "limit": 1000,
+            "last_id": "",
+        }
         while True:
             response = requests.post(
                 f"{self.host}/v3/product/list", headers=self.headers, json=body
@@ -107,7 +145,7 @@ def start_push_to_ozon(separate_records: dict[str, list[dict]], prefix: str):
         for item in separate_records:
             seller_id = item
             api_key = os.getenv(f"{prefix.upper()}_CLIENT_ID_{seller_id}")
-            ozon = Ozon(client_id=seller_id, api_key=api_key)
+            ozon = Ozon(client_id=seller_id, api_key=api_key, prefix=prefix)
             future = executor.submit(ozon.update_stock, separate_records[item])
             futures.append(future)
 
@@ -128,7 +166,7 @@ def get_in_sale(prefix: str):
     with ThreadPoolExecutor(max_workers=20) as executor:
         futures = []
         for item in shop_list:
-            ozon = Ozon(client_id=item[0], api_key=item[1])
+            ozon = Ozon(client_id=item[0], api_key=item[1], prefix=prefix)
             task = executor.submit(ozon.in_sale)
             futures.append(task)
         for i in futures:
