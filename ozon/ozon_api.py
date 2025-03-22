@@ -47,12 +47,21 @@ class Ozon:
         list_for_price_update = []
         for i in item_list:
             if i["price"] is not None:
-                i["price"] = round(float(i["price"].replace(",", ".")))
+                raw_price = round(float(i["price"].replace(",", ".")))
+                price = round(raw_price * 2.75)
+                if price < 999:
+                    price = 999
+                old_price = price * 2
+                min_price = price * self.discount
+
                 item_body = {
                     "offer_id": i["article"],
-                    "old_price": str(int(i["price"]) * 5.5),
-                    "price": str(int(i["price"]) * 2.75),
-                    "min_price": str(int(i["price"] * 2.75 * self.discount)),
+                    "old_price": str(old_price),
+                    "price": str(price),
+                    "min_price": str(min_price),
+                    "min_price_for_auto_actions_enabled": True,
+                    "auto_action_enabled": "DISABLED",
+                    "price_strategy_enabled": "DISABLED",
                 }
                 list_for_price_update.append(item_body)
 
