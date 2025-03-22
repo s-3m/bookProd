@@ -71,6 +71,9 @@ def get_link_from_ajax(article):
             )
             response = resp.json()
             link = response["included"][0]["attributes"].get("url")
+            print()
+            print(f"Нашёл ссылку {link}")
+            print()
             return link
         except KeyError:
             continue
@@ -109,11 +112,8 @@ def get_main_data(book_item):
 
         stock = soup.find("link", attrs={"itemprop": "availability"})
 
-        sale = soup.find("span", class_="product-offer-price__old-price")
-        if sale:
-            price = sale.text.strip()[:-1].strip().replace("\xa0", "")
-        else:
-            price = soup.find("span", attrs={"itemprop": "price"}).get("content")
+        price = soup.find("span", attrs={"itemprop": "price"}).get("content")
+        print(f"---{price}---")
 
         book_item["price"] = price
 
