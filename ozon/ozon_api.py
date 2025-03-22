@@ -120,9 +120,10 @@ class Ozon:
     def _prepare_for_sample(self, raw_data: list[dict]):
         ready_data = []
         for item in raw_data:
-            ready_data.append(
-                {"Артикул": item["offer_id"], "seller_id": self.client_id}
-            )
+            if item["offer_id"].endswith(".0"):
+                ready_data.append(
+                    {"Артикул": item["offer_id"], "seller_id": self.client_id}
+                )
         return ready_data
 
     def in_sale(self):

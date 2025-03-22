@@ -116,10 +116,10 @@ async def check_danger_string(
     return base_string
 
 
-def sync_fetch_request(url, headers):
+def sync_fetch_request(url, headers, cookies=None):
     response_status_code = None
     for _ in range(10):
-        response = requests.get(url, headers=headers, timeout=30)
+        response = requests.get(url, headers=headers, cookies=cookies, timeout=30)
         time.sleep(2)
         if response.status_code == 200:
             return response.text
