@@ -242,8 +242,6 @@ def get_book_data(book_url: str):
     except Exception as e:
         logger.exception(f"Error - {link}")
         item_error.append(link)
-        with open(f"{BASE_LINUX_DIR}/error.txt", "a+") as f:
-            f.write(f"{link} --- {e}\n")
 
 
 page_to_stop = 4600
@@ -280,8 +278,6 @@ def get_page_data(book_category_link, page_number=1, reparse_url=False):
     except Exception as e:
         logger.exception(f"Error on page - {url}")
         page_error.append(url)
-        with open(f"{BASE_LINUX_DIR}/page_error.txt", "a+") as f:
-            f.write(f"{url} --- {e}\n")
 
 
 async def get_gather_data():

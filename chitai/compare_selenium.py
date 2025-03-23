@@ -50,7 +50,6 @@ logger.add(
     serialize=True,
     filter=logger_filter,
 )
-error_book = []
 count = 1
 
 
@@ -125,10 +124,7 @@ def get_main_data(book_item):
 
     except Exception as e:
         book_item["stock"] = "error"
-        error_book.append(book_item["article"])
         logger.exception(f"ERROR - {book_item['link']}")
-        with open(f"{BASE_LINUX_DIR}/error.txt", "a") as f:
-            f.write(f"{book_item['link']} --- {e}\n")
     finally:
         global count
         print(f"\rDone - {count}", end="")
@@ -157,7 +153,7 @@ async def get_gather_data(sample):
     with ThreadPoolExecutor(max_workers=10) as executor:
         threads = [executor.submit(get_main_data, i) for i in sample]
 
-        # Reparse item
+    # Reparse item
     with ThreadPoolExecutor(max_workers=10) as executor:
         threads_repars = [
             executor.submit(get_main_data, i) for i in sample if i["stock"] == "error"
