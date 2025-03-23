@@ -53,7 +53,7 @@ logger.add(
     serialize=True,
     filter=logger_filter,
 )
-error_items = []
+error_items_count = 0
 
 
 async def get_id_from_ajax(session, item):
@@ -66,86 +66,70 @@ async def get_id_from_ajax(session, item):
             item["id"] = item_id.split("/")[-1].strip()
 
 
-async def get_item_data(session, item, semaphore, sample, reparse=False):
+async def get_item_data(session, item):
     global count
-
+    global error_items_count
     try:
-        async with semaphore:
-            if not item["id"]:
-                await get_id_from_ajax(session, item)
-                # search_url = f"https://www.dkmg.ru/catalog/search/?search_word={item["article"][:-2]}"
-                # search_response = await fetch_request(session, search_url, headers)
-                # soup = bs(search_response, "lxml")
-                # content = soup.find("div", {"id": "content"}).find("div", class_="item")
-                # if content is None:
-                #     item["stock"] = "del"
-                #     return
-                # item["id"] = content.find("a").get("href").split("/")[-1].strip()
-            if not item["id"]:
-                item["stock"] = "0"
-                item["price"] = None
-                return
+        if not item["id"]:
+            await get_id_from_ajax(session, item)
 
-            full_url = f"{BASE_URL}/tovar/{item["id"]}"
-            response = await fetch_request(session, full_url, headers)
-            soup = bs(response, "lxml")
-            buy_btn = soup.find("a", class_="btn_red wish_list_btn add_to_cart")
-            if not buy_btn:
-                item["stock"] = "0"
-            else:
-                item["stock"] = "2"
+        if not item["id"]:
+            item["stock"] = "0"
+            item["price"] = None
+            return
 
-            price = (
-                soup.find_all("div", class_="product_item_price")[1]
-                .text.strip()
-                .split(".")[0]
-                .replace(" ", "")
-            )
+        full_url = f"{BASE_URL}/tovar/{item["id"]}"
+        response = await fetch_request(session, full_url, headers)
+        soup = bs(response, "lxml")
+        buy_btn = soup.find("a", class_="btn_red wish_list_btn add_to_cart")
+        if not buy_btn:
+            item["stock"] = "0"
+        else:
+            item["stock"] = "2"
 
-            item["price"] = price
+        price = (
+            soup.find_all("div", class_="product_item_price")[1]
+            .text.strip()
+            .split(".")[0]
+            .replace(" ", "")
+        )
 
-            if reparse:
-                sample.append(item)
+        item["price"] = price
 
-            print(f"\rDone - {count}", end="")
-            count += 1
+        print(f"\rDone - {count} | Error - {error_items_count}", end="")
+        count += 1
     except Exception as e:
-        error_items.append(item)
+        item["stock"] = "error"
+        error_items_count += 1
         logger.exception(item)
         with open(f"{BASE_LINUX_DIR}/error.txt", "a+") as file:
             file.write(f"{item['article']} --- {e}\n")
 
 
-async def get_gather_data(semaphore, sample):
+async def get_gather_data(sample):
     tasks = []
     async with aiohttp.ClientSession(
-        connector=aiohttp.TCPConnector(ssl=False, limit_per_host=10, limit=50),
+        connector=aiohttp.TCPConnector(ssl=False, limit_per_host=10, limit=10),
         timeout=aiohttp.ClientTimeout(total=1200),
     ) as session:
         for item in sample:
-            task = asyncio.create_task(get_item_data(session, item, semaphore, sample))
+            task = asyncio.create_task(get_item_data(session, item))
             tasks.append(task)
 
         await asyncio.gather(*tasks)
 
-        if error_items:
-            print()
+        if error_items_count > 0:
             logger.info("\nStart reparse error")
-            print(f"--- Quantity error - {len(error_items)}")
-            errors_copy = error_items.copy()
-            error_items.clear()
             reparse_tasks = [
-                asyncio.create_task(
-                    get_item_data(session, item, semaphore, sample, reparse=True)
-                )
-                for item in errors_copy
+                asyncio.create_task(get_item_data(session, item))
+                for item in sample
+                if item["stock"] == "error"
             ]
-
             await asyncio.gather(*reparse_tasks)
-            sample.extend(errors_copy)
+            print()
 
         for i in sample:
-            if not i.get("stock"):
+            if item["stock"] == "error":
                 i["stock"] = "0"
 
 
@@ -156,19 +140,13 @@ def main():
         BASE_LINUX_DIR, prefix="mg", merge_obj="id", ozon_in_sale=books_in_sale
     )
 
-    semaphore = asyncio.Semaphore(10)
-    asyncio.run(get_gather_data(semaphore, sample))
+    asyncio.run(get_gather_data(sample))
 
     checker = quantity_checker(sample)
-    sample_without_duplicates = pd.DataFrame(sample).drop_duplicates(
-        keep="last", subset="article"
-    )
-    sample_without_duplicates = sample_without_duplicates.where(
-        sample_without_duplicates.notnull(), None
-    ).to_dict(orient="records")
+
     if checker:
         # Push to OZON with API
-        separate_records = separate_records_to_client_id(sample_without_duplicates)
+        separate_records = separate_records_to_client_id(sample)
         logger.info("Start push to ozon")
         start_push_to_ozon(separate_records, prefix="mg")
         logger.success("Data was pushed to ozon")
@@ -176,9 +154,7 @@ def main():
         logger.warning("Detected too many ZERO items")
         asyncio.run(tg_send_msg("'Гвардия'"))
 
-    df_result = pd.DataFrame(sample_without_duplicates)
-    df_result.drop_duplicates(inplace=True, keep="last", subset="article")
-
+    df_result = pd.DataFrame(sample)
     df_del = df_result.loc[df_result["stock"] == "0"][["article"]]
     del_file = f"{BASE_LINUX_DIR}/mg_del.xlsx"
     df_del.to_excel(del_file, index=False)
@@ -186,9 +162,13 @@ def main():
     df_without_del = df_result.loc[df_result["stock"] != "0"]
     stock_file = f"{BASE_LINUX_DIR}/mg_new_stock.xlsx"
     df_without_del.to_excel(stock_file, index=False)
+
     global count
+    global error_items_count
+    error_items_count = 0
     count = 1
-    time.sleep(10)
+
+    time.sleep(5)
     asyncio.run(tg_send_files([stock_file, del_file], subject="Гвардия"))
     print(f"\n{"----------" * 5}\n")
 

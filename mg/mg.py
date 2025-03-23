@@ -42,7 +42,6 @@ del_article: set = set(sample.keys())
 result = []
 id_to_add = []
 
-semaphore = asyncio.Semaphore(10)
 count = 1
 item_error = []
 cat_error = []
@@ -51,183 +50,179 @@ unique_title = set()
 
 async def get_item_data(session, link: str):
     link = link if link.startswith("http") else f"{BASE_URL}{link}"
-    global semaphore
     try:
         item_data = {"Ссылка": link}
-        async with semaphore:
-            response = await fetch_request(session, link, headers)
-            soup = bs(response, "lxml")
+        response = await fetch_request(session, link, headers)
+        soup = bs(response, "lxml")
+        try:
+            category_area = soup.find("div", class_="way")
+            if category_area:
+                all_cat_items = category_area.find_all("a")
+                category = all_cat_items[-2].text.strip()
+                sub_category = all_cat_items[-1].text.strip()
+            item_data["Категория"] = category
+            item_data["Подкатегория"] = sub_category
+        except:
+            item_data["Категория"] = "Нет категории"
+            item_data["Подкатегория"] = "Нет подкатегории"
+        try:
+            title = soup.find("h1").text.strip()
+            title = await check_danger_string(title, "title")
+            if not title or title in unique_title:
+                return
+            item_data["Название"] = title
+        except:
+            item_data["Название"] = "Нет названия"
+        try:
+            options = soup.find("div", class_="item_basket_cont").find_all("tr")
+            for option in options:
+                item_data[option.find_all("td")[0].text.strip()] = option.find_all(
+                    "td"
+                )[1].text.strip()
+                if option.find_all("td")[0].text.strip() == "ISBN:":
+                    isbn = option.find_all("td")[1].text.strip()
             try:
-                category_area = soup.find("div", class_="way")
-                if category_area:
-                    all_cat_items = category_area.find_all("a")
-                    category = all_cat_items[-2].text.strip()
-                    sub_category = all_cat_items[-1].text.strip()
-                item_data["Категория"] = category
-                item_data["Подкатегория"] = sub_category
-            except:
-                item_data["Категория"] = "Нет категории"
-                item_data["Подкатегория"] = "Нет подкатегории"
-            try:
-                title = soup.find("h1").text.strip()
-                title = await check_danger_string(title, "title")
-                if not title or title in unique_title:
-                    return
-                item_data["Название"] = title
-            except:
-                item_data["Название"] = "Нет названия"
-            try:
-                options = soup.find("div", class_="item_basket_cont").find_all("tr")
-                for option in options:
-                    item_data[option.find_all("td")[0].text.strip()] = option.find_all(
-                        "td"
-                    )[1].text.strip()
-                    if option.find_all("td")[0].text.strip() == "ISBN:":
-                        isbn = option.find_all("td")[1].text.strip()
-                try:
-                    additional_options = soup.find(
-                        "div", class_="additional_information"
-                    ).find_all("tr")
-                    for option in additional_options:
-                        item_data[option.find_all("td")[0].text.strip()] = (
-                            option.find_all("td")[1].text.strip()
-                        )
-                except:
-                    pass
+                additional_options = soup.find(
+                    "div", class_="additional_information"
+                ).find_all("tr")
+                for option in additional_options:
+                    item_data[option.find_all("td")[0].text.strip()] = (
+                        option.find_all("td")[1].text.strip()
+                    )
             except:
                 pass
+        except:
+            pass
 
-            count_edition: str = item_data.get("Тираж:")
-            quantity_page: str = item_data.get("Страниц:")
+        count_edition: str = item_data.get("Тираж:")
+        quantity_page: str = item_data.get("Страниц:")
 
-            if not quantity_page:
-                item_data["Страниц:"] = "100"
-            elif not quantity_page.isdigit():
-                item_data["Страниц:"] = count_edition.split(" ")[0]
+        if not quantity_page:
+            item_data["Страниц:"] = "100"
+        elif not quantity_page.isdigit():
+            item_data["Страниц:"] = count_edition.split(" ")[0]
 
-            if not count_edition:
-                item_data["Тираж:"] = "1000"
-            elif not count_edition.isdigit():
-                item_data["Тираж:"] = count_edition.split(" ")[0]
+        if not count_edition:
+            item_data["Тираж:"] = "1000"
+        elif not count_edition.isdigit():
+            item_data["Тираж:"] = count_edition.split(" ")[0]
 
-            try:
-                info = soup.find("div", class_="content_sm_2").find("h4")
-                if info.text.strip() == "Аннотация":
-                    info = info.find_next().text.strip()
-                else:
-                    info = "Описание отсутствует"
-                info = await check_danger_string(info, "description")
-                if len(info) < 5:
-                    item_data["description"] = "Автор рекомендует книгу ко прочтению!"
-                else:
-                    item_data["description"] = info
-            except:
-                item_data["description"] = "Автор рекомендует книгу ко прочтению!"
-            try:
-                price = (
-                    soup.find_all("div", class_="product_item_price")[1]
-                    .text.strip()
-                    .split(".")[0]
-                )
-                item_data["price"] = price
-            except:
-                item_data["price"] = "Цена не указана"
-
-            item_id = soup.find("div", class_="wish_list_btn_box").find(
-                "a", class_="btn_desirable2 to_wishlist"
-            )
-            if item_id:
-                item_id = item_id["data-tovar"]
-                item_data["id"] = item_id
-            try:
-                quantity = soup.find("div", class_="wish_list_poz").text.strip()
-                item_data["Наличие"] = quantity
-            except:
-                item_data["Наличие"] = "Наличие не указано"
-            try:
-                photo = soup.find("a", class_="highslide")["href"]
-                photo = BASE_URL + photo
-                if photo == "https://www.dkmg.ru/goods_img/no_photo.png":
-                    item_data["Фото"] = (
-                        "https://zapobedu21.ru/images/26.07.2017/kniga.jpg"
-                    )
-                else:
-                    item_data["Фото"] = photo
-            except:
-                item_data["Фото"] = "Нет изображения"
-
-            item_data["Артикул_OZ"] = isbn + ".0"
-
-            # Cover filter
-            cover_type = item_data.get("Тип обложки:")
-            if cover_type:
-                item_data["Тип обложки:"] = filtering_cover(cover_type)
-
-            # Author filter
-            item_data["Автор:"] = (
-                item_data["Автор:"] if item_data.get("Автор:") else "Нет автора"
-            )
-            # ISBN filter
-            item_data["ISBN:"] = (
-                item_data["ISBN:"] if item_data.get("ISBN:") else "978-5-0000-0000-0"
-            )
-            # Publisher filter
-            item_data["Издательство:"] = (
-                item_data["Издательство:"]
-                if item_data.get("Издательство:")
-                else "Не указано"
-            )
-
-            # Year filter
-            publish_year = item_data.get("Год публикации:")
-            if publish_year:
-                try:
-                    int_publish_year = int(publish_year)
-                    if int_publish_year < 2018:
-                        item_data["Год публикации:"] = "2018"
-                except:
-                    item_data["Год публикации:"] = "2018"
+        try:
+            info = soup.find("div", class_="content_sm_2").find("h4")
+            if info.text.strip() == "Аннотация":
+                info = info.find_next().text.strip()
             else:
-                item_data["Год публикации:"] = "2018"
-
-            # Age filter
-            age = item_data.get("Возраст от:")
-
-            if not age or age == ":":
-                item_data["Возраст от:"] = "3+"
-            elif "+" not in age:
-                item_data["Возраст от:"] = age + "+"
-
-            if isbn + ".0" in not_in_sale and quantity == "есть в наличии":
-                not_in_sale[isbn + ".0"]["on sale"] = "да"
-            elif isbn + ".0" not in sample and quantity == "есть в наличии":
-                id_to_add.append(item_data)
-            if isbn + ".0" in del_article and quantity == "есть в наличии":
-                del_article.remove(isbn + ".0")
-
-            for d in prices:
-                if isbn + ".0" in prices[d] and quantity == "есть в наличии":
-                    prices[d][isbn + ".0"]["price"] = price
-
-            result.append(item_data)
-            unique_title.add(title)
-            global count
-            print(
-                f"\rDONE - {count} | Error item - {len(item_error)} | Page error - {len(cat_error)}",
-                end="",
+                info = "Описание отсутствует"
+            info = await check_danger_string(info, "description")
+            if len(info) < 5:
+                item_data["description"] = "Автор рекомендует книгу ко прочтению!"
+            else:
+                item_data["description"] = info
+        except:
+            item_data["description"] = "Автор рекомендует книгу ко прочтению!"
+        try:
+            price = (
+                soup.find_all("div", class_="product_item_price")[1]
+                .text.strip()
+                .split(".")[0]
             )
-            count += 1
+            item_data["price"] = price
+        except:
+            item_data["price"] = "Цена не указана"
+
+        item_id = soup.find("div", class_="wish_list_btn_box").find(
+            "a", class_="btn_desirable2 to_wishlist"
+        )
+        if item_id:
+            item_id = item_id["data-tovar"]
+            item_data["id"] = item_id
+        try:
+            quantity = soup.find("div", class_="wish_list_poz").text.strip()
+            item_data["Наличие"] = quantity
+        except:
+            item_data["Наличие"] = "Наличие не указано"
+        try:
+            photo = soup.find("a", class_="highslide")["href"]
+            photo = BASE_URL + photo
+            if photo == "https://www.dkmg.ru/goods_img/no_photo.png":
+                item_data["Фото"] = (
+                    "https://zapobedu21.ru/images/26.07.2017/kniga.jpg"
+                )
+            else:
+                item_data["Фото"] = photo
+        except:
+            item_data["Фото"] = "Нет изображения"
+
+        item_data["Артикул_OZ"] = isbn + ".0"
+
+        # Cover filter
+        cover_type = item_data.get("Тип обложки:")
+        if cover_type:
+            item_data["Тип обложки:"] = filtering_cover(cover_type)
+
+        # Author filter
+        item_data["Автор:"] = (
+            item_data["Автор:"] if item_data.get("Автор:") else "Нет автора"
+        )
+        # ISBN filter
+        item_data["ISBN:"] = (
+            item_data["ISBN:"] if item_data.get("ISBN:") else "978-5-0000-0000-0"
+        )
+        # Publisher filter
+        item_data["Издательство:"] = (
+            item_data["Издательство:"]
+            if item_data.get("Издательство:")
+            else "Не указано"
+        )
+
+        # Year filter
+        publish_year = item_data.get("Год публикации:")
+        if publish_year:
+            try:
+                int_publish_year = int(publish_year)
+                if int_publish_year < 2018:
+                    item_data["Год публикации:"] = "2018"
+            except:
+                item_data["Год публикации:"] = "2018"
+        else:
+            item_data["Год публикации:"] = "2018"
+
+        # Age filter
+        age = item_data.get("Возраст от:")
+
+        if not age or age == ":":
+            item_data["Возраст от:"] = "3+"
+        elif "+" not in age:
+            item_data["Возраст от:"] = age + "+"
+
+        if isbn + ".0" in not_in_sale and quantity == "есть в наличии":
+            not_in_sale[isbn + ".0"]["on sale"] = "да"
+        elif isbn + ".0" not in sample and quantity == "есть в наличии":
+            id_to_add.append(item_data)
+        if isbn + ".0" in del_article and quantity == "есть в наличии":
+            del_article.remove(isbn + ".0")
+
+        for d in prices:
+            if isbn + ".0" in prices[d] and quantity == "есть в наличии":
+                prices[d][isbn + ".0"]["price"] = price
+
+        result.append(item_data)
+        unique_title.add(title)
+        global count
+        print(
+            f"\rDONE - {count} | Error item - {len(item_error)} | Page error - {len(cat_error)}",
+            end="",
+        )
+        count += 1
     except Exception as e:
         logger.exception(link)
         item_error.append(link)
-        with open(f"{BASE_LINUX_DIR}/error.txt", "a+", encoding="utf-8") as f:
-            f.write(f"{link} ----- {e}\n")
 
 
 async def get_gather_data():
     tasks = []
     async with aiohttp.ClientSession(
-        connector=aiohttp.TCPConnector(ssl=False)
+        connector=aiohttp.TCPConnector(ssl=False, limit_per_host=10)
     ) as session:
         response = await session.get(BASE_URL, headers=headers)
         response_text = await response.text()
@@ -265,9 +260,7 @@ async def get_gather_data():
                         tasks.append(task)
             except Exception as e:
                 cat_error.append(f"{BASE_URL}{cat_link}?page={page_numb}&orderNew=asc")
-                with open(f"{BASE_LINUX_DIR}/cat_error.txt", "a+") as f:
-                    f.write(f"{BASE_URL}{cat_link} ----- {e}\n")
-                    continue
+                continue
         await asyncio.gather(*tasks)
 
         if item_error:
