@@ -167,6 +167,7 @@ def main():
     logger.success("Script was finished successfully")
     global count
     count = 1
+    print("-----------" * 5)
 
 
 def super_main():
