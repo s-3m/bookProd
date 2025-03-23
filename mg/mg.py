@@ -86,9 +86,9 @@ async def get_item_data(session, link: str):
                     "div", class_="additional_information"
                 ).find_all("tr")
                 for option in additional_options:
-                    item_data[option.find_all("td")[0].text.strip()] = (
-                        option.find_all("td")[1].text.strip()
-                    )
+                    item_data[option.find_all("td")[0].text.strip()] = option.find_all(
+                        "td"
+                    )[1].text.strip()
             except:
                 pass
         except:
@@ -145,9 +145,7 @@ async def get_item_data(session, link: str):
             photo = soup.find("a", class_="highslide")["href"]
             photo = BASE_URL + photo
             if photo == "https://www.dkmg.ru/goods_img/no_photo.png":
-                item_data["Фото"] = (
-                    "https://zapobedu21.ru/images/26.07.2017/kniga.jpg"
-                )
+                item_data["Фото"] = "https://zapobedu21.ru/images/26.07.2017/kniga.jpg"
             else:
                 item_data["Фото"] = photo
         except:
