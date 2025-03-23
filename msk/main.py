@@ -265,8 +265,6 @@ async def get_item_data(session, item: str):
     except Exception as e:
         item_error.append(link)
         logger.exception(f"Exception in book - {link}")
-        with open(f"{BASE_LINUX_DIR}/error.txt", "a+") as file:
-            file.write(f"{link} ---> {e}\n")
 
 
 async def get_page_data(session, page_link):
@@ -284,12 +282,9 @@ async def get_page_data(session, page_link):
         except Exception as e:
             page_error.append(page_link)
             logger.exception(f"Exception on page {page_link} - {e}")
-            with open(f"{BASE_LINUX_DIR}/page_error.txt", "a+") as file:
-                file.write(f"{page_link} + - + {e}")
 
 
 async def get_gather_data():
-    # semaphore = asyncio.Semaphore(10)
     logger.info("Start to collect data")
     async with aiohttp.ClientSession(
         connector=aiohttp.TCPConnector(ssl=False, limit_per_host=10), trust_env=True
@@ -329,33 +324,12 @@ async def get_gather_data():
             ]
             await asyncio.gather(*items_error_tasks)
 
-        # Reparse empty string
-        # del file
-        # logger.info("Reparse del file")
         del_list = [{"Артикул": i} for i in id_to_del]
         reparse_del_tasks = [
             asyncio.create_task(check_empty_element(session, item, item["Артикул"]))
             for item in del_list
         ]
         await asyncio.gather(*reparse_del_tasks)
-
-        # price files
-        # try:
-        #     logger.info("Reparse empty price")
-        #     for i_dict in prices:
-        #         prices_tasks = [
-        #             asyncio.create_task(
-        #                 check_empty_element(
-        #                     session, prices[i_dict][item], item, check_price=True
-        #                 )
-        #             )
-        #             for item in prices[i_dict]
-        #             if prices[i_dict][item]["price"] == ""
-        #         ]
-        #         await asyncio.gather(*prices_tasks)
-        # except Exception as e:
-        #     logger.exception(e)
-        #     pass
 
     print()
     logger.info("Start to write data in file")

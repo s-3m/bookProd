@@ -89,11 +89,6 @@ async def to_check_item(item, session):
         item["stock"] = "error"
         error_count += 1
         logger.exception(f"ERROR with {link}")
-        with open(
-            f"{PATH_TO_FILES}/error.txt",
-            "a+",
-        ) as f:
-            f.write(f"{link} ------ {e}\n")
 
 
 async def get_compare():
