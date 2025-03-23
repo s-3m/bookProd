@@ -221,8 +221,6 @@ async def get_item_data(session, book: str):
     except (BaseException, Exception) as e:
         logger.exception(f"Error - {link}")
         item_error.append(link)
-        with open(f"{BASE_LINUX_DIR}/error.txt", "a+", encoding="utf-8") as f:
-            f.write(f"{link} ----- {e}\n")
 
 
 async def get_page_data(session, page_url):
@@ -245,8 +243,6 @@ async def get_page_data(session, page_url):
     except Exception as e:
         page_error.append(page_url)
         logger.exception(f"Error on page - {page_url}")
-        with open(f"{BASE_LINUX_DIR}/page_error.txt", "a+", encoding="utf-8") as f:
-            f.write(f"{page_url} ----- {e}\n")
 
 
 async def get_category_data(session, category: str):
@@ -307,8 +303,6 @@ async def checker_del(session, book):
     except Exception as e:
         book["stock"] = "del"
         logger.exception(f"ERROR with {book['article'][:-2]}")
-        with open(f"{BASE_LINUX_DIR}/error.txt", "a") as f:
-            f.write(f"{book['article'][:-2]} --- {e}\n")
     finally:
         global count
         print(f"\rDone - {count}", end="")

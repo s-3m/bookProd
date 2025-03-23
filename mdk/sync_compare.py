@@ -90,8 +90,6 @@ def get_main_data(book):
         book["stock"] = "error"
         error_book.append(book)
         logger.exception(f"ERROR with {book['article'][:-2]}")
-        with open(f"{BASE_LINUX_DIR}/error.txt", "a") as f:
-            f.write(f"{book['article'][:-2]} --- {e}\n")
     finally:
         global count
         print(f"\rDone - {count} | Error books - {len(error_book)}", end="")
