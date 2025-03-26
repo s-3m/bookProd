@@ -62,6 +62,7 @@ class Ozon:
                     "min_price_for_auto_actions_enabled": True,
                     "auto_action_enabled": "DISABLED",
                     "price_strategy_enabled": "DISABLED",
+                    "vat": "0",
                 }
                 list_for_price_update.append(item_body)
 

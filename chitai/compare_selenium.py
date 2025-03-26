@@ -112,7 +112,6 @@ def get_main_data(book_item):
         stock = soup.find("link", attrs={"itemprop": "availability"})
 
         price = soup.find("span", attrs={"itemprop": "price"}).get("content")
-        print(f"---{price}---")
 
         book_item["price"] = price
 
@@ -207,6 +206,9 @@ def main():
         asyncio.run(tg_send_files([new_stock_path, del_path], "Chit_gor"))
 
         logger.success("Script was finished successfully")
+        print(
+            "\n---------------------------------------------------------------------------------------------\n"
+        )
     except Exception as e:
         logger.exception(e)
 

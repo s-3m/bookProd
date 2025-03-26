@@ -147,10 +147,12 @@ def main():
     if checker:
         # Push to OZON with API
         separate_records = separate_records_to_client_id(sample)
+        print()
         logger.info("Start push to ozon")
         start_push_to_ozon(separate_records, prefix="mg")
         logger.success("Data was pushed to ozon")
     else:
+        print()
         logger.warning("Detected too many ZERO items")
         asyncio.run(tg_send_msg("'Гвардия'"))
 

@@ -103,6 +103,7 @@ async def get_gather_data(sample):
         for book in sample:
             executor.submit(get_main_data, book)
 
+    print()
     # Reparse errors
     logger.warning(f"Errors detected: {len(error_book)}")
     error_book.clear()
@@ -117,6 +118,7 @@ async def get_gather_data(sample):
         if book["stock"] == "error":
             book["stock"] = "0"
 
+    print()
     logger.warning(f"Error not reparse: {len(error_book)}")
 
     print()
