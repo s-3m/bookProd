@@ -3,6 +3,7 @@ import sys
 import os
 import time
 import re
+from concurrent.futures import ThreadPoolExecutor
 import pandas.io.formats.excel
 import unicodedata
 from fake_useragent import UserAgent
@@ -13,7 +14,12 @@ import pandas as pd
 from loguru import logger
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from utils import filesdata_to_dict, check_danger_string, fetch_request
+from utils import (
+    filesdata_to_dict,
+    check_danger_string,
+    fetch_request,
+    sync_fetch_request,
+)
 from filter import filtering_cover
 
 pd.io.formats.excel.ExcelFormatter.header_style = None
@@ -78,15 +84,10 @@ def to_write_file(temporary=False, final_result=False):
         df_result.to_excel(f"{filepath}/bb_price_{price_item}.xlsx", index=True)
 
     df_not_in_sale = pd.DataFrame().from_dict(not_in_sale, orient="index")
-    df_not_in_sale = df_not_in_sale.loc[df_not_in_sale["on sale"] == "Да"][["article"]]
+    df_not_in_sale = df_not_in_sale.loc[df_not_in_sale["on sale"] == "да"][["article"]]
     df_not_in_sale.to_excel(f"{filepath}/bb_not_in_sale.xlsx")
 
     df_add = pd.DataFrame(id_to_add)
-    df_add = (
-        df_add.sort_values("Наличие")
-        .drop_duplicates(subset="Название", keep="last")
-        .sort_values("Артикул_OZ")
-    )
     df_add.to_excel(f"{filepath}/bb_add.xlsx", index=False)
 
     df_del = pd.DataFrame(id_to_del)
@@ -94,14 +95,17 @@ def to_write_file(temporary=False, final_result=False):
     df_del.to_excel(f"{filepath}/bb_del.xlsx", index=False)
 
 
-async def get_item_data(item, session, main_category=None):
+semaphore = asyncio.Semaphore(8)
+
+
+def get_item_data(item, main_category=None):
     global count
+    global semaphore
     res_dict = {}
     link = f"{BASE_URL}{item}"
     res_dict["Ссылка"] = link
-    await asyncio.sleep(3)
     try:
-        response = await fetch_request(session, link, headers=headers)
+        response = sync_fetch_request(link, headers=headers)
         soup = bs(response, "lxml")
 
         if not main_category:
@@ -113,13 +117,13 @@ async def get_item_data(item, session, main_category=None):
 
         try:
             title = soup.find("h1").text
-            title = await check_danger_string(title, "title")
+            title = asyncio.run(check_danger_string(title, "title"))
             if not title:
                 return
-            res_dict["Название"] = title.strip()
+            res_dict["title"] = title.strip()
         except:
             title = "Нет названия"
-            res_dict["Название"] = title
+            res_dict["title"] = title
 
         try:
             pattern = re.compile(r"setViewedProduct\((\d+, .+)'MIN_PRICE':([^'].+}),")
@@ -158,10 +162,10 @@ async def get_item_data(item, session, main_category=None):
                 .find(class_="value")
                 .text.strip()
             )
-            res_dict["Наличие"] = quantity
+            res_dict["quantity"] = quantity
         except:
             quantity = "Наличие не указано"
-            res_dict["Наличие"] = quantity
+            res_dict["quantity"] = quantity
 
         try:
             desc = (
@@ -169,7 +173,7 @@ async def get_item_data(item, session, main_category=None):
                 .find(class_="content")
                 .text.strip()
             )
-            desc = await check_danger_string(desc, "description")
+            desc = asyncio.run(check_danger_string(desc, "description"))
             res_dict["description"] = desc
         except:
             res_dict["description"] = "Нет описания"
@@ -187,8 +191,8 @@ async def get_item_data(item, session, main_category=None):
             all_chars = zip(names_of_chars, val_of_chars)
             for i in all_chars:
                 res_dict[i[0]] = i[1]
-
-            if not names_of_chars:
+        except:
+            try:
                 all_chars = soup.find(class_="product-chars").find_all(
                     class_="properties__item"
                 )
@@ -196,8 +200,8 @@ async def get_item_data(item, session, main_category=None):
                     res_dict[i.find(class_="properties__title").text.strip()] = i.find(
                         class_="properties__value"
                     ).text.strip()
-        except:
-            pass
+            except:
+                pass
 
         # Year filter
         pub_year = res_dict.get("Дата издания")
@@ -267,32 +271,39 @@ async def get_item_data(item, session, main_category=None):
         pass
 
 
-async def get_price_data(item, session):
+async def get_price_data(item, session, semaphore_price):
     global empty_price_count
     item_article = item["article"][:-2]
     url = f"{BASE_URL}/catalog/?q={item_article}"
-    try:
-        response = await fetch_request(session, url, headers, sleep=10)
-        soup = bs(response, "html.parser")
-        div_list = soup.find_all("div", class_="inner_wrap TYPE_1")
+    async with semaphore_price:
+        try:
+            response = await fetch_request(session, url, headers, sleep=10)
+            soup = bs(response, "html.parser")
+            div_list = soup.find_all("div", class_="inner_wrap TYPE_1")
 
-        for div in div_list:
-            div_article = str(div.find("div", class_="article_block").get("data-value"))
-            div_stock = soup.find("div", class_="item-stock").text
-            if div_article != item_article or div_stock == "Нет в наличии":
-                continue
-            div_price_value = div.find_all("span", class_="price_value")[-1]
-            if div_price_value:
-                price_value: str = unicodedata.normalize("NFKD", div_price_value.text)
-                item["price"] = price_value.replace(" ", "")
+            for div in div_list:
+                div_article = str(
+                    div.find("div", class_="article_block").get("data-value")
+                )
+                div_stock = soup.find("div", class_="item-stock").text
+                if div_article != item_article or div_stock == "Нет в наличии":
+                    continue
+                div_price_value = div.find_all("span", class_="price_value")[-1]
+                if div_price_value:
+                    price_value: str = unicodedata.normalize(
+                        "NFKD", div_price_value.text
+                    )
+                    item["price"] = price_value.replace(" ", "")
 
-        print(f"\r{empty_price_count}", end="")
-        empty_price_count += 1
-    except Exception as e:
-        logger.exception(f"Exception in reparse price")
+            print(f"\r{empty_price_count}", end="")
+            empty_price_count += 1
+        except Exception as e:
+            logger.exception(f"Exception in reparse price")
 
 
 async def check_empty_price(session):
+    semaphore_price = asyncio.Semaphore(5)
+
     empty_price_tasks = []
     df_empty_price_one = pd.read_excel(
         f"{BASE_LINUX_DIR}/result/bb_price_1.xlsx",
@@ -320,7 +331,7 @@ async def check_empty_price(session):
     for item_price in (price_one, price_two, price_three):
         for i in item_price:
             if not i["price"]:
-                task = asyncio.create_task(get_price_data(i, session))
+                task = asyncio.create_task(get_price_data(i, session, semaphore_price))
                 empty_price_tasks.append(task)
     logger.info(f"Total empty price in PRICE_ONE - {len(empty_price_tasks)}")
     await asyncio.gather(*empty_price_tasks)
@@ -343,9 +354,9 @@ async def get_gather_data():
     all_need_links = []
     logger.info("Start to collect data")
     async with aiohttp.ClientSession(
-        connector=aiohttp.TCPConnector(ssl=False, limit=50, limit_per_host=15),
+        connector=aiohttp.TCPConnector(ssl=False, limit=50, limit_per_host=7),
         trust_env=True,
-        timeout=aiohttp.ClientTimeout(total=300),
+        timeout=aiohttp.ClientTimeout(total=600),
     ) as session:
         response = await session.get(f"{BASE_URL}/catalog", headers=headers)
         response_text = await response.text()
@@ -363,12 +374,11 @@ async def get_gather_data():
             except:
                 continue
 
-        tasks = []
         for link in all_need_links:
             try:
                 for _ in range(10):
                     response = await session.get(f"{BASE_URL}{link}", headers=headers)
-                    # await asyncio.sleep(10)
+                    await asyncio.sleep(10)
                     if response.status == 200:
                         soup = bs(await response.text(), "lxml")
 
@@ -378,12 +388,12 @@ async def get_gather_data():
                         else:
                             pagination = 1
                         break
+                    # pagination = 3
             except Exception as e:
-                logger.exception(e)
                 page_error.append(f"{BASE_URL}{link}")
 
             for page in range(1, pagination + 1):
-                await asyncio.sleep(1)
+                await asyncio.sleep(2)
 
                 try:
                     for _ in range(20):
@@ -391,19 +401,19 @@ async def get_gather_data():
                             f"{BASE_URL}{link}?PAGEN_1={page}",
                             headers=headers,
                         ) as response:
-                            # await asyncio.sleep(10)
+                            await asyncio.sleep(10)
                             if response.status == 200:
                                 soup = bs(await response.text(), "lxml")
                                 page_items = soup.find_all("div", class_="item-title")
                                 items = [item.find("a")["href"] for item in page_items]
                                 main_category = soup.find("h1").text.strip()
 
-                                for item in items:
-                                    task = asyncio.create_task(
-                                        get_item_data(item, session, main_category)
-                                    )
-                                    tasks.append(task)
-                                # await asyncio.sleep(5)
+                                with ThreadPoolExecutor(max_workers=15) as executor:
+                                    for item in items:
+                                        executor.submit(
+                                            get_item_data, item, main_category
+                                        )
+                                await asyncio.sleep(5)
                                 break
                             else:
                                 await asyncio.sleep(10)
@@ -413,7 +423,6 @@ async def get_gather_data():
                     ) as file:
                         file.write(f"{BASE_URL}{link} --- {page} --- {e}\n")
                     continue
-        await asyncio.gather(*tasks)
 
         print()  # empty print for break string after count
         logger.success("Main data was collected")
@@ -441,7 +450,7 @@ async def get_gather_data():
                         main_category = soup.find("h1").text.strip()
                         for item in items:
                             task = asyncio.create_task(
-                                get_item_data(item, session, main_category)
+                                get_item_data(item, main_category)
                             )
                             page_error_tasks.append(task)
                     except Exception as e:
@@ -474,8 +483,8 @@ async def get_gather_data():
 
         to_write_file(final_result=True)
 
-        # logger.info("Start check empty price field")
-        # await check_empty_price(session)
+        logger.info("Start check empty price field")
+        await check_empty_price(session)
 
         logger.success("All done successfully!!!")
 

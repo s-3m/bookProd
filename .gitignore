@@ -5,6 +5,13 @@ Scripts
 Lib
 pyvenv.cfg
 .xlsx
+*.csv
 .env
 *.xlsx
 .venv
+*.txt
+*.png
+*.log
+chromedriver
+*.json
+.python-version

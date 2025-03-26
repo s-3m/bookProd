@@ -1,4 +1,4 @@
-import os.path
+import sys, os
 import time
 import schedule
 import pandas.io.formats.excel
@@ -7,8 +7,14 @@ from fake_useragent import UserAgent
 import aiohttp
 import asyncio
 import pandas as pd
-from tg_sender import tg_send_files
 from loguru import logger
+from dotenv import load_dotenv
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from tg_sender import tg_send_files, tg_send_msg
+from utils import fetch_request, give_me_sample, quantity_checker
+from ozon.ozon_api import separate_records_to_client_id, start_push_to_ozon, get_in_sale
+from ozon.utils import logger_filter
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 
@@ -16,117 +22,170 @@ BASE_URL = "https://www.dkmg.ru"
 USER_AGENT = UserAgent()
 headers = {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
-    "user-agent": USER_AGENT.random
+    "user-agent": USER_AGENT.random,
+}
+ajax_headers = {
+    "Accept": "application/json, text/javascript, */*; q=0.01",
+    "Accept-Language": "ru,en;q=0.9",
+    "Connection": "keep-alive",
+    # 'Cookie': '_ym_uid=1724136084781768402; _ym_d=1724136084; BITRIX_SM_mguser=972aa2e5-c315-416b-88b3-92f79b453510; BX_USER_ID=ed697227b63725fef1d378c8253f2c14; PHPSESSID=vrf57rm4u3ioipl9cgotmjgec6; _ym_isad=2; _ym_visorc=w',
+    "Referer": "https://www.dkmg.ru/catalog/search/?Catalog_ID=0&search_word=978-5-9951-4898-2.0&Series_ID=&Publisher_ID=&Year_Biblio=",
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-origin",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 YaBrowser/24.12.0.0 Safari/537.36",
+    "X-Requested-With": "XMLHttpRequest",
+    "sec-ch-ua": '"Chromium";v="130", "YaBrowser";v="24.12", "Not?A_Brand";v="99", "Yowser";v="2.5"',
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": '"Windows"',
 }
 
 
 count = 1
+DEBUG = True if sys.platform.startswith("win") else False
+BASE_LINUX_DIR = "/media/source/mg/every_day" if not DEBUG else "source/every_day"
+logger.add(
+    f"{BASE_LINUX_DIR}/error.log", format="{time} {level} {message}", level="ERROR"
+)
+logger.add(
+    f"{BASE_LINUX_DIR}/log.json",
+    level="WARNING",
+    serialize=True,
+    filter=logger_filter,
+)
+error_items_count = 0
 
 
-async def get_item_data(session, item, semaphore, sample, reparse=False):
+async def get_id_from_ajax(session, item):
+    ajax_url = "https://www.dkmg.ru/ajax/ajax_search.php"
+    params = {"term": item["article"][:-2]}
+    async with session.get(ajax_url, params=params, headers=ajax_headers) as resp:
+        ajax_result = await resp.json(content_type=None)
+        item_id = ajax_result[0].get("value")
+        if item_id and item_id != "#":
+            item["id"] = item_id.split("/")[-1].strip()
+
+
+async def get_item_data(session, item):
     global count
-    item_id = item['id']
-    if not item_id:
-        item['stock'] = 'del'
-        return
-    url = f"{BASE_URL}/tovar/{item_id}"
+    global error_items_count
     try:
-        async with semaphore:
-            await asyncio.sleep(0.5)
-            async with session.get(url, headers=headers) as response:
-                soup = bs(await response.text(), 'lxml')
-                buy_btn = soup.find('a', class_='btn_red wish_list_btn add_to_cart')
-                if not buy_btn:
-                    item['stock'] = 'del'
-                else:
-                    item['stock'] = '2'
+        if not item["id"]:
+            await get_id_from_ajax(session, item)
 
-                if reparse:
-                    sample.append(item)
+        if not item["id"]:
+            item["stock"] = "0"
+            item["price"] = None
+            return
 
-                print(f'\rDone - {count}', end='')
-                # logger.info(f'\rDone - {count}\r', end='')
-                count += 1
+        full_url = f"{BASE_URL}/tovar/{item["id"]}"
+        response = await fetch_request(session, full_url, headers)
+        soup = bs(response, "lxml")
+        buy_btn = soup.find("a", class_="btn_red wish_list_btn add_to_cart")
+        if not buy_btn:
+            item["stock"] = "0"
+        else:
+            item["stock"] = "2"
+
+        price = (
+            soup.find_all("div", class_="product_item_price")[1]
+            .text.strip()
+            .split(".")[0]
+            .replace(" ", "")
+        )
+
+        item["price"] = price
+
+        print(f"\rDone - {count} | Error - {error_items_count}", end="")
+        count += 1
     except Exception as e:
-        if not os.path.exists(f'{os.path.dirname(os.path.realpath(__file__))}/compare/'):
-            os.makedirs(f'{os.path.dirname(os.path.realpath(__file__))}/compare/')
-        with open(f'{os.path.dirname(os.path.realpath(__file__))}/compare/error.txt', 'a+') as file:
-            file.write(f'{item_id} --- {item['article']} --- {e}\n')
+        item["stock"] = "error"
+        error_items_count += 1
+        logger.exception(item)
+        with open(f"{BASE_LINUX_DIR}/error.txt", "a+") as file:
+            file.write(f"{item['article']} --- {e}\n")
 
 
-async def get_gather_data(semaphore, sample):
-
+async def get_gather_data(sample):
     tasks = []
-    async with (aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False, limit_per_host=10, limit=50),
-                                      timeout=aiohttp.ClientTimeout(total=None)) as session):
+    async with aiohttp.ClientSession(
+        connector=aiohttp.TCPConnector(ssl=False, limit_per_host=10, limit=10),
+        timeout=aiohttp.ClientTimeout(total=1200),
+    ) as session:
         for item in sample:
-            task = asyncio.create_task(get_item_data(session, item, semaphore, sample))
+            task = asyncio.create_task(get_item_data(session, item))
             tasks.append(task)
 
         await asyncio.gather(*tasks)
 
-        reparse_count = 0
-        while os.path.exists(f'{os.path.dirname(os.path.realpath(__file__))}/compare/error.txt') and reparse_count < 10:
-            # print('\n------- Start reparse error ------')
-            print()
-            logger.info('\nStart reparse error')
-            reparse_count += 1
-            with open(f'{os.path.dirname(os.path.realpath(__file__))}/compare/error.txt') as file:
-                id_list = [{'id': i.split(' --- ')[0], 'article': i.split(' --- ')[1]} for i in file.readlines()]
-                print(f'--- Quantity error - {len(id_list)}')
-                os.remove(f'{os.path.dirname(os.path.realpath(__file__))}/compare/error.txt')
-
-            reparse_tasks = []
-
-            for item in id_list:
-                task = asyncio.create_task(get_item_data(session, item, semaphore, sample, reparse=True))
-                reparse_tasks.append(task)
-
+        if error_items_count > 0:
+            logger.info("\nStart reparse error")
+            reparse_tasks = [
+                asyncio.create_task(get_item_data(session, item))
+                for item in sample
+                if item["stock"] == "error"
+            ]
             await asyncio.gather(*reparse_tasks)
+            print()
 
-            global count
-            count = 1
+        for i in sample:
+            if item["stock"] == "error":
+                i["stock"] = "0"
 
 
 def main():
-    # print('start\n')
-    logger.info('Start MG parsing')
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    df = pd.read_excel(f'{dir_path}/compare/gvardia_new_stock.xlsx', converters={'id': str})
-    df = df.where(df.notnull(), None)
-    sample = df.to_dict('records')
+    logger.info("Start MG parsing")
+    books_in_sale = get_in_sale("mg")
+    sample = give_me_sample(
+        BASE_LINUX_DIR, prefix="mg", merge_obj="id", ozon_in_sale=books_in_sale
+    )
 
-    semaphore = asyncio.Semaphore(5)
-    asyncio.run(get_gather_data(semaphore, sample))
+    asyncio.run(get_gather_data(sample))
+
+    checker = quantity_checker(sample)
+
+    if checker:
+        # Push to OZON with API
+        separate_records = separate_records_to_client_id(sample)
+        print()
+        logger.info("Start push to ozon")
+        start_push_to_ozon(separate_records, prefix="mg")
+        logger.success("Data was pushed to ozon")
+    else:
+        print()
+        logger.warning("Detected too many ZERO items")
+        asyncio.run(tg_send_msg("'Гвардия'"))
+
     df_result = pd.DataFrame(sample)
-    df_result.drop_duplicates(inplace=True, keep='last', subset='article')
-
-    result_file = f'{dir_path}/compare/all_result.xlsx'
-    df_result.to_excel(result_file, index=False)
-
-    df_del = df_result.loc[df_result['stock'] == 'del'][['article']]
-    del_file =  f'{dir_path}/compare/gvardia_del.xlsx'
+    df_del = df_result.loc[df_result["stock"] == "0"][["article"]]
+    del_file = f"{BASE_LINUX_DIR}/mg_del.xlsx"
     df_del.to_excel(del_file, index=False)
 
-    df_without_del = df_result.loc[df_result['stock'] != 'del']
-    stock_file = f'{dir_path}/compare/gvardia_new_stock.xlsx'
+    df_without_del = df_result.loc[df_result["stock"] != "0"]
+    stock_file = f"{BASE_LINUX_DIR}/mg_new_stock.xlsx"
     df_without_del.to_excel(stock_file, index=False)
+
     global count
+    global error_items_count
+    error_items_count = 0
     count = 1
-    time.sleep(10)
-    print()
-    logger.success('Parse end successfully')
-    asyncio.run(tg_send_files([stock_file, del_file], subject='Гвардия'))
+
+    time.sleep(5)
+    asyncio.run(tg_send_files([stock_file, del_file], subject="Гвардия"))
+    print(f"\n{"----------" * 5}\n")
+
 
 def super_main():
-    schedule.every().day.at('03:30').do(main)
+    load_dotenv("../.env")
+    schedule.every().day.at("20:00").do(main)
 
     while True:
         schedule.run_pending()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     start_time = time.time()
+    # main()
     super_main()
     print()
     print(time.time() - start_time)
