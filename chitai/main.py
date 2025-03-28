@@ -8,15 +8,15 @@ import asyncio
 import pandas as pd
 from loguru import logger
 
+from ozon.ozon_api import get_in_sale
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import (
     check_danger_string,
     sync_fetch_request,
-    filesdata_to_dict,
     write_result_files,
 )
 from filter import filtering_cover
-from compare_selenium import get_gather_data as checker_del
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 logger.add("chitai_error.log", format="{time} {level} {message}", level="ERROR")
@@ -25,9 +25,8 @@ BASE_URL = "https://www.chitai-gorod.ru"
 BASE_LINUX_DIR = "/media/source/chitai" if not DEBUG else "source"
 semaphore = asyncio.Semaphore(10)
 
-prices = filesdata_to_dict(f"{BASE_LINUX_DIR}/prices")
-sample = filesdata_to_dict(f"{BASE_LINUX_DIR}/sale", combined=True)
-not_in_sale = filesdata_to_dict(f"{BASE_LINUX_DIR}/not_in_sale", combined=True)
+sample_raw = get_in_sale("chit_gor")
+sample = {i["Артикул"] for i in sample_raw}
 
 headers = {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -48,8 +47,6 @@ headers = {
 
 all_books_result = []
 id_to_add = []
-id_to_del = set(sample.keys())
-new_del = []
 
 done_count = 0
 item_error = []
@@ -99,11 +96,7 @@ def get_book_data(book_url: str):
             photo = "Нет фото"
 
         try:
-            sale = soup.find("span", class_="product-offer-price__old-price")
-            if sale:
-                price = sale.text.strip()[:-1].strip()
-            else:
-                price = soup.find("span", attrs={"itemprop": "price"}).get("content")
+            price = soup.find("span", attrs={"itemprop": "price"}).get("content")
         except:
             price = "Цена не указана"
 
@@ -218,18 +211,11 @@ def get_book_data(book_url: str):
 
             else:
                 in_shop_option = False
+
         avalible_status = True if online_option else False
 
-        for d in prices:
-            if article in prices[d] and avalible_status:
-                prices[d][article]["price"] = book_result["Цена"]
-
-        if article in not_in_sale and avalible_status:
-            not_in_sale[article]["on sale"] = "да"
-        elif article not in sample and avalible_status:
+        if article not in sample and avalible_status:
             id_to_add.append(book_result)
-        if article in id_to_del and avalible_status:
-            id_to_del.remove(article)
 
         all_books_result.append(book_result)
 
@@ -330,21 +316,7 @@ async def get_gather_data():
             prefix="chit_gor",
             all_books_result=all_books_result,
             id_to_add=id_to_add,
-            id_to_del=id_to_del,
-            not_in_sale=not_in_sale,
-            prices=prices,
         )
-
-        # Check del file
-        logger.warning("Check del file")
-        del_dict = [{"article": i, "stock": None, "link": None} for i in id_to_del]
-
-        await checker_del(del_dict)
-
-        global new_del
-        for i in del_dict:
-            if i["stock"] in (0, "0"):
-                new_del.append(i["article"])
 
         logger.warning(
             f"Datas was collected. Not reparse: item errors - {len(item_error)} --- page errors - {len(page_error)}"
@@ -360,9 +332,6 @@ def main():
         prefix="chit-gor",
         all_books_result=all_books_result,
         id_to_add=id_to_add,
-        id_to_del=new_del,
-        not_in_sale=not_in_sale,
-        prices=prices,
     )
     logger.info("Finished write files")
     logger.success("Script finished")
