@@ -6,6 +6,7 @@ import aiohttp
 import asyncio
 
 from filter import filtering_cover
+from ozon.ozon_api import get_in_sale
 from selenium_data import get_book_data
 from loguru import logger
 import pandas.io.formats.excel
@@ -47,11 +48,9 @@ item_error = []
 page_error = []
 id_to_add = []
 
-prices = filesdata_to_dict(f"{BASE_LINUX_DIR}/prices")
-sample = filesdata_to_dict(f"{BASE_LINUX_DIR}/sale", combined=True)
-not_in_sale = filesdata_to_dict(f"{BASE_LINUX_DIR}/not_in_sale", combined=True)
+sample_raw = get_in_sale("msk")
+sample = {i["Артикул"] for i in sample_raw}
 
-id_to_del = set(sample.keys())
 last_isbn = None
 
 
@@ -245,16 +244,8 @@ async def get_item_data(session, item: str):
             item_status.find("span").text.lower().strip() if item_status else None
         )
 
-        for d in prices:
-            if article_for_check in prices[d] and price is not None:
-                prices[d][article_for_check]["price"] = price
-
-        if article_for_check in not_in_sale and item_status == "в наличии":
-            not_in_sale[article_for_check]["on sale"] = "да"
-        elif article_for_check not in sample and item_status == "в наличии":
+        if article_for_check not in sample and item_status == "в наличии":
             id_to_add.append(book_dict)
-        if article_for_check in id_to_del and item_status == "в наличии":
-            id_to_del.remove(article_for_check)
 
         result.append(book_dict)
         print(
@@ -324,13 +315,6 @@ async def get_gather_data():
             ]
             await asyncio.gather(*items_error_tasks)
 
-        del_list = [{"Артикул": i} for i in id_to_del]
-        reparse_del_tasks = [
-            asyncio.create_task(check_empty_element(session, item, item["Артикул"]))
-            for item in del_list
-        ]
-        await asyncio.gather(*reparse_del_tasks)
-
     print()
     logger.info("Start to write data in file")
     write_result_files(
@@ -338,9 +322,6 @@ async def get_gather_data():
         prefix="msk",
         all_books_result=result,
         id_to_add=id_to_add,
-        id_to_del=[i["Артикул"] for i in del_list if i["Статус"] == "Не в продаже"],
-        not_in_sale=not_in_sale,
-        prices=prices,
     )
     logger.success("Data was wrote in file successfully")
 
