@@ -22,7 +22,7 @@ DEBUG = True if sys.platform.startswith("win") else False
 BASE_URL = "https://mdk-arbat.ru"
 BASE_LINUX_DIR = "/media/source/mdk" if not DEBUG else "source"
 
-sample_raw = get_in_sale("mdk")
+sample_raw = get_in_sale("mdk", visibility="ALL")
 sample = {i["Артикул"] for i in sample_raw}
 
 headers = {

@@ -14,7 +14,6 @@ import pandas.io.formats.excel
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import (
     check_danger_string,
-    filesdata_to_dict,
     fetch_request,
     write_result_files,
 )
@@ -48,7 +47,7 @@ item_error = []
 page_error = []
 id_to_add = []
 
-sample_raw = get_in_sale("msk")
+sample_raw = get_in_sale("msk", visibility="ALL")
 sample = {i["Артикул"] for i in sample_raw}
 
 last_isbn = None

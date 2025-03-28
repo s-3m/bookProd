@@ -25,7 +25,7 @@ BASE_URL = "https://www.chitai-gorod.ru"
 BASE_LINUX_DIR = "/media/source/chitai" if not DEBUG else "source"
 semaphore = asyncio.Semaphore(10)
 
-sample_raw = get_in_sale("chit_gor")
+sample_raw = get_in_sale("chit_gor", visibility="ALL")
 sample = {i["Артикул"] for i in sample_raw}
 
 headers = {

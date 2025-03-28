@@ -35,7 +35,7 @@ headers = {
     "user-agent": USER_AGENT.random,
 }
 
-sample_raw = get_in_sale("mg")
+sample_raw = get_in_sale("mg", visibility="ALL")
 sample = {i["Артикул"] for i in sample_raw}
 
 result = []
