@@ -7,13 +7,13 @@ import aiohttp
 import asyncio
 from loguru import logger
 from filter import filtering_cover
+from ozon.ozon_api import get_in_sale
 from photo_utils import replace_photo
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import (
     check_danger_string,
     fetch_request,
-    filesdata_to_dict,
     write_result_files,
 )
 
@@ -22,9 +22,8 @@ DEBUG = True if sys.platform.startswith("win") else False
 BASE_URL = "https://mdk-arbat.ru"
 BASE_LINUX_DIR = "/media/source/mdk" if not DEBUG else "source"
 
-prices = filesdata_to_dict(f"{BASE_LINUX_DIR}/prices")
-sample = filesdata_to_dict(f"{BASE_LINUX_DIR}/sale", combined=True)
-not_in_sale = filesdata_to_dict(f"{BASE_LINUX_DIR}/not_in_sale", combined=True)
+sample_raw = get_in_sale("mdk")
+sample = {i["Артикул"] for i in sample_raw}
 
 headers = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -47,7 +46,6 @@ headers = {
 all_books_result = []
 id_to_add = []
 new_id_to_add = []
-id_to_del = set(sample.keys())
 
 done_count = 0
 item_error = []
@@ -55,8 +53,6 @@ page_error = []
 category_error = []
 
 count = 1
-
-book_error = 0
 
 logger.add("mdk_error.log", format="{time} {level} {message}", level="ERROR")
 semaphore = asyncio.Semaphore(50)
@@ -197,18 +193,10 @@ async def get_item_data(session, book: str):
         if not publisher:
             book_data["Издательство"] = "АСТ"
 
-        for d in prices:
-            if article in prices[d] and stock > 0:
-                prices[d][article]["price"] = price
-
-        if article in not_in_sale and stock > 0:
-            not_in_sale[article]["on sale"] = "да"
-        elif article not in sample and stock > 0:
+        if article not in sample and stock > 0:
             check_book_type = char_data.get("Вид товара")
             if check_book_type == "Книги":
                 id_to_add.append(book_data)
-        if article in id_to_del and stock > 0:
-            id_to_del.remove(article)
 
         print(
             f"\rDone - {count} | Item error - {len(item_error)} | Page errors - {len(page_error)} | Category errors - {len(category_error)}",
@@ -283,32 +271,6 @@ def get_all_catalogs():
     return cat_list
 
 
-async def checker_del(session, book):
-    book_url = f"{BASE_URL}/book/{book['article'][:-2]}"
-    try:
-        # async with semaphore:
-        response = await fetch_request(session, book_url, headers)
-        if response in ("404", "503"):
-            book["stock"] = "del"
-        else:
-            soup = bs(response, "lxml")
-            try:
-                stock = soup.find("div", {"class": "tg-quantityholder"}).get(
-                    "data-maxqty"
-                )
-            except:
-                stock = "del"
-
-            book["stock"] = stock
-    except Exception as e:
-        book["stock"] = "del"
-        logger.exception(f"ERROR with {book['article'][:-2]}")
-    finally:
-        global count
-        print(f"\rDone - {count}", end="")
-        count += 1
-
-
 @logger.catch
 async def get_gather_data():
     logger.info("Начинаю сбор данных МДК")
@@ -359,14 +321,6 @@ async def get_gather_data():
             ]
             await asyncio.gather(*item_err)
 
-        # Check del position
-        global id_to_del
-        logger.info(f"Start check del file - {len(id_to_del)}pc")
-        check_del = [{"article": i, "stock": ""} for i in id_to_del]
-        del_tasks = [asyncio.create_task(checker_del(session, i)) for i in check_del]
-        await asyncio.gather(*del_tasks)
-        id_to_del = [i["article"] for i in check_del if i["stock"] == "del"]
-
         # Replace photo
         global new_id_to_add
         global id_to_add
@@ -386,9 +340,6 @@ if __name__ == "__main__":
             prefix="mdk",
             all_books_result=all_books_result,
             id_to_add=new_id_to_add,
-            id_to_del=id_to_del,
-            not_in_sale=not_in_sale,
-            prices=prices,
             replace_photo=True,
         )
     except Exception as e:
@@ -398,8 +349,5 @@ if __name__ == "__main__":
             prefix="mdk",
             all_books_result=all_books_result,
             id_to_add=id_to_add,
-            id_to_del=id_to_del,
-            not_in_sale=not_in_sale,
-            prices=prices,
         )
     logger.success("Script finished successfully")
