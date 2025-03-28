@@ -155,9 +155,6 @@ def write_result_files(
     prefix: str,
     all_books_result,
     id_to_add: list,
-    id_to_del: list | set,
-    not_in_sale: dict,
-    prices: dict[str, dict],
     replace_photo: bool = False,
 ):
     all_result_df = pd.DataFrame(all_books_result).drop_duplicates(subset="Артикул_OZ")
@@ -173,21 +170,6 @@ def write_result_files(
         del df_add["Фото_y"]
         df_add.rename(columns={"Фото_x": "Фото"}, inplace=True)
     df_add.to_excel(f"{base_dir}/result/{prefix}_add.xlsx", index=False)
-
-    df_del = pd.DataFrame(id_to_del).drop_duplicates()
-    df_del.columns = ["Артикул"]
-    df_del.to_excel(f"{base_dir}/result/{prefix}_del.xlsx", index=False)
-
-    df_not_in_sale = pd.DataFrame().from_dict(not_in_sale, orient="index")
-    df_not_in_sale = df_not_in_sale.loc[df_not_in_sale["on sale"] == "да"][["article"]]
-    df_not_in_sale.to_excel(f"{base_dir}/result/{prefix}_not_in_sale.xlsx", index=False)
-
-    for price_item in prices:
-        df_result = pd.DataFrame().from_dict(prices[price_item], orient="index")
-        df_result.index.name = "article"
-        df_result.to_excel(
-            f"{base_dir}/result/{prefix}_price_{price_item}.xlsx", index=True
-        )
 
 
 def give_me_sample(
