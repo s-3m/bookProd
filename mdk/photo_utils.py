@@ -7,6 +7,7 @@ from PIL import Image, ImageFilter
 from io import BytesIO
 import pandas as pd
 import yadisk
+from s3_utils import s3_client
 
 BASE_API_URL = "https://cloud-api.yandex.net"
 
@@ -54,9 +55,11 @@ async def crop_image(image, img_name):
         new_size = (int(im_crop.size[0] * scale_), int(im_crop.size[1] * scale_))
         new_img = im_crop.resize(new_size)
         img_filter = new_img.filter(ImageFilter.SHARPEN)
-        img_filter.save(path_photo, "PNG")
-        full_path = os.path.abspath(path_photo)
-        return full_path
+        img_byte_arr = BytesIO()
+        img_filter.save(img_byte_arr, format="PNG")
+        img_byte_arr.seek(0)
+        return img_byte_arr
+
     except ValueError:
         image.save(path_photo, "PNG")
         return os.path.abspath(path_photo)
@@ -79,12 +82,12 @@ async def photo_processing(session, item):
             except Exception:
                 continue
         img_path = await crop_image(resp, item["Фото_x"].split("/")[-1][:-4])
-        async with sem:
-            new_url = await save_to_ya(img_path, item)
-            os.remove(img_path)
-            item["Фото_x"] = new_url
-            print(f"\rReplace photo done - {count_replace_photo}", end="")
-            count_replace_photo += 1
+        new_url = await s3_client.upload_file(
+            file=img_path, name=f"mdk_{item["Фото_x"].split("/")[-1][:-4]}.png"
+        )
+        item["Фото_y"] = new_url
+        print(f"\rReplace photo done - {count_replace_photo}", end="")
+        count_replace_photo += 1
     except Exception as e:
         logger.exception(e)
         item["Фото_x"] = "https://zapobedu21.ru/images/26.07.2017/kniga.jpg"
@@ -114,7 +117,8 @@ async def replace_photo(add_list: list[dict]):
 
     result = merge_result.to_dict("records")
     async with aiohttp.ClientSession(
-        connector=aiohttp.TCPConnector(ssl=False, limit_per_host=4), trust_env=True
+        connector=aiohttp.TCPConnector(ssl=False, limit_per_host=10, limit=10),
+        trust_env=True,
     ) as session:
 
         tasks = []
