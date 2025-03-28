@@ -6,12 +6,12 @@ import aiohttp
 import asyncio
 
 from filter import filtering_cover
-from ozon.ozon_api import get_items_list
 from selenium_data import get_book_data
 from loguru import logger
 import pandas.io.formats.excel
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from ozon.ozon_api import get_items_list
 from utils import (
     check_danger_string,
     fetch_request,

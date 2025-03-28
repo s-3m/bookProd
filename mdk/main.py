@@ -7,10 +7,10 @@ import aiohttp
 import asyncio
 from loguru import logger
 from filter import filtering_cover
-from ozon.ozon_api import get_items_list
 from photo_utils import replace_photo
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from ozon.ozon_api import get_items_list
 from utils import (
     check_danger_string,
     fetch_request,
