@@ -127,10 +127,10 @@ class Ozon:
                 )
         return ready_data
 
-    def in_sale(self):
+    def in_sale(self, visibility):
         result = []
         body = {
-            "filter": {"visibility": "VISIBLE"},
+            "filter": {"visibility": visibility},
             "limit": 1000,
             "last_id": "",
         }
@@ -167,7 +167,7 @@ def start_push_to_ozon(separate_records: dict[str, list[dict]], prefix: str):
                 logger.critical(f"Ошибка в задаче: {e}")
 
 
-def get_in_sale(prefix: str):
+def get_in_sale(prefix: str, visibility: str = "VISIBLE"):
     shop_list = []
     ready_result = []
     for key, value in os.environ.items():
@@ -178,7 +178,7 @@ def get_in_sale(prefix: str):
         futures = []
         for item in shop_list:
             ozon = Ozon(client_id=item[0], api_key=item[1], prefix=prefix)
-            task = executor.submit(ozon.in_sale)
+            task = executor.submit(ozon.in_sale, visibility)
             futures.append(task)
         for i in futures:
             try:
