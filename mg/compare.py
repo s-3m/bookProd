@@ -13,7 +13,11 @@ from dotenv import load_dotenv
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files, tg_send_msg
 from utils import fetch_request, give_me_sample, quantity_checker
-from ozon.ozon_api import separate_records_to_client_id, start_push_to_ozon, get_in_sale
+from ozon.ozon_api import (
+    separate_records_to_client_id,
+    start_push_to_ozon,
+    get_items_list,
+)
 from ozon.utils import logger_filter
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
@@ -135,7 +139,7 @@ async def get_gather_data(sample):
 
 def main():
     logger.info("Start MG parsing")
-    books_in_sale = get_in_sale("mg")
+    books_in_sale = get_items_list("mg")
     sample = give_me_sample(
         BASE_LINUX_DIR, prefix="mg", merge_obj="id", ozon_in_sale=books_in_sale
     )

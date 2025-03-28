@@ -16,7 +16,11 @@ from selenium_data import get_book_data
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files, tg_send_msg
 from utils import give_me_sample, fetch_request, quantity_checker
-from ozon.ozon_api import separate_records_to_client_id, start_push_to_ozon, get_in_sale
+from ozon.ozon_api import (
+    separate_records_to_client_id,
+    start_push_to_ozon,
+    get_items_list,
+)
 from ozon.utils import logger_filter
 
 
@@ -92,7 +96,7 @@ async def to_check_item(item, session):
 
 
 async def get_compare():
-    books_in_sale = get_in_sale("msk")
+    books_in_sale = get_items_list("msk")
     sample = give_me_sample(
         base_dir=PATH_TO_FILES,
         prefix="msk",

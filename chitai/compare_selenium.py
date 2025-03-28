@@ -14,7 +14,11 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files, tg_send_msg
 from utils import give_me_sample, quantity_checker
 from concurrent.futures import ThreadPoolExecutor
-from ozon.ozon_api import get_in_sale, start_push_to_ozon, separate_records_to_client_id
+from ozon.ozon_api import (
+    get_items_list,
+    start_push_to_ozon,
+    separate_records_to_client_id,
+)
 from ozon.utils import logger_filter
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
@@ -171,7 +175,7 @@ async def get_gather_data(sample):
 def main():
     try:
         # load_dotenv("../.env")
-        books_in_sale = get_in_sale("chit_gor")
+        books_in_sale = get_items_list("chit_gor")
         sample = give_me_sample(
             base_dir=BASE_LINUX_DIR, prefix="chit_gor", ozon_in_sale=books_in_sale
         )

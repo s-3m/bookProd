@@ -5,10 +5,9 @@ import pandas.io.formats.excel
 from bs4 import BeautifulSoup as bs
 import aiohttp
 import asyncio
-import pandas as pd
 from loguru import logger
 
-from ozon.ozon_api import get_in_sale
+from ozon.ozon_api import get_items_list
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import (
@@ -25,7 +24,7 @@ BASE_URL = "https://www.chitai-gorod.ru"
 BASE_LINUX_DIR = "/media/source/chitai" if not DEBUG else "source"
 semaphore = asyncio.Semaphore(10)
 
-sample_raw = get_in_sale("chit_gor", visibility="ALL")
+sample_raw = get_items_list("chit_gor", visibility="ALL")
 sample = {i["Артикул"] for i in sample_raw}
 
 headers = {

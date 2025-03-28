@@ -6,7 +6,7 @@ import aiohttp
 import asyncio
 
 from filter import filtering_cover
-from ozon.ozon_api import get_in_sale
+from ozon.ozon_api import get_items_list
 from selenium_data import get_book_data
 from loguru import logger
 import pandas.io.formats.excel
@@ -47,7 +47,7 @@ item_error = []
 page_error = []
 id_to_add = []
 
-sample_raw = get_in_sale("msk", visibility="ALL")
+sample_raw = get_items_list("msk", visibility="ALL")
 sample = {i["Артикул"] for i in sample_raw}
 
 last_isbn = None

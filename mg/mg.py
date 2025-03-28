@@ -9,11 +9,10 @@ import aiohttp
 import asyncio
 from loguru import logger
 
-from ozon.ozon_api import get_in_sale
+from ozon.ozon_api import get_items_list
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import (
-    filesdata_to_dict,
     check_danger_string,
     fetch_request,
     write_result_files,
@@ -35,7 +34,7 @@ headers = {
     "user-agent": USER_AGENT.random,
 }
 
-sample_raw = get_in_sale("mg", visibility="ALL")
+sample_raw = get_items_list("mg", visibility="ALL")
 sample = {i["Артикул"] for i in sample_raw}
 
 result = []

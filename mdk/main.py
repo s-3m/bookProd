@@ -7,7 +7,7 @@ import aiohttp
 import asyncio
 from loguru import logger
 from filter import filtering_cover
-from ozon.ozon_api import get_in_sale
+from ozon.ozon_api import get_items_list
 from photo_utils import replace_photo
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -22,7 +22,7 @@ DEBUG = True if sys.platform.startswith("win") else False
 BASE_URL = "https://mdk-arbat.ru"
 BASE_LINUX_DIR = "/media/source/mdk" if not DEBUG else "source"
 
-sample_raw = get_in_sale("mdk", visibility="ALL")
+sample_raw = get_items_list("mdk", visibility="ALL")
 sample = {i["Артикул"] for i in sample_raw}
 
 headers = {
