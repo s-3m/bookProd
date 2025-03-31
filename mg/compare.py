@@ -17,7 +17,7 @@ from ozon.ozon_api import (
     separate_records_to_client_id,
     start_push_to_ozon,
     get_items_list,
-    archive_items_stock_to_zero
+    archive_items_stock_to_zero,
 )
 from ozon.utils import logger_filter
 
