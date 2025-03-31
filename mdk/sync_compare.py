@@ -17,6 +17,7 @@ from ozon.ozon_api import (
     get_items_list,
     start_push_to_ozon,
     separate_records_to_client_id,
+    archive_items_stock_to_zero
 )
 from ozon.utils import logger_filter
 
@@ -176,6 +177,7 @@ def main():
 
 def super_main():
     load_dotenv("../.env")
+    schedule.every().day.at("12:25").do(archive_items_stock_to_zero, "mdk")
     schedule.every().day.at("18:25").do(main)
 
     while True:
