@@ -29,10 +29,11 @@ sample = {i["Артикул"] for i in sample_raw}
 headers = {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
     "accept-language": "ru,en;q=0.9",
-    "cache-control": "no-cache",
-    # 'cookie': '__ddg1_=pvduRZr2PWRQfgBSlf6h; refresh-token=; tmr_lvid=03935c7450b807684f9dcd65334067b0; tmr_lvidTS=1719430836103; _ym_uid=1719430836919836282; _ym_d=1719430836; gdeslon.ru.__arc_domain=gdeslon.ru; gdeslon.ru.user_id=15254033-97f3-4a90-ae4b-740f08cf987d; _bge_ci=BA1.1.1122769529.1719430836; popmechanic_sbjs_migrations=popmechanic_1418474375998%3D1%7C%7C%7C1471519752600%3D1%7C%7C%7C1471519752605%3D1; flocktory-uuid=0241fd6a-c187-4d15-b067-6914fd7ea4c9-9; adrcid=A6I49NSU-aGn_FnD2kzLfwA; adrcid=A6I49NSU-aGn_FnD2kzLfwA; stDeIdU=c130f130-3401-4ce5-9052-788e665fbea5; _ymab_param=NOyyliya_BgJ0VOb3JL1PA1-1gyIOZRewTIGnSgxe-t2ci28PM-AMDZfHAuZzH4TsvmxnZPeYOHvYxXI9RgNC-VeR8Q; chg_visitor_id=470bb97a-014e-404d-9c3d-a67245b92f38; adid=173169335285853; analytic_id=1731693382619506; tagtag_aid=ca8994e09ac019fbd41e0fc168321848; tagtag_aid=ca8994e09ac019fbd41e0fc168321848; tagtag_aid=ca8994e09ac019fbd41e0fc168321848; origem=cityads; deduplication_cookie=cityads; deduplication_cookie=cityads; _ga_YVB4ZXMWPL=GS1.2.1731764757.1.1.1731765315.60.0.0; access-token=Bearer%20eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MzIwODY5NzcsImlhdCI6MTczMTkxODk3NywiaXNzIjoiL2FwaS92MS9hdXRoL2Fub255bW91cyIsInN1YiI6IjA0ODlmNzEzNzQ4NjRiNjYxMGNiOGJmZTlmNTY1M2UxOWRkYzQ3NTAwMmZlNTc1MzNlYWViMzk0MGJhOGZlZTkiLCJ0eXBlIjoxMH0.Tq3QOvFYkYoTpnAT4MDH51OIaSENrWDhAYCpNpXbFPg; _ga=GA1.1.1903252348.1719430836; _ym_isad=2; acs_3=%7B%22hash%22%3A%22768a608b20ce960ff29026da95a81203ec583ad1%22%2C%22nextSyncTime%22%3A1732005380055%2C%22syncLog%22%3A%7B%22224%22%3A1731918980055%2C%221228%22%3A1731918980055%2C%221230%22%3A1731918980055%7D%7D; acs_3=%7B%22hash%22%3A%22768a608b20ce960ff29026da95a81203ec583ad1%22%2C%22nextSyncTime%22%3A1732005380055%2C%22syncLog%22%3A%7B%22224%22%3A1731918980055%2C%221228%22%3A1731918980055%2C%221230%22%3A1731918980055%7D%7D; adrdel=1731918980080; adrdel=1731918980080; domain_sid=L3BsIrNkQonH7entRBvC0%3A1731918980423; clickCityAdsID=7MRZ235eurZf323; epn_click_id=7MRZ235eurZf323; tmr_detect=0%7C1731918987403; __ddg9_=85.198.105.3; partner_name=cityads; mindboxDeviceUUID=0660d298-673e-43fc-8993-474c6e6cd4c8; directCrm-session=%7B%22deviceGuid%22%3A%220660d298-673e-43fc-8993-474c6e6cd4c8%22%7D; __ddg10_=1731930396; __ddg8_=Kj0vHcaaytcn7CsU; _ga_W0V3RXZCPY=GS1.1.1731930384.6.1.1731930398.0.0.0; _ga_6JJPBGS8QY=GS1.1.1731930384.6.1.1731930398.0.0.0; _ga_LN4Z31QGF4=GS1.1.1731930376.7.1.1731930404.32.0.1425492556',
+    "cache-control": "max-age=0",
+    # 'cookie': '__ddg1_=yWrh69GuCxAUjXSCodCf; refresh-token=; _ym_uid=172527752299912427; _ym_d=1733736779; _ga=GA1.1.11893149.1733736780; tmr_lvid=cd762e6000c9037a100c4ac95d961051; tmr_lvidTS=1725277523213; _ymab_param=PPhFvankcmpKDwmn7qscmms5XlJXLzkfnYP7_GsmlVspAc3CHvQJlRI9Xwv6ZSY733RwoAiNp3bWflRxg15sYwXo75c; gdeslon.ru.__arc_domain=gdeslon.ru; gdeslon.ru.user_id=db16c5ef-b01d-4aea-9cbd-88ad11af62f6; popmechanic_sbjs_migrations=popmechanic_1418474375998%3D1%7C%7C%7C1471519752600%3D1%7C%7C%7C1471519752605%3D1; adrcid=AoR2yjfMnkaj8U98-uI46GA; adrcid=AoR2yjfMnkaj8U98-uI46GA; flocktory-uuid=1183ce97-9eef-4b5c-b717-2109aa9c8049-3; analytic_id=1733736783431262; _pk_id.1.f5fe=d968ec26cb54d349.1734072966.; adid=173683801139491; __P__wuid=7ced6ae9c151dda37671045d4e0bf2e9; stDeIdU=7ced6ae9c151dda37671045d4e0bf2e9; chg_visitor_id=9dd3ba69-35f3-4fc3-872a-a3f08a99dbd6; adrdel=1741588150140; adrdel=1741588150140; acs_3=%7B%22hash%22%3A%22be483547539f1e5fb43aa6ae1ea56ef0a5c5be24%22%2C%22nst%22%3A1741674550175%2C%22sl%22%3A%7B%22224%22%3A1741588150175%2C%221228%22%3A1741588150175%7D%7D; acs_3=%7B%22hash%22%3A%22be483547539f1e5fb43aa6ae1ea56ef0a5c5be24%22%2C%22nst%22%3A1741674550175%2C%22sl%22%3A%7B%22224%22%3A1741588150175%2C%221228%22%3A1741588150175%7D%7D; mindboxDeviceUUID=c6cfc9ac-0349-46cc-8b11-e2362a153d96; directCrm-session=%7B%22deviceGuid%22%3A%22c6cfc9ac-0349-46cc-8b11-e2362a153d96%22%7D; _ga_W0V3RXZCPY=GS1.1.1741588149.45.1.1741588166.0.0.0; _ga_LN4Z31QGF4=GS1.1.1741588149.47.1.1741588166.43.0.1146694035; _ga_6JJPBGS8QY=GS1.1.1741588150.45.1.1741588166.0.0.0; __ddgid_=tGw2PWBoCFqMPRO7; __ddg9_=185.112.249.83; __ddgmark_=fypt6YQQKSKH0JC8; __ddg5_=xlSx15KpL0isZOg6; __ddg2_=c6X5H58ic0WGzmtM; _ymab_param=PPhFvankcmpKDwmn7qscmms5XlJXLzkfnYP7_GsmlVspAc3CHvQJlRI9Xwv6ZSY733RwoAiNp3bWflRxg15sYwXo75c; access-token=Bearer%20eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDM2NjY3MjAsImlhdCI6MTc0MzQ5ODcyMCwiaXNzIjoiL2FwaS92MS9hdXRoL2Fub255bW91cyIsInN1YiI6IjkzNmU0ZmQ2OTRmYmYyNjM4NDAyNWE4NGQ2MTgxY2FkNmNhZDdhOWJlOGJlOTk4OTkwODYyOTRjZDdhMjdkY2IiLCJ0eXBlIjoxMH0.ka53VDN2bKEHDGdbg2Wed4_toTQ7JVbBrGSav9yh450; vIdUid=a0457a4d-de09-40ec-8813-b45667dff8a3; stSeStTi=1743498723704; _pk_ref.1.f5fe=%5B%22%22%2C%22%22%2C1743498724%2C%22https%3A%2F%2Fwww.yandex.ru%2Fclck%2Fjsredir%3Ffrom%3Dyandex.ru%3Bsuggest%3Bbrowser%26text%3D%22%5D; _pk_ses.1.f5fe=1; tid-back-to=%7B%22fullPath%22%3A%22%2Fcatalog%2Fbooks-18030%22%2C%22hash%22%3A%22%22%2C%22query%22%3A%7B%7D%2C%22name%22%3A%22catalog-page%22%2C%22path%22%3A%22%2Fcatalog%2Fbooks-18030%22%2C%22params%22%3A%7B%22category%22%3A%22%22%2C%22slug%22%3A%22books%22%2C%22id%22%3A%2218030%22%7D%2C%22meta%22%3A%7B%7D%7D; tid-strategy=tinkoffWhiteLabel; tid-state=bb87dfff-bcd8-4558-b2a8-ca0a12303fe9; tid-redirect-uri=https%3A%2F%2Fwww.chitai-gorod.ru%2Fauth%2Ft-id-next; stLaEvTi=1743498731662; __ddg8_=s1NKwwEHse8c7IHU; __ddg10_=1743498736',
     "priority": "u=0, i",
-    "sec-ch-ua": '"Chromium";v="128", "Not;A=Brand";v="24", "YaBrowser";v="24.10", "Yowser";v="2.5"',
+    "referer": "https://www.chitai-gorod.ru/",
+    "sec-ch-ua": '"Not A(Brand";v="8", "Chromium";v="132", "YaBrowser";v="25.2", "Yowser";v="2.5"',
     "sec-ch-ua-mobile": "?0",
     "sec-ch-ua-platform": '"Windows"',
     "sec-fetch-dest": "document",
@@ -40,7 +41,56 @@ headers = {
     "sec-fetch-site": "same-origin",
     "sec-fetch-user": "?1",
     "upgrade-insecure-requests": "1",
-    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 YaBrowser/24.10.0.0 Safari/537.36",
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 YaBrowser/25.2.0.0 Safari/537.36",
+}
+cookies = {
+    "__ddg1_": "yWrh69GuCxAUjXSCodCf",
+    "refresh-token": "",
+    "_ym_uid": "172527752299912427",
+    "_ym_d": "1733736779",
+    "_ga": "GA1.1.11893149.1733736780",
+    "tmr_lvid": "cd762e6000c9037a100c4ac95d961051",
+    "tmr_lvidTS": "1725277523213",
+    "_ymab_param": "PPhFvankcmpKDwmn7qscmms5XlJXLzkfnYP7_GsmlVspAc3CHvQJlRI9Xwv6ZSY733RwoAiNp3bWflRxg15sYwXo75c",
+    "gdeslon.ru.__arc_domain": "gdeslon.ru",
+    "gdeslon.ru.user_id": "db16c5ef-b01d-4aea-9cbd-88ad11af62f6",
+    "popmechanic_sbjs_migrations": "popmechanic_1418474375998%3D1%7C%7C%7C1471519752600%3D1%7C%7C%7C1471519752605%3D1",
+    "adrcid": "AoR2yjfMnkaj8U98-uI46GA",
+    "adrcid": "AoR2yjfMnkaj8U98-uI46GA",
+    "flocktory-uuid": "1183ce97-9eef-4b5c-b717-2109aa9c8049-3",
+    "analytic_id": "1733736783431262",
+    "_pk_id.1.f5fe": "d968ec26cb54d349.1734072966.",
+    "adid": "173683801139491",
+    "__P__wuid": "7ced6ae9c151dda37671045d4e0bf2e9",
+    "stDeIdU": "7ced6ae9c151dda37671045d4e0bf2e9",
+    "chg_visitor_id": "9dd3ba69-35f3-4fc3-872a-a3f08a99dbd6",
+    "adrdel": "1741588150140",
+    "adrdel": "1741588150140",
+    "acs_3": "%7B%22hash%22%3A%22be483547539f1e5fb43aa6ae1ea56ef0a5c5be24%22%2C%22nst%22%3A1741674550175%2C%22sl%22%3A%7B%22224%22%3A1741588150175%2C%221228%22%3A1741588150175%7D%7D",
+    "acs_3": "%7B%22hash%22%3A%22be483547539f1e5fb43aa6ae1ea56ef0a5c5be24%22%2C%22nst%22%3A1741674550175%2C%22sl%22%3A%7B%22224%22%3A1741588150175%2C%221228%22%3A1741588150175%7D%7D",
+    "mindboxDeviceUUID": "c6cfc9ac-0349-46cc-8b11-e2362a153d96",
+    "directCrm-session": "%7B%22deviceGuid%22%3A%22c6cfc9ac-0349-46cc-8b11-e2362a153d96%22%7D",
+    "_ga_W0V3RXZCPY": "GS1.1.1741588149.45.1.1741588166.0.0.0",
+    "_ga_LN4Z31QGF4": "GS1.1.1741588149.47.1.1741588166.43.0.1146694035",
+    "_ga_6JJPBGS8QY": "GS1.1.1741588150.45.1.1741588166.0.0.0",
+    "__ddgid_": "tGw2PWBoCFqMPRO7",
+    "__ddg9_": "185.112.249.83",
+    "__ddgmark_": "fypt6YQQKSKH0JC8",
+    "__ddg5_": "xlSx15KpL0isZOg6",
+    "__ddg2_": "c6X5H58ic0WGzmtM",
+    "_ymab_param": "PPhFvankcmpKDwmn7qscmms5XlJXLzkfnYP7_GsmlVspAc3CHvQJlRI9Xwv6ZSY733RwoAiNp3bWflRxg15sYwXo75c",
+    "access-token": "Bearer%20eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDM2NjY3MjAsImlhdCI6MTc0MzQ5ODcyMCwiaXNzIjoiL2FwaS92MS9hdXRoL2Fub255bW91cyIsInN1YiI6IjkzNmU0ZmQ2OTRmYmYyNjM4NDAyNWE4NGQ2MTgxY2FkNmNhZDdhOWJlOGJlOTk4OTkwODYyOTRjZDdhMjdkY2IiLCJ0eXBlIjoxMH0.ka53VDN2bKEHDGdbg2Wed4_toTQ7JVbBrGSav9yh450",
+    "vIdUid": "a0457a4d-de09-40ec-8813-b45667dff8a3",
+    "stSeStTi": "1743498723704",
+    "_pk_ref.1.f5fe": "%5B%22%22%2C%22%22%2C1743498724%2C%22https%3A%2F%2Fwww.yandex.ru%2Fclck%2Fjsredir%3Ffrom%3Dyandex.ru%3Bsuggest%3Bbrowser%26text%3D%22%5D",
+    "_pk_ses.1.f5fe": "1",
+    "tid-back-to": "%7B%22fullPath%22%3A%22%2Fcatalog%2Fbooks-18030%22%2C%22hash%22%3A%22%22%2C%22query%22%3A%7B%7D%2C%22name%22%3A%22catalog-page%22%2C%22path%22%3A%22%2Fcatalog%2Fbooks-18030%22%2C%22params%22%3A%7B%22category%22%3A%22%22%2C%22slug%22%3A%22books%22%2C%22id%22%3A%2218030%22%7D%2C%22meta%22%3A%7B%7D%7D",
+    "tid-strategy": "tinkoffWhiteLabel",
+    "tid-state": "bb87dfff-bcd8-4558-b2a8-ca0a12303fe9",
+    "tid-redirect-uri": "https%3A%2F%2Fwww.chitai-gorod.ru%2Fauth%2Ft-id-next",
+    "stLaEvTi": "1743498731662",
+    "__ddg8_": "s1NKwwEHse8c7IHU",
+    "__ddg10_": "1743498736",
 }
 
 all_books_result = []
@@ -269,6 +319,7 @@ async def get_gather_data():
     timeout = aiohttp.ClientTimeout(total=800)
     async with aiohttp.ClientSession(
         headers=headers,
+        cookies=cookies,
         connector=aiohttp.TCPConnector(ssl=False),
         timeout=timeout,
         trust_env=True,
@@ -277,7 +328,7 @@ async def get_gather_data():
             logger.info(f"Start parsing {i}")
             async with session.get(i, headers=headers) as resp:
                 soup = bs(await resp.text(), "lxml")
-                parse_city = soup.find("span", class_="header-city__title").text.strip()
+                parse_city = soup.find("button", class_="header-location").text.strip()
                 logger.info(f"City - {parse_city}")
                 max_pages = int(
                     soup.find_all("a", class_="pagination__button")[-2].text
