@@ -105,7 +105,7 @@ last_isbn = None
 def get_book_data(book_url: str):
     link = book_url if book_url.startswith("http") else f"{BASE_URL}{book_url}"
     try:
-        response = sync_fetch_request(link, headers)
+        response = sync_fetch_request(link, headers, cookies)
         soup = bs(response, "lxml")
 
         try:
@@ -285,17 +285,15 @@ def get_page_data(book_category_link, page_number=1, reparse_url=False):
     global page_to_stop
     url = f"{book_category_link}?page={page_number}" if not reparse_url else reparse_url
     try:
-        response = sync_fetch_request(url, headers)
+        response = sync_fetch_request(url, headers, cookies)
         soup = bs(response, "lxml")
-        product_list = soup.find("div", class_="products-list")
-        all_articles = product_list.find_all(
-            "article", class_="product-card product-card product"
-        )
+        product_list = soup.find("div", class_="app-catalog__list")
+        all_articles = product_list.find_all("article", class_="product-card")
         stop_count = 0
         with ThreadPoolExecutor(max_workers=10) as executor:
             for article in all_articles:
                 buy_possibility = article.find(
-                    "span", class_="action-button__text"
+                    "div", class_="chg-app-button__content"
                 ).text.strip()
                 book_link = article.find("a", class_="product-card__title")[
                     "href"
@@ -331,7 +329,7 @@ async def get_gather_data():
                 parse_city = soup.find("button", class_="header-location").text.strip()
                 logger.info(f"City - {parse_city}")
                 max_pages = int(
-                    soup.find_all("a", class_="pagination__button")[-2].text
+                    soup.find_all("a", class_="chg-app-pagination__item")[-1].text
                 )
                 with ThreadPoolExecutor(max_workers=5) as executor:
                     for page in range(1, max_pages + 1):
