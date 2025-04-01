@@ -232,7 +232,7 @@ async def get_item_data(session, item: str):
             "Категория": category,
             "Подкатегория": category,
             "Цена": price,
-            "Наличие": stock if stock != 9999999 else "1",
+            "Наличие": stock if stock != 9999999 else 1,
             "Фото": img,
         }
         book_dict.update(details_dict)
