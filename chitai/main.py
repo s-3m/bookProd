@@ -322,12 +322,10 @@ async def get_gather_data():
         timeout=timeout,
         trust_env=True,
     ) as session:
-        for i in [f"{BASE_URL}/catalog/books-18030", f"{BASE_URL}/sales"]:
+        for i in [f"{BASE_URL}/catalog/books-18030"]:
             logger.info(f"Start parsing {i}")
             async with session.get(i, headers=headers) as resp:
                 soup = bs(await resp.text(), "lxml")
-                parse_city = soup.find("button", class_="header-location").text.strip()
-                logger.info(f"City - {parse_city}")
                 max_pages = int(
                     soup.find_all("a", class_="chg-app-pagination__item")[-1].text
                 )
