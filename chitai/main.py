@@ -356,29 +356,22 @@ async def get_gather_data():
                 for url in new_page_list:
                     executor.submit(get_page_data, False, 1, url)
 
+        logger.warning(
+            f"Datas was collected. Not reparse: item errors - {len(item_error)} --- page errors - {len(page_error)}"
+        )
+        logger.info("Start write files")
         write_result_files(
             base_dir=BASE_LINUX_DIR,
             prefix="chit_gor",
             all_books_result=all_books_result,
             id_to_add=id_to_add,
         )
-
-        logger.warning(
-            f"Datas was collected. Not reparse: item errors - {len(item_error)} --- page errors - {len(page_error)}"
-        )
+        logger.info("Finished write files")
 
 
 @logger.catch
 def main():
     asyncio.run(get_gather_data())
-    logger.info("Start write files")
-    write_result_files(
-        base_dir=BASE_LINUX_DIR,
-        prefix="chit-gor",
-        all_books_result=all_books_result,
-        id_to_add=id_to_add,
-    )
-    logger.info("Finished write files")
     logger.success("Script finished")
 
 
