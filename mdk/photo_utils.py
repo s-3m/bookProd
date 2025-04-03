@@ -1,6 +1,5 @@
 import asyncio
 import os
-from datetime import datetime
 from loguru import logger
 import aiohttp
 from PIL import Image, ImageFilter
@@ -76,18 +75,25 @@ async def photo_processing(session, item):
         for _ in range(5):
             try:
                 async with session.get(item["Фото_x"]) as resp:
-                    await asyncio.sleep(3)
+                    await asyncio.sleep(6)
                     resp = await resp.content.read()
+                    if not resp:
+                        print(f"not resp {item["Фото_x"]}")
+                    img_path = await crop_image(
+                        resp, item["Фото_x"].split("/")[-1][:-4]
+                    )
+                    new_url = await s3_client.upload_file(
+                        file=img_path,
+                        name=f"mdk_{item["Фото_x"].split("/")[-1][:-4]}.png",
+                    )
+                    item["Фото_y"] = new_url
+                    print(f"\rReplace photo done - {count_replace_photo}", end="")
+                    count_replace_photo += 1
                     break
-            except Exception:
+            except Exception as e:
+                logger.exception(e)
                 continue
-        img_path = await crop_image(resp, item["Фото_x"].split("/")[-1][:-4])
-        new_url = await s3_client.upload_file(
-            file=img_path, name=f"mdk_{item["Фото_x"].split("/")[-1][:-4]}.png"
-        )
-        item["Фото_y"] = new_url
-        print(f"\rReplace photo done - {count_replace_photo}", end="")
-        count_replace_photo += 1
+
     except Exception as e:
         logger.exception(e)
         item["Фото_x"] = "https://zapobedu21.ru/images/26.07.2017/kniga.jpg"
