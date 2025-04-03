@@ -32,11 +32,11 @@ class S3Client:
 
 
 s3_client = S3Client(
-    access_key=os.getenv("s3_access_key"),
-    secret_key=os.getenv("s3_secret_key"),
-    bucket_name=os.getenv("S3_bucket_name"),
+    access_key=os.getenv("S3_ACCESS_KEY"),
+    secret_key=os.getenv("S3_SECRET_KEY"),
+    bucket_name=os.getenv("S3_BUCKET_NAME"),
 )
 
-
-if __name__ == "__main__":
-    asyncio.run(s3_client.upload_file("1.png", "mdk_1212111111.png"))
+#
+# if __name__ == "__main__":
+#     asyncio.run(s3_client.upload_file("1.png", "mdk_1212111111.png"))
