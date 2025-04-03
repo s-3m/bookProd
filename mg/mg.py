@@ -10,8 +10,8 @@ import asyncio
 from loguru import logger
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from ozon.ozon_api import get_items_list
 from utils import (
-    filesdata_to_dict,
     check_danger_string,
     fetch_request,
     write_result_files,
@@ -33,11 +33,8 @@ headers = {
     "user-agent": USER_AGENT.random,
 }
 
-prices = filesdata_to_dict(f"{BASE_LINUX_DIR}/prices")
-
-sample = filesdata_to_dict(f"{BASE_LINUX_DIR}/sale", combined=True)
-not_in_sale = filesdata_to_dict(f"{BASE_LINUX_DIR}/not_in_sale", combined=True)
-del_article: set = set(sample.keys())
+sample_raw = get_items_list("mg", visibility="ALL")
+sample = {i["Артикул"] for i in sample_raw}
 
 result = []
 id_to_add = []
@@ -193,16 +190,8 @@ async def get_item_data(session, link: str):
         elif "+" not in age:
             item_data["Возраст от:"] = age + "+"
 
-        if isbn + ".0" in not_in_sale and quantity == "есть в наличии":
-            not_in_sale[isbn + ".0"]["on sale"] = "да"
-        elif isbn + ".0" not in sample and quantity == "есть в наличии":
+        if isbn + ".0" not in sample and quantity == "есть в наличии":
             id_to_add.append(item_data)
-        if isbn + ".0" in del_article and quantity == "есть в наличии":
-            del_article.remove(isbn + ".0")
-
-        for d in prices:
-            if isbn + ".0" in prices[d] and quantity == "есть в наличии":
-                prices[d][isbn + ".0"]["price"] = price
 
         result.append(item_data)
         unique_title.add(title)
@@ -293,9 +282,6 @@ def main():
         prefix="mg",
         all_books_result=result,
         id_to_add=id_to_add,
-        id_to_del=del_article,
-        not_in_sale=not_in_sale,
-        prices=prices,
     )
 
     logger.info("Finish to write to excel")

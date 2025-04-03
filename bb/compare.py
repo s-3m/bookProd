@@ -16,7 +16,11 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import give_me_sample, quantity_checker
-from ozon.ozon_api import separate_records_to_client_id, start_push_to_ozon, get_in_sale
+from ozon.ozon_api import (
+    separate_records_to_client_id,
+    start_push_to_ozon,
+    get_items_list,
+)
 from ozon.utils import logger_filter
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
@@ -119,7 +123,7 @@ async def get_link_from_ajax(session, id):
 
 
 async def get_gather_data():
-    books_in_sale = get_in_sale("bb")
+    books_in_sale = get_items_list("bb")
     sample = give_me_sample(
         base_dir=PATH_TO_FILES, prefix="bb", ozon_in_sale=books_in_sale
     )

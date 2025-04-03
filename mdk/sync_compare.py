@@ -13,7 +13,12 @@ import pandas as pd
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files, tg_send_msg
 from utils import give_me_sample, sync_fetch_request, quantity_checker
-from ozon.ozon_api import get_in_sale, start_push_to_ozon, separate_records_to_client_id
+from ozon.ozon_api import (
+    get_items_list,
+    start_push_to_ozon,
+    separate_records_to_client_id,
+    archive_items_stock_to_zero,
+)
 from ozon.utils import logger_filter
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
@@ -127,7 +132,7 @@ async def get_gather_data(sample):
 
 def main():
     logger.info("Start script")
-    books_in_sale = get_in_sale("mdk")
+    books_in_sale = get_items_list("mdk")
     sample = give_me_sample(
         base_dir=BASE_LINUX_DIR,
         prefix="mdk",
@@ -172,6 +177,7 @@ def main():
 
 def super_main():
     load_dotenv("../.env")
+    schedule.every().day.at("12:25").do(archive_items_stock_to_zero, "mdk")
     schedule.every().day.at("18:25").do(main)
 
     while True:

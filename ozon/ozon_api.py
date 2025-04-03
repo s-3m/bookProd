@@ -82,10 +82,10 @@ class Ozon:
                 logger.error(e)
                 continue
 
-    def update_stock(self, item_list: list[dict]):
-        self.update_price(
-            item_list
-        )  # Сначала обновляем цены, чтобы не вывелись товары со старыми ценами
+    def update_stock(self, item_list: list[dict], update_price=True):
+        if update_price:
+            # Сначала обновляем цены, чтобы не вывелись товары со старыми ценами
+            self.update_price(item_list)
         warehouse_id = self._get_warehouse_id()
         stocks_list = [
             {
@@ -118,19 +118,25 @@ class Ozon:
         if self.errors[self.client_id]:
             logger.warning(self.errors)
 
-    def _prepare_for_sample(self, raw_data: list[dict]):
+    def _prepare_for_sample(self, raw_data: list[dict], for_parse_sample: bool = True):
         ready_data = []
-        for item in raw_data:
-            if item["offer_id"].endswith(".0"):
+        if for_parse_sample:
+            for item in raw_data:
+                if item["offer_id"].endswith(".0"):
+                    ready_data.append(
+                        {"Артикул": item["offer_id"], "seller_id": self.client_id}
+                    )
+        else:
+            for item in raw_data:
                 ready_data.append(
                     {"Артикул": item["offer_id"], "seller_id": self.client_id}
                 )
         return ready_data
 
-    def in_sale(self):
+    def get_items_list(self, visibility, for_parse_sample=True):
         result = []
         body = {
-            "filter": {"visibility": "VISIBLE"},
+            "filter": {"visibility": visibility},
             "limit": 1000,
             "last_id": "",
         }
@@ -145,19 +151,23 @@ class Ozon:
             if not items_list:
                 break
             result.extend(items_list)
-        ready_data = self._prepare_for_sample(result)
+        ready_data = self._prepare_for_sample(result, for_parse_sample)
         print(len(ready_data))
         return ready_data
 
 
-def start_push_to_ozon(separate_records: dict[str, list[dict]], prefix: str):
+def start_push_to_ozon(
+    separate_records: dict[str, list[dict]], prefix: str, update_price=True
+):
     with ThreadPoolExecutor(max_workers=20) as executor:
         futures = []
         for item in separate_records:
             seller_id = item
             api_key = os.getenv(f"{prefix.upper()}_CLIENT_ID_{seller_id}")
             ozon = Ozon(client_id=seller_id, api_key=api_key, prefix=prefix)
-            future = executor.submit(ozon.update_stock, separate_records[item])
+            future = executor.submit(
+                ozon.update_stock, separate_records[item], update_price
+            )
             futures.append(future)
 
         for future in futures:
@@ -167,7 +177,7 @@ def start_push_to_ozon(separate_records: dict[str, list[dict]], prefix: str):
                 logger.critical(f"Ошибка в задаче: {e}")
 
 
-def get_in_sale(prefix: str):
+def get_items_list(prefix: str, visibility: str = "VISIBLE", for_parse_sample=True):
     shop_list = []
     ready_result = []
     for key, value in os.environ.items():
@@ -178,7 +188,7 @@ def get_in_sale(prefix: str):
         futures = []
         for item in shop_list:
             ozon = Ozon(client_id=item[0], api_key=item[1], prefix=prefix)
-            task = executor.submit(ozon.in_sale)
+            task = executor.submit(ozon.get_items_list, visibility, for_parse_sample)
             futures.append(task)
         for i in futures:
             try:
@@ -189,17 +199,30 @@ def get_in_sale(prefix: str):
     return ready_result
 
 
+def archive_items_stock_to_zero(prefix):
+    archive_items_list = get_items_list(
+        prefix, visibility="ARCHIVED", for_parse_sample=False
+    )
+    ready_items_list = [
+        {"seller_id": i["seller_id"], "article": i["Артикул"], "stock": "0"}
+        for i in archive_items_list
+    ]
+    ready_items_list = separate_records_to_client_id(ready_items_list)
+    start_push_to_ozon(ready_items_list, prefix, update_price=False)
+
+
 # if __name__ == "__main__":
-#     load_dotenv(".env")
-#     from utils import give_me_sample
+# load_dotenv(".env")
+# from utils import give_me_sample
 #
-#     sample = give_me_sample("bb/source/every_day", "bb")
-#     for i in sample:
-#         i["stock"] = random.randint(3, 8)
+# sample = give_me_sample("bb/source/every_day", "bb")
+# for i in sample:
+#     i["stock"] = random.randint(3, 8)
 #
-#     sep_rec = separate_records_to_client_id(sample)
-#     # ozon = Ozon("2173296", "4fdc3d57-5f21-416f-b032-d7fce2332d90")
-#     # ozon.update_stock(sep_rec["2173296"])
+# sep_rec = separate_records_to_client_id(sample)
+# ozon = Ozon("2173296", "4fdc3d57-5f21-416f-b032-d7fce2332d90")
+# ozon.update_stock(sep_rec["2173296"])
+
 #
-#     #
-#     start_push_to_ozon(sep_rec)
+# start_push_to_ozon(sep_rec)
+# sample = archive_items_stock_to_zero("msk")
