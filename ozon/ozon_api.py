@@ -1,12 +1,13 @@
 import requests
 import os
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 import time
 
 from dotenv import load_dotenv
 from loguru import logger
 
-load_dotenv("../.env")
+load_dotenv(Path(__file__).parent / ".env")
 
 
 def separate_records_to_client_id(books_records: list[dict]) -> dict[str, list[dict]]:
