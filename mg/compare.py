@@ -186,10 +186,11 @@ def main():
     asyncio.run(tg_send_files([stock_file, del_file], subject="Гвардия"))
     print(f"\n{"----------" * 5}\n")
 
+    archive_items_stock_to_zero(prefix="mg")
+
 
 def super_main():
     load_dotenv("../.env")
-    schedule.every().day.at("16:00").do(archive_items_stock_to_zero, "mg")
     schedule.every().day.at("20:00").do(main)
 
     while True:

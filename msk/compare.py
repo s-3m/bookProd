@@ -149,6 +149,8 @@ async def get_compare():
 
     logger.info("Start sending files")
     await tg_send_files([without_del_path, del_path], subject="Москва")
+
+    archive_items_stock_to_zero(prefix="msk")
     print(f"\n{"----------" * 5}\n")
 
 
@@ -158,7 +160,6 @@ def main():
 
 
 def super_main():
-    schedule.every().day.at("11:00").do(archive_items_stock_to_zero, "msk")
     schedule.every().day.at("21:00").do(main)
 
     while True:

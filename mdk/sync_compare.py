@@ -172,12 +172,13 @@ def main():
     logger.success("Script was finished successfully")
     global count
     count = 1
+
+    archive_items_stock_to_zero(prefix="mdk")
     print("-----------" * 5)
 
 
 def super_main():
     load_dotenv("../.env")
-    schedule.every().day.at("12:25").do(archive_items_stock_to_zero, "mdk")
     schedule.every().day.at("18:25").do(main)
 
     while True:

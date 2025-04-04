@@ -228,6 +228,7 @@ def main():
         asyncio.run(tg_send_files([new_stock_path, del_path], "Chit_gor"))
 
         logger.success("Script was finished successfully")
+        archive_items_stock_to_zero(prefix="chit_gor")
         print(
             "\n---------------------------------------------------------------------------------------------\n"
         )
@@ -237,7 +238,6 @@ def main():
 
 def super_main():
     load_dotenv("../.env")
-    schedule.every().day.at("13:00").do(archive_items_stock_to_zero, "chit_gor")
     schedule.every().day.at("16:00").do(main)
 
     while True:
