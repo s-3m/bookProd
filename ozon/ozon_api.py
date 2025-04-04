@@ -7,7 +7,7 @@ import time
 from dotenv import load_dotenv
 from loguru import logger
 
-load_dotenv(Path(__file__).parent / ".env")
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 
 def separate_records_to_client_id(books_records: list[dict]) -> dict[str, list[dict]]:
@@ -36,6 +36,28 @@ class Ozon:
             "Api-Key": self.api_key,
             "Content-Type": "application/json",
         }
+
+    def get_stocks(self, visible: str, *args) -> list[dict]:
+        result = []
+        cursor = ""
+        while True:
+            response = requests.post(
+                f"{self.host}/v4/product/info/stocks",
+                headers=self.headers,
+                json={
+                    "cursor": cursor,
+                    "filter": {"visibility": visible},
+                    "limit": 1000,
+                },
+            )
+            items_list = response.json().get("items")
+            if not items_list:
+                break
+            cursor = response.json()["cursor"]
+            for item in items_list:
+                item["seller_id"] = self.client_id
+                result.append(item)
+        return result
 
     def _get_warehouse_id(self):
         response = requests.post(f"{self.host}/v1/warehouse/list", headers=self.headers)
@@ -178,7 +200,9 @@ def start_push_to_ozon(
                 logger.critical(f"Ошибка в задаче: {e}")
 
 
-def get_items_list(prefix: str, visibility: str = "VISIBLE", for_parse_sample=True):
+def get_items_list(
+    prefix: str, visibility: str = "VISIBLE", for_parse_sample=True, get_stocks=False
+):
     shop_list = []
     ready_result = []
     for key, value in os.environ.items():
@@ -189,7 +213,11 @@ def get_items_list(prefix: str, visibility: str = "VISIBLE", for_parse_sample=Tr
         futures = []
         for item in shop_list:
             ozon = Ozon(client_id=item[0], api_key=item[1], prefix=prefix)
-            task = executor.submit(ozon.get_items_list, visibility, for_parse_sample)
+            task = executor.submit(
+                (ozon.get_items_list if not get_stocks else ozon.get_stocks),
+                visibility,
+                for_parse_sample,
+            )
             futures.append(task)
         for i in futures:
             try:
@@ -203,12 +231,16 @@ def get_items_list(prefix: str, visibility: str = "VISIBLE", for_parse_sample=Tr
 def archive_items_stock_to_zero(prefix):
     logger.info("Start check archived stocks")
     archive_items_list = get_items_list(
-        prefix, visibility="ARCHIVED", for_parse_sample=False
+        prefix, visibility="ARCHIVED", for_parse_sample=False, get_stocks=True
     )
     ready_items_list = [
-        {"seller_id": i["seller_id"], "article": i["Артикул"], "stock": "0"}
+        {"seller_id": i["seller_id"], "article": i["offer_id"], "stock": "0"}
         for i in archive_items_list
+        if i["stocks"] and i["stocks"][0]["present"] != 0
     ]
+    if not ready_items_list:
+        logger.success("Didn't find any stocks")
+        return
     ready_items_list = separate_records_to_client_id(ready_items_list)
     start_push_to_ozon(ready_items_list, prefix, update_price=False)
     logger.success("Archived stocks set to 0!")
