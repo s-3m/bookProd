@@ -114,7 +114,7 @@ class Ozon:
                         self.errors[self.client_id].append(result)
                 time.sleep(30)
             except Exception as e:
-                logger.error(e)
+                logger.exception(e)
                 continue
         if self.errors[self.client_id]:
             logger.warning(self.errors)
