@@ -201,6 +201,7 @@ def get_items_list(prefix: str, visibility: str = "VISIBLE", for_parse_sample=Tr
 
 
 def archive_items_stock_to_zero(prefix):
+    logger.info("Start check archived stocks")
     archive_items_list = get_items_list(
         prefix, visibility="ARCHIVED", for_parse_sample=False
     )
@@ -210,6 +211,7 @@ def archive_items_stock_to_zero(prefix):
     ]
     ready_items_list = separate_records_to_client_id(ready_items_list)
     start_push_to_ozon(ready_items_list, prefix, update_price=False)
+    logger.success("Archived stocks set to 0!")
 
 
 # if __name__ == "__main__":
