@@ -3,6 +3,7 @@ import sys
 import os
 
 import schedule
+from dotenv import load_dotenv
 from loguru import logger
 import aiohttp
 import pandas as pd
@@ -155,6 +156,7 @@ async def get_compare():
 
 
 def main():
+    load_dotenv("../.env")
     logger.info("Start parsing Moscow")
     asyncio.run(get_compare())
 
