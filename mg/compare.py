@@ -116,6 +116,7 @@ async def get_item_data(session, item):
 
 
 async def get_gather_data(sample):
+    global error_items_count
     tasks = []
     async with aiohttp.ClientSession(
         connector=aiohttp.TCPConnector(ssl=False, limit_per_host=10, limit=10),
@@ -129,6 +130,7 @@ async def get_gather_data(sample):
 
         if error_items_count > 0:
             logger.info("\nStart reparse error")
+            error_items_count = 0
             reparse_tasks = [
                 asyncio.create_task(get_item_data(session, item))
                 for item in sample
@@ -136,6 +138,7 @@ async def get_gather_data(sample):
             ]
             await asyncio.gather(*reparse_tasks)
             print()
+            logger.info(f"Not reparse - {error_items_count} errors")
 
         for i in sample:
             if item["stock"] == "error":
