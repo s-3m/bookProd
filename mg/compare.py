@@ -85,6 +85,10 @@ async def get_item_data(session, item):
 
         full_url = f"{BASE_URL}/tovar/{item["id"]}"
         response = await fetch_request(session, full_url, headers)
+        if response == "404":
+            item["stock"] = "0"
+            item["price"] = None
+            return
         soup = bs(response, "lxml")
         buy_btn = soup.find("a", class_="btn_red wish_list_btn add_to_cart")
         if not buy_btn:
