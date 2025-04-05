@@ -138,7 +138,9 @@ async def get_gather_data(sample):
             ]
             await asyncio.gather(*reparse_tasks)
             print()
-            logger.info(f"Not reparse - {error_items_count} errors")
+            logger.info(
+                f"Success parse - {count} | Not reparse - {error_items_count} errors"
+            )
 
         for i in sample:
             if item["stock"] == "error":

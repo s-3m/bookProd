@@ -10,6 +10,7 @@ import polars as pl
 from typing import Literal
 import aiohttp
 import requests
+from loguru import logger
 
 
 def filesdata_to_dict(
@@ -141,12 +142,17 @@ async def fetch_request(session, url, headers: dict, sleep=4, proxy=None):
                     return "404"
                 elif resp.status == 503:
                     return "503"
-        except TimeoutError:
+        except TimeoutError as e:
+            logger.exception(e)
             continue
-        except aiohttp.client_exceptions.ClientConnectorError:
+        except aiohttp.client_exceptions.ClientConnectorError as e:
+            logger.exception(e)
             continue
-        except aiohttp.client_exceptions.ServerDisconnectedError:
+        except aiohttp.client_exceptions.ServerDisconnectedError as e:
+            logger.exception(e)
             continue
+        except Exception as e:
+            logger.exception(e)
     return None
 
 
