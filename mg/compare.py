@@ -1,5 +1,7 @@
 import sys, os
+from concurrent.futures import ThreadPoolExecutor
 import time
+
 import schedule
 import pandas.io.formats.excel
 from bs4 import BeautifulSoup as bs
@@ -12,7 +14,7 @@ from dotenv import load_dotenv
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files, tg_send_msg
-from utils import fetch_request, give_me_sample, quantity_checker
+from utils import sync_fetch_request, give_me_sample, quantity_checker
 from ozon.ozon_api import (
     separate_records_to_client_id,
     start_push_to_ozon,
@@ -33,14 +35,14 @@ ajax_headers = {
     "Accept": "application/json, text/javascript, */*; q=0.01",
     "Accept-Language": "ru,en;q=0.9",
     "Connection": "keep-alive",
-    # 'Cookie': '_ym_uid=1724136084781768402; _ym_d=1724136084; BITRIX_SM_mguser=972aa2e5-c315-416b-88b3-92f79b453510; BX_USER_ID=ed697227b63725fef1d378c8253f2c14; PHPSESSID=vrf57rm4u3ioipl9cgotmjgec6; _ym_isad=2; _ym_visorc=w',
-    "Referer": "https://www.dkmg.ru/catalog/search/?Catalog_ID=0&search_word=978-5-9951-4898-2.0&Series_ID=&Publisher_ID=&Year_Biblio=",
+    # 'Cookie': '_ym_uid=1720808089691784096; _ym_d=1736077150; BITRIX_SM_mguser=45ca9715-54f6-4479-869b-35e199121449; BX_USER_ID=6e50fcb9b721e584b1f4ec678c7886f1; PHPSESSID=c356f1bd469eb954d806af6ad4d5e53e',
+    "Referer": "https://www.dkmg.ru/",
     "Sec-Fetch-Dest": "empty",
     "Sec-Fetch-Mode": "cors",
     "Sec-Fetch-Site": "same-origin",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 YaBrowser/24.12.0.0 Safari/537.36",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 YaBrowser/25.2.0.0 Safari/537.36",
     "X-Requested-With": "XMLHttpRequest",
-    "sec-ch-ua": '"Chromium";v="130", "YaBrowser";v="24.12", "Not?A_Brand";v="99", "Yowser";v="2.5"',
+    "sec-ch-ua": '"Not A(Brand";v="8", "Chromium";v="132", "YaBrowser";v="25.2", "Yowser";v="2.5"',
     "sec-ch-ua-mobile": "?0",
     "sec-ch-ua-platform": '"Windows"',
 }
@@ -61,22 +63,30 @@ logger.add(
 error_items_count = 0
 
 
-async def get_id_from_ajax(session, item):
+async def get_id_from_ajax(item):
     ajax_url = "https://www.dkmg.ru/ajax/ajax_search.php"
     params = {"term": item["article"][:-2]}
-    async with session.get(ajax_url, params=params, headers=ajax_headers) as resp:
-        ajax_result = await resp.json(content_type=None)
-        item_id = ajax_result[0].get("value")
-        if item_id and item_id != "#":
-            item["id"] = item_id.split("/")[-1].strip()
+    # response = requests.get(url=ajax_url, json=params, headers=ajax_headers, timeout=20)
+    # ajax_result = response.json()
+    # item_id = ajax_result[0].get("value")
+    # if item_id and item_id != "#":
+    #     item["id"] = item_id.split("/")[-1].strip()
+    #     print(f"find - {item_id.split("/")[-1].strip()}")
+    async with aiohttp.ClientSession() as session:
+        async with session.get(ajax_url, params=params, headers=ajax_headers) as resp:
+            ajax_result = await resp.json(content_type=None)
+            item_id = ajax_result[0].get("value")
+            if item_id and item_id != "#":
+                item["id"] = item_id.split("/")[-1].strip()
+                print(f"find - {item_id.split("/")[-1].strip()}")
 
 
-async def get_item_data(session, item):
+def get_item_data(item):
     global count
     global error_items_count
     try:
         if not item["id"]:
-            await get_id_from_ajax(session, item)
+            asyncio.run(get_id_from_ajax(item))
 
         if not item["id"]:
             item["stock"] = "0"
@@ -84,7 +94,7 @@ async def get_item_data(session, item):
             return
 
         full_url = f"{BASE_URL}/tovar/{item["id"]}"
-        response = await fetch_request(session, full_url, headers)
+        response = sync_fetch_request(full_url, headers)
         if response == "404":
             item["stock"] = "0"
             item["price"] = None
@@ -121,34 +131,28 @@ async def get_item_data(session, item):
 
 async def get_gather_data(sample):
     global error_items_count
-    tasks = []
-    async with aiohttp.ClientSession(
-        connector=aiohttp.TCPConnector(ssl=False, limit_per_host=10, limit=10),
-        timeout=aiohttp.ClientTimeout(total=1200),
-    ) as session:
+
+    with ThreadPoolExecutor(max_workers=7) as executor:
+        tasks = []
         for item in sample:
-            task = asyncio.create_task(get_item_data(session, item))
+            task = executor.submit(get_item_data, item)
             tasks.append(task)
 
-        await asyncio.gather(*tasks)
+    if error_items_count > 0:
+        logger.info("\nStart reparse error")
+        error_items_count = 0
+        with ThreadPoolExecutor(max_workers=7) as executor:
+            reparse_tasks = []
+            for item in sample:
+                if item["stock"] == "error":
+                    reparse_tasks.append(executor.submit(get_item_data, item))
 
-        if error_items_count > 0:
-            logger.info("\nStart reparse error")
-            error_items_count = 0
-            reparse_tasks = [
-                asyncio.create_task(get_item_data(session, item))
-                for item in sample
-                if item["stock"] == "error"
-            ]
-            await asyncio.gather(*reparse_tasks)
-            print()
-            logger.info(
-                f"Success parse - {count} | Not reparse - {error_items_count} errors"
-            )
+    print()
+    logger.info(f"Success parse - {count} | Not reparse - {error_items_count} errors")
 
-        for i in sample:
-            if item["stock"] == "error":
-                i["stock"] = "0"
+    for i in sample:
+        if item["stock"] == "error":
+            i["stock"] = "0"
 
 
 def main():
