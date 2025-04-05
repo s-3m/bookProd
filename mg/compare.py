@@ -89,6 +89,10 @@ async def get_item_data(session, item):
             item["stock"] = "0"
             item["price"] = None
             return
+        elif not response:
+            item["stock"] = "error"
+            item["price"] = None
+            return
         soup = bs(response, "lxml")
         buy_btn = soup.find("a", class_="btn_red wish_list_btn add_to_cart")
         if not buy_btn:
