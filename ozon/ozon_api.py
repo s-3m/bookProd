@@ -70,6 +70,9 @@ class Ozon:
         list_for_price_update = []
         for i in item_list:
             if i["price"] is not None:
+                if not i["price"].isdigit():
+                    logger.warning(i)
+                    continue
                 raw_price = round(float(i["price"].replace(",", ".")))
                 price = round(raw_price * 2.75)
                 if price < 999:
