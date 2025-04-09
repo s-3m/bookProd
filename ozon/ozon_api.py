@@ -144,20 +144,26 @@ class Ozon:
         if self.errors[self.client_id]:
             logger.warning(self.errors)
 
-    def _prepare_for_sample(self, raw_data: list[dict], for_parse_sample: bool = True):
+    def _prepare_for_sample(
+        self, raw_data: list[dict], for_parse_sample: bool = True
+    ) -> tuple[list, list]:
         ready_data = []
+        wrong_article = []
         if for_parse_sample:
             for item in raw_data:
                 if item["offer_id"].endswith(".0"):
                     ready_data.append(
                         {"Артикул": item["offer_id"], "seller_id": self.client_id}
                     )
+                else:
+                    wrong_dict = {"article": item["offer_id"], "stock": 0}
+                    wrong_article.append(wrong_dict)
         else:
             for item in raw_data:
                 ready_data.append(
                     {"Артикул": item["offer_id"], "seller_id": self.client_id}
                 )
-        return ready_data
+        return ready_data, wrong_article
 
     def get_items_list(self, visibility, for_parse_sample=True):
         result = []
@@ -178,8 +184,10 @@ class Ozon:
                 break
             result.extend(items_list)
         ready_data = self._prepare_for_sample(result, for_parse_sample)
-        print(len(ready_data))
-        return ready_data
+        if ready_data[1]:
+            self.update_stock(ready_data[1], update_price=False)
+        print(len(ready_data[0]))
+        return ready_data[0]
 
 
 def start_push_to_ozon(
