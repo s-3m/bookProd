@@ -107,17 +107,18 @@ def get_item_data(item):
         buy_btn = soup.find("a", class_="btn_red wish_list_btn add_to_cart")
         if not buy_btn:
             item["stock"] = "0"
+            item["price"] = None
         else:
             item["stock"] = "2"
 
-        price = (
-            soup.find_all("div", class_="product_item_price")[1]
-            .text.strip()
-            .split(".")[0]
-            .replace(" ", "")
-        )
+            price = (
+                soup.find_all("div", class_="product_item_price")[1]
+                .text.strip()
+                .split(".")[0]
+                .replace(" ", "")
+            )
 
-        item["price"] = price
+            item["price"] = price
 
         print(f"\rDone - {count} | Error - {error_items_count}", end="")
         count += 1
