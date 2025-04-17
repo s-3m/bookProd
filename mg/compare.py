@@ -78,7 +78,6 @@ async def get_id_from_ajax(item):
             item_id = ajax_result[0].get("value")
             if item_id and item_id != "#":
                 item["id"] = item_id.split("/")[-1].strip()
-                print(f"find - {item_id.split("/")[-1].strip()}")
 
 
 def get_item_data(item):
