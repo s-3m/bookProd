@@ -73,6 +73,7 @@ async def photo_processing(session, item):
     global count_replace_photo
     try:
         for _ in range(5):
+            await asyncio.sleep(0.5)
             try:
                 async with session.get(item["Фото_x"]) as resp:
                     await asyncio.sleep(6)
@@ -86,7 +87,7 @@ async def photo_processing(session, item):
                         file=img_path,
                         name=f"mdk_{item["Фото_x"].split("/")[-1][:-4]}.png",
                     )
-                    item["Фото_y"] = new_url
+                    item["Фото_x"] = new_url
                     print(f"\rReplace photo done - {count_replace_photo}", end="")
                     count_replace_photo += 1
                     break
