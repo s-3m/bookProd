@@ -157,9 +157,9 @@ async def fetch_request(session, url, headers: dict, sleep=4, proxy=None):
     return None
 
 
-def check_archived_books(df_add: pd.DataFrame) -> pd.DataFrame:
+def check_archived_books(df_for_add: pd.DataFrame) -> pd.DataFrame:
     df_archive = pd.read_excel(Path(__file__).parent / "arch_for_check.xlsx")
-    df_result = df_add[~df_add["ISBN"].isin(df_archive["ISBN"])]
+    df_result = df_for_add[~df_for_add["ISBN"].isin(df_archive["ISBN"])]
     return df_result
 
 
@@ -180,7 +180,7 @@ def write_result_files(
         .sort_values("Артикул_OZ")
     )
     # Check "add books" not in archive books
-    df_add = check_archived_books(df_add=df_add)
+    df_add = check_archived_books(df_for_add=df_add)
 
     if replace_photo:
         del df_add["Фото_y"]
