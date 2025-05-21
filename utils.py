@@ -4,6 +4,7 @@ import os
 import re
 import random
 import time
+from pathlib import Path
 
 import pandas as pd
 import polars as pl
@@ -156,6 +157,12 @@ async def fetch_request(session, url, headers: dict, sleep=4, proxy=None):
     return None
 
 
+def check_archived_books(df_add: pd.DataFrame) -> pd.DataFrame:
+    df_archive = pd.read_excel(Path(__file__).parent / "arch_for_check.xlsx")
+    df_result = df_add[~df_add["ISBN"].isin(df_archive["ISBN"])]
+    return df_result
+
+
 def write_result_files(
     base_dir: str,
     prefix: str,
@@ -172,6 +179,9 @@ def write_result_files(
         .drop_duplicates(subset="Название", keep="last")
         .sort_values("Артикул_OZ")
     )
+    # Check "add books" not in archive books
+    df_add = check_archived_books(df_add=df_add)
+
     if replace_photo:
         del df_add["Фото_y"]
         df_add.rename(columns={"Фото_x": "Фото"}, inplace=True)
