@@ -159,8 +159,12 @@ async def fetch_request(session, url, headers: dict, sleep=4, proxy=None):
 
 def check_archived_books(df_for_add: pd.DataFrame) -> pd.DataFrame:
     df_archive = pd.read_excel(Path(__file__).parent / "arch_for_check.xlsx")
-    df_result = df_for_add[~df_for_add["ISBN"].isin(df_archive["ISBN"])]
-    return df_result
+    try:
+        df_result = df_for_add[~df_for_add["ISBN"].isin(df_archive["ISBN"])]
+        return df_result
+    except KeyError:
+        df_result = df_for_add[~df_for_add["ISBN:"].isin(df_archive["ISBN"])]
+        return df_result
 
 
 def write_result_files(
