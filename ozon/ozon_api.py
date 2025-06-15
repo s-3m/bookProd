@@ -9,6 +9,33 @@ from loguru import logger
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
+items = [
+    {
+        "attributes": [
+            {"id": 4180, "values": [{"value": "Тума"}]},
+            {"id": 7, "values": [{"value": "АСТ"}]},
+            {"id": 8229, "values": [{"value": "Художественная литература"}]},
+            {"id": 4182, "values": [{"value": "Захар Прилепин"}]},
+            {"id": 4184, "values": [{"value": "978-5-17-176266-7"}]},
+        ],
+        "description_category_id": 200001483,
+        "depth": 100,
+        "dimension_unit": "mm",
+        "height": 250,
+        "images": ["https://www.moscowbooks.ru/image/book/838/orig/i838498.jpg"],
+        "primary_image": "https://www.moscowbooks.ru/image/book/838/orig/i838498.jpg",
+        "name": "Тума",
+        "offer_id": "1227247.0",
+        "old_price": "5560",
+        "price": "4090",
+        "type_id": 971445081,
+        "vat": "0",
+        "weight": 200,
+        "weight_unit": "g",
+        "width": 150,
+    }
+]
+
 
 def separate_records_to_client_id(books_records: list[dict]) -> dict[str, list[dict]]:
     result_dict = {}
@@ -36,6 +63,21 @@ class Ozon:
             "Api-Key": self.api_key,
             "Content-Type": "application/json",
         }
+
+    def add_items(self):
+        proxies = {
+            "http": "http://wysdF18S:4ExAvuCY@194.190.131.202:63058",
+            "https": "http://wysdF18S:4ExAvuCY@194.190.131.202:63058",
+        }
+        response = requests.post(
+            f"{self.host}/v3/product/import",
+            headers=self.headers,
+            json={
+                "items": items,
+            },
+            proxies=proxies,
+        )
+        print(response.json())
 
     def get_stocks(self, visible: str, *args) -> list[dict]:
         result = []
