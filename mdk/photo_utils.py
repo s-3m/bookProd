@@ -1,5 +1,7 @@
 import asyncio
 import os
+
+import requests
 from loguru import logger
 import aiohttp
 from PIL import Image, ImageFilter
@@ -68,29 +70,25 @@ count_replace_photo = 1
 
 sem = asyncio.Semaphore(3)
 
-
-async def photo_processing(session, item):
+async def photo_processing(item):
     global count_replace_photo
     try:
         for _ in range(5):
             await asyncio.sleep(0.5)
             try:
-                async with session.get(item["Фото_x"]) as resp:
-                    await asyncio.sleep(6)
-                    resp = await resp.content.read()
-                    if not resp:
-                        print(f"not resp {item["Фото_x"]}")
-                    img_path = await crop_image(
-                        resp, item["Фото_x"].split("/")[-1][:-4]
-                    )
-                    new_url = await s3_client.upload_file(
-                        file=img_path,
-                        name=f"mdk_{item["Фото_x"].split("/")[-1][:-4]}.png",
-                    )
-                    item["Фото_x"] = new_url
-                    print(f"\rReplace photo done - {count_replace_photo}", end="")
-                    count_replace_photo += 1
-                    break
+                resp = requests.get(item["Фото_x"], timeout=30)
+                resp = resp.content
+                if not resp:
+                    print(f"not resp {item["Фото_x"]}")
+                img_path = await crop_image(resp, item["Фото_x"].split("/")[-1][:-4])
+                new_url = await s3_client.upload_file(
+                    file=img_path,
+                    name=f"mdk_{item["Фото_x"].split("/")[-1][:-4]}.png",
+                )
+                item["Фото_x"] = new_url
+                print(f"\rReplace photo done - {count_replace_photo}", end="")
+                count_replace_photo += 1
+                break
             except Exception as e:
                 logger.exception(e)
                 continue
@@ -103,11 +101,7 @@ async def photo_processing(session, item):
 async def replace_photo(add_list: list[dict]):
     print()
     logger.info("Start replace photo")
-    # path_to_chit = os.path.join(
-    #     os.path.split(os.path.abspath(__file__))[0],
-    #     "..",
-    #     "chitai/result/chit-gor_all.xlsx",
-    # )
+
     path_to_chit = "/media/source/chitai/result/chit_gor_all.xlsx"
     chit_gor_df = pd.read_excel(path_to_chit)[["ISBN", "Фото"]]
     chit_gor_df = chit_gor_df.where(chit_gor_df.notnull(), None)
@@ -123,22 +117,17 @@ async def replace_photo(add_list: list[dict]):
     merge_result = merge_result.where(merge_result.notnull(), None)
 
     result = merge_result.to_dict("records")
-    async with aiohttp.ClientSession(
-        connector=aiohttp.TCPConnector(ssl=False, limit_per_host=10, limit=10),
-        trust_env=True,
-    ) as session:
 
-        tasks = []
-        for i in result:
-            if i["Фото_y"]:
-                i["Фото_x"] = i["Фото_y"]
-            else:
-                if i["Фото_x"] is not None:
-                    task = asyncio.create_task(photo_processing(session, i))
-                    tasks.append(task)
-        await asyncio.gather(*tasks)
+    for i in result:
+        if i["Фото_y"]:
+            i["Фото_x"] = i["Фото_y"]
+        else:
+            if i["Фото_x"] is not None:
+                await photo_processing(i)
     return result
 
 
-# sample = pd.read_excel("source/result/mdk_add.xlsx").to_dict(orient="records")
-# asyncio.run(replace_photo(sample))
+if __name__ == "__main__":
+    sample = pd.read_excel("mdk_all.xlsx", keep_default_na=False)
+    sample = sample.where(sample.notnull(), None).to_dict(orient="records")
+    asyncio.run(replace_photo(sample))

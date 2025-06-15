@@ -29,6 +29,7 @@ class S3Client:
                 return (
                     f"https://88826fd1-7276-4186-85e7-3cfb551f1cb7.selstorage.ru/{name}"
                 )
+            return None
 
 
 s3_client = S3Client(
