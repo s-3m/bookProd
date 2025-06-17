@@ -1,7 +1,14 @@
+import os
+
 from ozon_api import Ozon
+import pandas as pd
 
 oz = Ozon(
-    client_id="2175442", api_key="3ccb0a76-22f7-4425-9094-b7969c5731d1", prefix="msk"
+    client_id=os.getenv("TEST_CLIENT_ID"), api_key=os.getenv("TEST_API_KEY"), prefix="msk"
 )
 
-oz.add_items()
+item_list = pd.read_excel("msk_all.xlsx", keep_default_na=False).to_dict(
+    orient="records"
+)
+
+oz.add_items(item_list)

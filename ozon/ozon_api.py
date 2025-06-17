@@ -9,33 +9,6 @@ from loguru import logger
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
-items = [
-    {
-        "attributes": [
-            {"id": 4180, "values": [{"value": "Тума"}]},
-            {"id": 7, "values": [{"value": "АСТ"}]},
-            {"id": 8229, "values": [{"value": "Художественная литература"}]},
-            {"id": 4182, "values": [{"value": "Захар Прилепин"}]},
-            {"id": 4184, "values": [{"value": "978-5-17-176266-7"}]},
-        ],
-        "description_category_id": 200001483,
-        "depth": 100,
-        "dimension_unit": "mm",
-        "height": 250,
-        "images": ["https://www.moscowbooks.ru/image/book/838/orig/i838498.jpg"],
-        "primary_image": "https://www.moscowbooks.ru/image/book/838/orig/i838498.jpg",
-        "name": "Тума",
-        "offer_id": "1227247.0",
-        "old_price": "5560",
-        "price": "4090",
-        "type_id": 971445081,
-        "vat": "0",
-        "weight": 200,
-        "weight_unit": "g",
-        "width": 150,
-    }
-]
-
 
 def separate_records_to_client_id(books_records: list[dict]) -> dict[str, list[dict]]:
     result_dict = {}
@@ -57,6 +30,7 @@ class Ozon:
         self.discount = self.max_discount[prefix]
         self.host = "https://api-seller.ozon.ru"
         self.errors = {self.client_id: []}
+        self.tasks_id = []
 
         self.headers = {
             "Client-Id": str(self.client_id),
@@ -64,20 +38,119 @@ class Ozon:
             "Content-Type": "application/json",
         }
 
-    def add_items(self):
+    def add_items(self, item_list: list[dict]) -> list[dict] | None:
+        prx = os.getenv("PRX")
         proxies = {
-            "http": "http://wysdF18S:4ExAvuCY@194.190.131.202:63058",
-            "https": "http://wysdF18S:4ExAvuCY@194.190.131.202:63058",
+            "http": f"http://{prx}",
+            "https": f"http://{prx}",
         }
-        response = requests.post(
-            f"{self.host}/v3/product/import",
-            headers=self.headers,
-            json={
-                "items": items,
-            },
-            proxies=proxies,
-        )
-        print(response.json())
+
+        ready_data_for_push = [
+            {
+                "attributes": [
+                    {
+                        "id": 4180,
+                        "values": [{"value": i["Название"]}],
+                    },
+                    {"id": 9356, "values": [{"value": i["Тип обложки"]}]},
+                    {"id": 4052, "values": [{"value": str(i["Тираж"])}]},
+                    {
+                        "id": 8862,
+                        "values": [{"value": i["Возраст"] if i["Возраст"] else "0+"}],
+                    },
+                    {
+                        "id": 9070,
+                        "values": [
+                            {"value": "true" if "18" in i["Возраст"] else "false"}
+                        ],
+                    },
+                    {"id": 4191, "values": [{"value": i["description"]}]},
+                    {"id": 4051, "values": [{"value": str(i["Страниц"])}]},
+                    {"id": 4081, "values": [{"value": str(i["Год производства"])}]},
+                    {
+                        "id": 7,
+                        "values": [{"value": p} for p in i["Издательство"].split(";")],
+                    },
+                    {"id": 8229, "values": [{"value": "Художественная литература"}]},
+                    {
+                        "id": 4182,
+                        "values": [
+                            {"value": i["author"] if i["author"] else "Нет автора"}
+                        ],
+                    },
+                    {"id": 4184, "values": [{"value": str(i["ISBN"])}]},
+                ],
+                "description_category_id": 200001483,  # Печатные книги, журналы, комиксы (с 2011 г.)
+                "depth": 80,  # длина
+                "dimension_unit": "mm",
+                "height": 40,  # высота
+                "images": [i["Фото"]],
+                "primary_image": "",
+                "name": i["Название"],
+                "offer_id": str(i["Артикул_OZ"]),
+                "old_price": self._price_calculate(i["Цена"])["old_price"],
+                "price": self._price_calculate(i["Цена"])["price"],
+                "type_id": 971445081,  # проза других жанров
+                "vat": "0",
+                "weight": 200,  # вес
+                "weight_unit": "g",
+                "width": 100,  # ширина
+                "stock": "4",
+            }
+            for i in item_list
+        ]
+        logger.info("Начал добавлять товары")
+        for item in range(0, len(item_list), 100):
+            response = requests.post(
+                f"{self.host}/v3/product/import",
+                headers=self.headers,
+                json={
+                    "items": ready_data_for_push[item : item + 100],
+                },
+                proxies=proxies,
+            )
+            result = response.json().get("result")
+            task_id = result.get("task_id")
+            if task_id:
+                self.tasks_id.append(task_id)
+            else:
+                print(result)
+        print(self.tasks_id)
+        time.sleep(30)
+        errors_status = self.check_tasks_status()
+        print(errors_status)
+        return errors_status
+
+    def check_tasks_status(self, tasks: list[str] = None) -> list[dict]:
+        """Проверяем все таски на добавление товаров, возвращаем только ошибки в формате списка словарей (артикул - ошибка)"""
+        logger.info("Начал проверять статусы загрузки")
+        errors_list = []
+        if tasks is None:
+            tasks = self.tasks_id
+        for task in tasks:
+            response = requests.post(
+                f"{self.host}/v1/product/import/info",
+                headers=self.headers,
+                json={"task_id": task},
+            )
+            result = response.json().get("result")
+            if result:
+                result_items_list = result.get("items")
+                for item in result_items_list:
+                    article = item.get("offer_id")
+                    errors = item.get("errors")
+                    if errors:
+                        for error in errors:
+                            if error.get("level") == "error":
+                                errors_list.append(
+                                    {
+                                        "article": article,
+                                        "field": error["field"],
+                                        "code": error["code"],
+                                        "error": error["description"],
+                                    }
+                                )
+        return errors_list
 
     def get_stocks(self, visible: str, *args) -> list[dict]:
         result = []
@@ -107,6 +180,21 @@ class Ozon:
         for i in warehouses_list:
             if i["name"] == "Волгоградка":
                 return int(i["warehouse_id"])
+        return None
+
+    def _price_calculate(self, input_price) -> dict:
+        input_price = str(input_price)
+        raw_price = round(float(input_price.replace(",", ".").replace("\xa0", "")), 2)
+        price = round(raw_price * 2.75)
+        if price < 999:
+            price = 999
+        old_price = price * 2
+        min_price = price * self.discount
+        return {
+            "price": str(price),
+            "old_price": str(old_price),
+            "min_price": str(min_price),
+        }
 
     def update_price(self, item_list: list[dict]) -> None:
         list_for_price_update = []
@@ -115,18 +203,14 @@ class Ozon:
                 if not i["price"].isdigit():
                     logger.warning(i)
                     continue
-                raw_price = round(float(i["price"].replace(",", ".")))
-                price = round(raw_price * 2.75)
-                if price < 999:
-                    price = 999
-                old_price = price * 2
-                min_price = price * self.discount
+
+                prices_dict = self._price_calculate(i["price"])
 
                 item_body = {
                     "offer_id": i["article"],
-                    "old_price": str(old_price),
-                    "price": str(price),
-                    "min_price": str(min_price),
+                    "old_price": str(prices_dict["old_price"]),
+                    "price": str(prices_dict["price"]),
+                    "min_price": str(prices_dict["min_price"]),
                     "min_price_for_auto_actions_enabled": True,
                     "auto_action_enabled": "DISABLED",
                     "price_strategy_enabled": "DISABLED",
