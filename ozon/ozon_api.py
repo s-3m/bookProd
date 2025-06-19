@@ -22,7 +22,7 @@ def separate_records_to_client_id(books_records: list[dict]) -> dict[str, list[d
 
 
 class Ozon:
-    max_discount = {"mg": 0.68, "msk": 0.72, "mdk": 0.75, "chit_gor": 0.80}
+    max_discount = {"mg": 0.68, "msk": 0.75, "mdk": 0.77, "chit_gor": 0.80}
 
     def __init__(self, client_id: str, api_key: str, prefix: str):
         self.client_id = client_id
