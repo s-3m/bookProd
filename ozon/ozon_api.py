@@ -1,3 +1,4 @@
+import pandas as pd
 import requests
 import os
 from concurrent.futures import ThreadPoolExecutor
@@ -24,13 +25,15 @@ def separate_records_to_client_id(books_records: list[dict]) -> dict[str, list[d
 class Ozon:
     max_discount = {"mg": 0.68, "msk": 0.75, "mdk": 0.77, "chit_gor": 0.80}
 
-    def __init__(self, client_id: str, api_key: str, prefix: str):
+    def __init__(self, client_id: str, api_key: str, prefix: str, prx: bool = False):
         self.client_id = client_id
         self.api_key = api_key
         self.discount = self.max_discount[prefix]
         self.host = "https://api-seller.ozon.ru"
         self.errors = {self.client_id: []}
         self.tasks_id = []
+        self.PRX = prx
+        self.prx_list = self.get_proxies()
 
         self.headers = {
             "Client-Id": str(self.client_id),
@@ -38,12 +41,15 @@ class Ozon:
             "Content-Type": "application/json",
         }
 
-    def add_items(self, item_list: list[dict]) -> list[dict] | None:
+    def get_proxies(self):
         prx = os.getenv("PRX")
         proxies = {
             "http": f"http://{prx}",
             "https": f"http://{prx}",
         }
+        return proxies
+
+    def add_items(self, item_list: list[dict]) -> list[dict] | None:
 
         ready_data_for_push = [
             {
@@ -100,6 +106,9 @@ class Ozon:
             for i in item_list
         ]
         logger.info("Начал добавлять товары")
+        items_stock = [
+            {"article": str(i["Артикул_OZ"]), "stock": i["Наличие"]} for i in item_list
+        ]
         for item in range(0, len(item_list), 100):
             response = requests.post(
                 f"{self.host}/v3/product/import",
@@ -107,7 +116,7 @@ class Ozon:
                 json={
                     "items": ready_data_for_push[item : item + 100],
                 },
-                proxies=proxies,
+                proxies=self.prx_list if self.PRX else None,
             )
             result = response.json().get("result")
             task_id = result.get("task_id")
@@ -115,11 +124,16 @@ class Ozon:
                 self.tasks_id.append(task_id)
             else:
                 print(result)
+            time.sleep(2)
         print(self.tasks_id)
-        time.sleep(30)
-        errors_status = self.check_tasks_status()
-        print(errors_status)
-        return errors_status
+        time.sleep(300)
+        error_articles = [i["article"] for i in self.check_tasks_status()]
+        for item in items_stock:
+            if error_articles:
+                if item["article"] in error_articles:
+                    items_stock.remove(item)
+
+        return items_stock
 
     def check_tasks_status(self, tasks: list[str] = None) -> list[dict]:
         """Проверяем все таски на добавление товаров, возвращаем только ошибки в формате списка словарей (артикул - ошибка)"""
@@ -132,6 +146,7 @@ class Ozon:
                 f"{self.host}/v1/product/import/info",
                 headers=self.headers,
                 json={"task_id": task},
+                proxies=self.prx_list if self.PRX else None,
             )
             result = response.json().get("result")
             if result:
@@ -150,6 +165,10 @@ class Ozon:
                                         "error": error["description"],
                                     }
                                 )
+        if errors_list:
+            pd.DataFrame(errors_list).to_excel(
+                f"error_list_{errors_list[0]["article"]}.xlsx"
+            )
         return errors_list
 
     def get_stocks(self, visible: str, *args) -> list[dict]:
@@ -175,10 +194,16 @@ class Ozon:
         return result
 
     def _get_warehouse_id(self):
-        response = requests.post(f"{self.host}/v1/warehouse/list", headers=self.headers)
+        response = requests.post(
+            f"{self.host}/v1/warehouse/list",
+            headers=self.headers,
+            proxies=self.prx_list if self.PRX else None,
+        )
         warehouses_list: list[dict] = response.json().get("result")
         for i in warehouses_list:
             if i["name"] == "Волгоградка":
+                return int(i["warehouse_id"])
+            elif "скот" in i["name"].lower() and i["status"] == "created":
                 return int(i["warehouse_id"])
         return None
 
@@ -225,6 +250,7 @@ class Ozon:
                     "https://api-seller.ozon.ru/v1/product/import/prices",
                     headers=self.headers,
                     json=body,
+                    proxies=self.prx_list if self.PRX else None,
                 )
                 results = response.json().get("result")
                 for result in results:
@@ -258,6 +284,7 @@ class Ozon:
                     f"{self.host}/v2/products/stocks",
                     headers=self.headers,
                     json=body,
+                    proxies=self.prx_list if self.PRX else None,
                 )
                 results = response.json().get("result")
                 for result in results:
@@ -342,14 +369,17 @@ def get_items_list(
 ):
     shop_list = []
     ready_result = []
+    prx = False
     for key, value in os.environ.items():
         if key.startswith(prefix.upper()):
             shop_list.append((key.split("_")[-1], value))
+            prx = True if key.split("_")[-2] == "PRX" else False
+            print()
 
     with ThreadPoolExecutor(max_workers=20) as executor:
         futures = []
         for item in shop_list:
-            ozon = Ozon(client_id=item[0], api_key=item[1], prefix=prefix)
+            ozon = Ozon(client_id=item[0], api_key=item[1], prefix=prefix, prx=prx)
             task = executor.submit(
                 (ozon.get_items_list if not get_stocks else ozon.get_stocks),
                 visibility,
