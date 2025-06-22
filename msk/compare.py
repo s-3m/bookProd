@@ -70,7 +70,7 @@ async def to_check_item(item, session):
         if age_control:
             closed_page = get_book_data(link)
             soup = bs(closed_page, "lxml")
-            script_index = 5
+            script_index = 2
 
         if not soup.find("div", class_="book__buy"):
             item["stock"] = "0"
