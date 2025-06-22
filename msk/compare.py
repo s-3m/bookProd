@@ -87,7 +87,12 @@ async def to_check_item(item, session):
             )
             need_data_dict = eval(a[:-1])["Products"][0]
             stock = need_data_dict["Stock"]
-            item["stock"] = stock if stock != 9999999 else "1"
+            if stock == 9999:
+                item["stock"] = "0"
+            elif stock == 9999999:
+                item["stock"] = "1"
+            else:
+                item["stock"] = stock
 
         price = soup.find("div", class_="book__price")
         if price:
