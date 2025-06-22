@@ -350,8 +350,13 @@ def start_push_to_ozon(
         futures = []
         for item in separate_records:
             seller_id = item
-            api_key = os.getenv(f"{prefix.upper()}_CLIENT_ID_{seller_id}")
-            ozon = Ozon(client_id=seller_id, api_key=api_key, prefix=prefix)
+            for key, value in os.environ.items():
+                prx = False
+                if seller_id in key:
+                    api_key = value
+                    prx = True if key.split("_")[-2] == "PRX" else False
+
+            ozon = Ozon(client_id=seller_id, api_key=api_key, prefix=prefix, prx=prx)
             future = executor.submit(
                 ozon.update_stock, separate_records[item], update_price
             )
@@ -369,8 +374,8 @@ def get_items_list(
 ):
     shop_list = []
     ready_result = []
-    prx = False
     for key, value in os.environ.items():
+        prx = False
         if key.startswith(prefix.upper()):
             shop_list.append((key.split("_")[-1], value))
             prx = True if key.split("_")[-2] == "PRX" else False
