@@ -61,6 +61,7 @@ logger.add(
     filter=logger_filter,
 )
 error_items_count = 0
+unique_article: dict[str, tuple] = {}  # article: (stock, price)
 
 
 async def get_id_from_ajax(item):
@@ -83,6 +84,13 @@ async def get_id_from_ajax(item):
 def get_item_data(item):
     global count
     global error_items_count
+    global unique_article
+
+    if item["article"] in unique_article:  # check on parse was
+        item["stock"] = unique_article[item["article"][0]]
+        item["price"] = unique_article[item["price"][1]]
+        return
+
     try:
         if not item["id"]:
             asyncio.run(get_id_from_ajax(item))
@@ -119,6 +127,7 @@ def get_item_data(item):
 
             item["price"] = price
 
+        unique_article[item["article"]] = (item["stock"], item["price"])
         print(f"\rDone - {count} | Error - {error_items_count}", end="")
         count += 1
     except Exception as e:
@@ -189,8 +198,10 @@ def main():
 
     global count
     global error_items_count
+    global unique_article
     error_items_count = 0
     count = 1
+    unique_article.clear()
 
     time.sleep(5)
     asyncio.run(tg_send_files([stock_file, del_file], subject="Гвардия"))

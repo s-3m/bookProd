@@ -59,9 +59,16 @@ logger.add(
 
 error_book = []
 count = 1
+unique_article: dict[str, tuple] = {}  # article: (stock, price)
 
 
 def get_main_data(book):
+
+    if book["article"] in unique_article:  # check on parse was
+        book["stock"] = unique_article[book["article"][0]]
+        book["price"] = unique_article[book["price"][1]]
+        return
+
     book_url = f"{BASE_URL}/book/{book['article'][:-2]}"
     try:
         # async with semaphore:
@@ -90,6 +97,8 @@ def get_main_data(book):
                 .replace("\xa0", "")
             )
             book["price"] = price
+
+            unique_article[book["article"]] = (book["stock"], book["price"])
 
     except Exception as e:
         book["stock"] = "error"
@@ -171,7 +180,9 @@ def main():
 
     logger.success("Script was finished successfully")
     global count
+    global unique_article
     count = 1
+    unique_article.clear()
 
     archive_items_stock_to_zero(prefix="mdk")
     print("-----------" * 5)

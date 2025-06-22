@@ -49,11 +49,18 @@ excel.ExcelFormatter.header_style = None
 
 count = 1
 error_count = 0
+unique_article: dict[str, tuple] = {}  # article: (stock, price)
 
 
 async def to_check_item(item, session):
     global count
     global error_count
+    global unique_article
+
+    if item["article"] in unique_article:  # check on parse was
+        item["stock"] = unique_article[item["article"][0]]
+        item["price"] = unique_article[item["price"][1]]
+        return
     link = f"{BASE_URL}/book/{item["article"][:-2]}"
     try:
         response = await fetch_request(session, link, headers=headers, sleep=None)
@@ -89,6 +96,8 @@ async def to_check_item(item, session):
         else:
             item["price"] = None
 
+        unique_article[item["article"]] = (item["stock"], item["price"])
+
         print(f"\r{count} | Error book - {error_count}", end="")
         count += 1
     except Exception as e:
@@ -119,7 +128,9 @@ async def get_compare():
             if item["stock"] == "error":
                 await to_check_item(item, session)
     global count
+    global unique_article
     count = 1
+    unique_article.clear()
 
     for item in sample:
         if item["stock"] == "error":

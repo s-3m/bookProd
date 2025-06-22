@@ -69,6 +69,7 @@ logger.add(
     filter=logger_filter,
 )
 count = 1
+unique_article: dict[str, tuple] = {}  # article: (stock, price)
 
 
 def get_link_from_ajax(article):
@@ -99,6 +100,12 @@ def get_link_from_ajax(article):
 
 
 def get_main_data(book_item):
+    global unique_article
+    if book_item["article"] in unique_article:  # check on parse was
+        book_item["stock"] = unique_article[book_item["article"][0]]
+        book_item["price"] = unique_article[book_item["price"][1]]
+        return
+
     try:
         if not book_item["link"]:
             i_link = get_link_from_ajax(book_item["article"])
@@ -141,6 +148,8 @@ def get_main_data(book_item):
             book_item["stock"] = stock
         else:
             book_item["stock"] = "0"
+
+        unique_article[book_item["article"]] = (book_item["stock"], book_item["price"])
 
     except Exception as e:
         book_item["stock"] = "error"
@@ -186,7 +195,9 @@ async def get_gather_data(sample):
 
     print()
     global count
+    global unique_article
     count = 1
+    unique_article.clear()
     logger.success("Finish collect data")
 
 
