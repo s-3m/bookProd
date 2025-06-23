@@ -63,10 +63,11 @@ unique_article: dict[str, tuple] = {}  # article: (stock, price)
 
 
 def get_main_data(book):
+    global unique_article
 
     if book["article"] in unique_article:  # check on parse was
-        book["stock"] = unique_article[book["article"][0]]
-        book["price"] = unique_article[book["price"][1]]
+        book["stock"] = unique_article[book["article"]][0]
+        book["price"] = unique_article[book["article"]][1]
         return
 
     book_url = f"{BASE_URL}/book/{book['article'][:-2]}"

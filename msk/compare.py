@@ -58,8 +58,8 @@ async def to_check_item(item, session):
     global unique_article
 
     if item["article"] in unique_article:  # check on parse was
-        item["stock"] = unique_article[item["article"][0]]
-        item["price"] = unique_article[item["price"][1]]
+        item["stock"] = unique_article[item["article"]][0]
+        item["price"] = unique_article[item["article"]][1]
         return
     link = f"{BASE_URL}/book/{item["article"][:-2]}"
     try:

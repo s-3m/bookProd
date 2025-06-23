@@ -102,8 +102,8 @@ def get_link_from_ajax(article):
 def get_main_data(book_item):
     global unique_article
     if book_item["article"] in unique_article:  # check on parse was
-        book_item["stock"] = unique_article[book_item["article"][0]]
-        book_item["price"] = unique_article[book_item["price"][1]]
+        book_item["stock"] = unique_article[book_item["article"]][0]
+        book_item["price"] = unique_article[book_item["article"]][1]
         return
 
     try:
