@@ -12,6 +12,7 @@ from typing import Literal
 import aiohttp
 import requests
 from loguru import logger
+from ozon.ozon_api import get_items_list
 
 
 def filesdata_to_dict(
@@ -190,6 +191,27 @@ def write_result_files(
         del df_add["Фото_y"]
         df_add.rename(columns={"Фото_x": "Фото"}, inplace=True)
     df_add.to_excel(f"{base_dir}/result/{prefix}_add.xlsx", index=False)
+
+
+def forming_add_files(result_df: pd.DataFrame):
+    polars_df = pl.from_pandas(result_df)
+    items_list_new_shop = get_items_list(
+        prefix="msk", visibility="ALL", shop_category="new"
+    )
+    items_list_old_shop = get_items_list(
+        prefix="msk", visibility="ALL", shop_category="old"
+    )
+
+    df_items_list_new_shop = pl.DataFrame(items_list_new_shop)[["Артикул"]].rename(
+        {"Артикул": "Артикул_OZ"}
+    )
+    df_items_list_old_shop = pl.DataFrame(items_list_old_shop)[["Артикул"]].rename(
+        {"Артикул": "Артикул_OZ"}
+    )
+
+    result_new_shop = polars_df.join(
+        df_items_list_new_shop, on="<Артикул_OZ", how="anti"
+    )
 
 
 def give_me_sample(
