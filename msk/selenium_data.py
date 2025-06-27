@@ -5,10 +5,11 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
 import undetected_chromedriver as uc
+from bs4 import BeautifulSoup
 
 
 def get_book_data(link):
-    driver = uc.Chrome(headless=True, use_subprocess=False, version_main=134)
+    driver = uc.Chrome(headless=True, use_subprocess=False, version_main=135)
 
     try:
         driver.get(link)
@@ -51,4 +52,4 @@ def get_book_data(link):
 
 
 if __name__ == "__main__":
-    get_book_data("https://www.moscowbooks.ru//book/1186599")
+    get_book_data("https://www.moscowbooks.ru/book/968695/")
