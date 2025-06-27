@@ -1,3 +1,5 @@
+from typing import Literal
+
 import pandas as pd
 import requests
 import os
@@ -370,21 +372,31 @@ def start_push_to_ozon(
 
 
 def get_items_list(
-    prefix: str, visibility: str = "VISIBLE", for_parse_sample=True, get_stocks=False
+    prefix: str,
+    visibility: str = "VISIBLE",
+    for_parse_sample=True,
+    get_stocks=False,
+    shop_category: Literal["new", "old", "all"] = "all",
 ):
     shop_list = []
     ready_result = []
     for key, value in os.environ.items():
         prx = False
         if key.startswith(prefix.upper()):
-            shop_list.append((key.split("_")[-1], value))
-            prx = True if key.split("_")[-2] == "PRX" else False
-            print()
+            new_shop_flag = True if key.split("_")[-2] == "PRX" else False
+            if shop_category == "new":
+                if new_shop_flag:
+                    shop_list.append((key.split("_")[-1], value, new_shop_flag))
+            elif shop_category == "old":
+                if not new_shop_flag:
+                    shop_list.append((key.split("_")[-1], value, new_shop_flag))
+            else:
+                shop_list.append((key.split("_")[-1], value, new_shop_flag))
 
     with ThreadPoolExecutor(max_workers=20) as executor:
         futures = []
         for item in shop_list:
-            ozon = Ozon(client_id=item[0], api_key=item[1], prefix=prefix, prx=prx)
+            ozon = Ozon(client_id=item[0], api_key=item[1], prefix=prefix, prx=item[2])
             task = executor.submit(
                 (ozon.get_items_list if not get_stocks else ozon.get_stocks),
                 visibility,
