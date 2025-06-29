@@ -36,6 +36,7 @@ class Ozon:
         self.tasks_id = []
         self.PRX = prx
         self.prx_list = self.get_proxies()
+        self.prefix = prefix
 
         self.headers = {
             "Client-Id": str(self.client_id),
@@ -212,7 +213,16 @@ class Ozon:
     def _price_calculate(self, input_price) -> dict:
         input_price = str(input_price)
         raw_price = round(float(input_price.replace(",", ".").replace("\xa0", "")), 2)
+        addition_price_for_deliver = 1
+        min_addition_price_for_deliver = 0
+        if self.prefix == "chit_gor":
+            addition_price_for_deliver = 1.024
+            min_addition_price_for_deliver = 100
         price = round(raw_price * 2.75)
+        if (price * 0.02) > 100:
+            price = round(price * addition_price_for_deliver)
+        else:
+            price = price + min_addition_price_for_deliver
         if price < 999:
             price = 999
         old_price = price * 2
