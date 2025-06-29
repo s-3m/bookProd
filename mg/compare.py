@@ -205,9 +205,8 @@ def main():
 
     time.sleep(5)
     asyncio.run(tg_send_files([stock_file, del_file], subject="Гвардия"))
-    print(f"\n{"----------" * 5}\n")
-
     archive_items_stock_to_zero(prefix="mg")
+    print(f"\n{"----------" * 5}\n")
 
 
 def super_main():

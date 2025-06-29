@@ -90,9 +90,7 @@ def get_link_from_ajax(article):
             )
             response = resp.json()
             link = response["included"][0]["attributes"].get("url")
-            print()
             print(f"Нашёл ссылку {link}")
-            print()
             return link
         except KeyError:
             continue

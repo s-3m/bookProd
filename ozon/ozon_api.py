@@ -341,7 +341,6 @@ class Ozon:
         ready_data = self._prepare_for_sample(result, for_parse_sample)
         if ready_data[1]:
             self.update_stock(ready_data[1], update_price=False)
-        print(len(ready_data[0]))
         return ready_data[0]
 
 
