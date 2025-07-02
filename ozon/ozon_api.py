@@ -35,7 +35,7 @@ class Ozon:
         self.errors = {self.client_id: []}
         self.tasks_id = []
         self.PRX = prx
-        self.prx_list = self.get_proxies()
+        self.prx_list = self.get_proxies() if prx else None
         self.prefix = prefix
 
         self.headers = {
@@ -213,28 +213,30 @@ class Ozon:
     def _price_calculate(self, input_price) -> dict:
         input_price = str(input_price)
         raw_price = round(float(input_price.replace(",", ".").replace("\xa0", "")), 2)
-        price = round(raw_price * 2.75)
+        if self.prefix == "mg":
+            raw_price = raw_price - (raw_price * 0.15)
+        # profit calculate
+        profit = (raw_price * 50) / 100
+        # Фиксированная сумма (обработка, доставка - 135р)
+        fixed_margin = raw_price + profit + 135
+        # Сумма с учетом минимальной комиссии за задержку отправлений (100р)
+        additional_coef = 0
         if self.prefix == "chit_gor":
-            addition_price_for_deliver = 1.024
-            min_addition_price_for_deliver = 100
-            if (price * 0.02) > 100:
-                price = round(price * addition_price_for_deliver)
-            else:
-                price = price + min_addition_price_for_deliver
+            additional_coef = 100
         elif self.prefix == "mdk":
-            addition_price_for_deliver = 1.018
-            min_addition_price_for_deliver = 50
-            if (price * 0.01) > 50:
-                price = round(price * addition_price_for_deliver)
-            else:
-                price = price + min_addition_price_for_deliver
+            additional_coef = 50
+        price_with_delay_tax = fixed_margin + additional_coef
+        # Сумма с учетом комиссии озон и эквайринга (32,5% и 2%)
+        price_with_main_tax = price_with_delay_tax * 34.5 / 65.5 + price_with_delay_tax
+        # Конечная сумма с учётом акции 15%
+        finish_price = round(price_with_main_tax * 15 / 85 + price_with_main_tax, 0)
 
-        if price < 999:
-            price = 999
-        old_price = price * 2
-        min_price = price * self.discount
+        if finish_price < 999:
+            finish_price = 999
+        old_price = finish_price * 2
+        min_price = finish_price * self.discount
         return {
-            "price": str(price),
+            "price": str(finish_price),
             "old_price": str(old_price),
             "min_price": str(min_price),
         }
@@ -357,6 +359,7 @@ class Ozon:
         ready_data = self._prepare_for_sample(result, for_parse_sample)
         if ready_data[1]:
             self.update_stock(ready_data[1], update_price=False)
+        print(len(ready_data[0]))
         return ready_data[0]
 
 
