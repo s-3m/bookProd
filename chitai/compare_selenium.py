@@ -137,7 +137,12 @@ def get_main_data(book_item):
 
         stock = soup.find("link", attrs={"itemprop": "availability"})
 
-        price = soup.find("span", attrs={"itemprop": "price"}).get("content")
+        price = (
+            soup.find("span", "product-offer-price__actual")
+            .text.split(" ₽")[0]
+            .strip()
+            .replace("\xa0", "")
+        )
 
         book_item["price"] = price
 
