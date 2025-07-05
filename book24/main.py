@@ -56,14 +56,14 @@ def get_item_data(link):
             .strip()
         )
         item_data["Название"] = title
-        char_area = soup.find("div", id="product-characteristic")
-        dt = [i.text.strip() for i in char_area.find_all("dt")]
-        dd = [i.text.strip() for i in char_area.find_all("dd")]
-        full_chars = zip(dt, dd)
-        for i in full_chars:
-            if i[0] == "ISBN":
-                item_data["ISBN"] = i[1]
-                break
+        # char_area = soup.find("dl", class_="product-characteristic__list")
+        # dt = [i.text.strip() for i in char_area.find_all("dt")]
+        # dd = [i.text.strip() for i in char_area.find_all("dd")]
+        # full_chars = zip(dt, dd)
+        # for i in full_chars:
+        #     if i[0] == "ISBN":
+        #         item_data["ISBN"] = i[1]
+        #         break
 
         status_btn = soup.find("div", class_="product-detail-page__sidebar")
         status = status_btn.find("span", class_="b24-btn__content").text.strip()
@@ -71,8 +71,11 @@ def get_item_data(link):
             item_data["Статус"] = "в наличии"
         elif status == "Оформить предзаказ":
             item_data["Статус"] = "предзаказ"
-        isbn = soup.find("meta", attrs={"itemprop": "isbn"}).get("content")
-        item_data["ISBN"] = isbn
+        try:
+            isbn = soup.find("meta", attrs={"itemprop": "isbn"}).get("content")
+            item_data["ISBN"] = isbn
+        except Exception:
+            item_data["ISBN"] = ""
 
         all_scripts = soup.find_all("script")
         quantity = 0
@@ -110,11 +113,11 @@ def main():
     max_pagination = 8833
     for page in range(1, max_pagination + 1):
         items_list = get_page_data(page)
-        with ThreadPoolExecutor(max_workers=5) as executor:
+        with ThreadPoolExecutor(max_workers=10) as executor:
             result = [executor.submit(get_item_data, link) for link in items_list]
 
     if errors:
-        with ThreadPoolExecutor(max_workers=5) as executor:
+        with ThreadPoolExecutor(max_workers=10) as executor:
             result = [executor.submit(get_item_data, link) for link in errors]
 
     result_df = pl.DataFrame(all_books)
