@@ -163,15 +163,12 @@ def get_book_data(book_url: str):
             stock = None
 
         try:
-            detail_section = soup.find(
-                "section", class_="detail-product__description-wrapper"
-            )
-            details = detail_section.find_all(
-                "div", class_="product-detail-features__item"
-            )
+            detail_section = soup.find("div", id="properties")
+            detail_element = detail_section.find_all("li")
+
             detail_dict = {
-                i.find_all()[0].text.strip(): i.find_all()[1].text.strip()
-                for i in details
+                i.find_all("span")[0].text.strip(): i.find_all("span")[1].text.strip()
+                for i in detail_element
             }
         except:
             detail_dict = None
