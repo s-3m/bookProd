@@ -1,5 +1,7 @@
+import random
 import sys
 import os
+import time
 from concurrent.futures import ThreadPoolExecutor
 import pandas.io.formats.excel
 from bs4 import BeautifulSoup as bs
@@ -104,6 +106,7 @@ last_isbn = None
 
 def get_book_data(book_url: str):
     link = book_url if book_url.startswith("http") else f"{BASE_URL}{book_url}"
+    time.sleep(random.uniform(0.5, 3))
     try:
         response = sync_fetch_request(link, headers, cookies)
         soup = bs(response, "lxml")
@@ -282,12 +285,13 @@ def get_page_data(book_category_link, page_number=1, reparse_url=False):
     global page_to_stop
     url = f"{book_category_link}?page={page_number}" if not reparse_url else reparse_url
     try:
+        time.sleep(random.uniform(0.5, 3))
         response = sync_fetch_request(url, headers, cookies)
         soup = bs(response, "lxml")
         product_list = soup.find("div", class_="app-catalog__list")
         all_articles = product_list.find_all("article", class_="product-card")
         stop_count = 0
-        with ThreadPoolExecutor(max_workers=10) as executor:
+        with ThreadPoolExecutor(max_workers=3) as executor:
             for article in all_articles:
                 buy_possibility = article.find(
                     "div", class_="chg-app-button__content"
@@ -326,7 +330,7 @@ async def get_gather_data():
                 max_pages = int(
                     soup.find_all("a", class_="chg-app-pagination__item")[-1].text
                 )
-                with ThreadPoolExecutor(max_workers=5) as executor:
+                with ThreadPoolExecutor(max_workers=3) as executor:
                     for page in range(1, max_pages + 1):
                         if page > page_to_stop:
                             break
@@ -340,7 +344,7 @@ async def get_gather_data():
             logger.warning(f"Start reparse {len(item_error)} errors")
             new_item_list = item_error.copy()
             item_error.clear()
-            with ThreadPoolExecutor(max_workers=5) as executor:
+            with ThreadPoolExecutor(max_workers=3) as executor:
                 for item in new_item_list:
                     executor.submit(get_book_data, item)
 
@@ -349,7 +353,7 @@ async def get_gather_data():
             logger.warning(f"Start reparse {len(item_error)} pages errors")
             new_page_list = page_error.copy()
             page_error.clear()
-            with ThreadPoolExecutor(max_workers=5) as executor:
+            with ThreadPoolExecutor(max_workers=3) as executor:
                 for url in new_page_list:
                     executor.submit(get_page_data, False, 1, url)
 
