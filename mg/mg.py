@@ -1,6 +1,8 @@
 import time
 import sys
 import os
+
+import pandas as pd
 import pandas.io.formats.excel
 from bs4 import BeautifulSoup as bs
 from pprint import pprint
@@ -15,6 +17,7 @@ from utils import (
     check_danger_string,
     fetch_request,
     write_result_files,
+    forming_add_files,
 )
 from filter import filtering_cover
 
@@ -33,11 +36,7 @@ headers = {
     "user-agent": USER_AGENT.random,
 }
 
-sample_raw = get_items_list("mg", visibility="ALL")
-sample = {i["Артикул"] for i in sample_raw}
-
 result = []
-id_to_add = []
 
 count = 1
 item_error = []
@@ -190,10 +189,9 @@ async def get_item_data(session, link: str):
         elif "+" not in age:
             item_data["Возраст от:"] = age + "+"
 
-        if isbn + ".0" not in sample and quantity == "есть в наличии":
-            id_to_add.append(item_data)
+        if quantity == "есть в наличии":
+            result.append(item_data)
 
-        result.append(item_data)
         unique_title.add(title)
         global count
         print(
@@ -270,20 +268,20 @@ async def get_gather_data():
                     continue
             await asyncio.gather(*reparse_tasks)
 
+        logger.info("Start to write to excel")
+        result_df = pd.DataFrame(result)
+        new_shop_df, old_shop_df = forming_add_files(result_df=result_df, prefix="mg")
+        write_result_files(
+            base_dir=BASE_LINUX_DIR,
+            prefix="mg",
+            all_books_result=result,
+            id_to_add=(new_shop_df, old_shop_df),
+        )
+
 
 def main():
     logger.info("Start parsing Gvardia")
     asyncio.run(get_gather_data())
-    logger.info("Finish parsing Gvardia")
-    logger.info("Start to write to excel")
-
-    write_result_files(
-        base_dir=BASE_LINUX_DIR,
-        prefix="mg",
-        all_books_result=result,
-        id_to_add=id_to_add,
-    )
-
     logger.info("Finish to write to excel")
     logger.success("Gvardia pars success")
 
