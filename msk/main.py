@@ -48,10 +48,6 @@ count = 1
 result = []
 item_error = []
 page_error = []
-# id_to_add = []
-
-# sample_raw = get_items_list("msk", visibility="ALL")
-# sample = {i["Артикул"] for i in sample_raw}
 
 last_isbn = None
 
@@ -250,7 +246,6 @@ async def get_item_data(session, item: str):
             "Канцелярские товары",
             "CD-Rom",
         ]:
-            # id_to_add.append(book_dict)
             result.append(book_dict)
 
         print(
