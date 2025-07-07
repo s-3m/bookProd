@@ -175,7 +175,9 @@ def write_result_files(
     replace_photo: bool = False,
 ):
     all_result_df = pd.DataFrame(all_books_result).drop_duplicates(subset="Артикул_OZ")
-    all_result_df.to_excel(f"{base_dir}/result/{prefix}_all.xlsx", index=False)
+    all_result_df.to_excel(
+        f"{base_dir}/result/{prefix}_all.xlsx", index=False, engine="openpyxl"
+    )
 
     df_add = pd.DataFrame(id_to_add).drop_duplicates(subset="Артикул_OZ")
     df_add = (
@@ -189,7 +191,9 @@ def write_result_files(
     if replace_photo:
         del df_add["Фото_y"]
         df_add.rename(columns={"Фото_x": "Фото"}, inplace=True)
-    df_add.to_excel(f"{base_dir}/result/{prefix}_add.xlsx", index=False)
+    df_add.to_excel(
+        f"{base_dir}/result/{prefix}_add.xlsx", index=False, engine="openpyxl"
+    )
 
 
 def give_me_sample(
