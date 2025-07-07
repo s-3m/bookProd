@@ -1,11 +1,15 @@
 import json
 import sys
 import os
+
+import pandas as pd
 import pandas.io.formats.excel
 from bs4 import BeautifulSoup as bs
 import aiohttp
 import asyncio
 from loguru import logger
+from pygments.lexer import combined
+
 from filter import filtering_cover
 from photo_utils import replace_photo
 
@@ -15,6 +19,7 @@ from utils import (
     check_danger_string,
     fetch_request,
     write_result_files,
+    forming_add_files,
 )
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
@@ -22,8 +27,8 @@ DEBUG = True if sys.platform.startswith("win") else False
 BASE_URL = "https://mdk-arbat.ru"
 BASE_LINUX_DIR = "/media/source/mdk" if not DEBUG else "source"
 
-sample_raw = get_items_list("mdk", visibility="ALL")
-sample = {i["Артикул"] for i in sample_raw}
+# sample_raw = get_items_list("mdk", visibility="ALL")
+# sample = {i["Артикул"] for i in sample_raw}
 
 headers = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -44,8 +49,8 @@ headers = {
 }
 
 all_books_result = []
-id_to_add = []
-new_id_to_add = []
+# id_to_add = []
+# new_id_to_add = []
 
 done_count = 0
 item_error = []
@@ -193,18 +198,16 @@ async def get_item_data(session, book: str):
         if not publisher:
             book_data["Издательство"] = "АСТ"
 
-        if article not in sample and stock > 0:
+        if stock > 0:
             check_book_type = char_data.get("Вид товара")
             if check_book_type == "Книги":
-                id_to_add.append(book_data)
+                all_books_result.append(book_data)
 
         print(
             f"\rDone - {count} | Item error - {len(item_error)} | Page errors - {len(page_error)} | Category errors - {len(category_error)}",
             end="",
         )
         count += 1
-        unique_book_links.add(link)
-        all_books_result.append(book_data)
 
     except (BaseException, Exception) as e:
         logger.exception(f"Error - {link}")
@@ -252,7 +255,7 @@ async def get_category_data(session, category: str):
             asyncio.create_task(
                 get_page_data(session, f"{BASE_URL}{category}&pid={page}")
             )
-            for page in range(1, pagination + 1)
+            for page in range(1, 3)
         ]
         await asyncio.gather(*page_tasks)
         # for page in range(1, pagination + 1):
@@ -283,7 +286,7 @@ async def get_gather_data():
         logger.info(f"Найдено {len(all_categories)} категорий")
         logger.info(f"Начался сбор данных по категориям")
 
-        for main_category in all_categories:
+        for main_category in all_categories[:3]:
             await get_category_data(session, main_category)
 
         logger.info(f"Main data was collected")
@@ -322,32 +325,60 @@ async def get_gather_data():
             await asyncio.gather(*item_err)
 
         # Replace photo
-        global new_id_to_add
-        global id_to_add
+        # global new_id_to_add
+        # global id_to_add
+
+        all_books_result_df = pd.DataFrame(all_books_result)
+        new_shops_df, old_shops_df = forming_add_files(
+            result_df=all_books_result_df, prefix="mdk"
+        )
+
+        combined_df = pd.concat([new_shops_df, old_shops_df]).drop_duplicates()
+        # Сброс индекса
+        combined_df = combined_df.reset_index(drop=True)
+        id_to_add = combined_df.to_dict("records")
+
         try:
-            new_id_to_add = await replace_photo(id_to_add)
+            new_id_to_add_df = await replace_photo(id_to_add)
+            new_id_to_add_df.set_index("Артикул_OZ", inplace=True)
+            new_shops_df.set_index("Артикул_OZ", inplace=True)
+            old_shops_df.set_index("Артикул_OZ", inplace=True)
+            result_new_df = new_shops_df.combine_first(
+                new_id_to_add_df[["Фото"]]
+            ).reset_index()
+            result_old_df = old_shops_df.combine_first(
+                new_id_to_add_df[["Фото"]]
+            ).reset_index()
+
+            write_result_files(
+                base_dir=BASE_LINUX_DIR,
+                prefix="mdk",
+                all_books_result=all_books_result,
+                id_to_add=(result_new_df, result_old_df),
+                replace_photo=True,
+            )
         except Exception as e:
             logger.exception(e)
-            new_id_to_add = id_to_add
+            # new_id_to_add = id_to_add
 
 
 if __name__ == "__main__":
     asyncio.run(get_gather_data())
     logger.info("Start write files")
-    try:
-        write_result_files(
-            base_dir=BASE_LINUX_DIR,
-            prefix="mdk",
-            all_books_result=all_books_result,
-            id_to_add=new_id_to_add,
-            replace_photo=True,
-        )
-    except Exception as e:
-        logger.exception(e)
-        write_result_files(
-            base_dir=BASE_LINUX_DIR,
-            prefix="mdk",
-            all_books_result=all_books_result,
-            id_to_add=id_to_add,
-        )
+    # try:
+    #     write_result_files(
+    #         base_dir=BASE_LINUX_DIR,
+    #         prefix="mdk",
+    #         all_books_result=all_books_result,
+    #         id_to_add=new_id_to_add,
+    #         replace_photo=True,
+    #     )
+    # except Exception as e:
+    #     logger.exception(e)
+    #     write_result_files(
+    #         base_dir=BASE_LINUX_DIR,
+    #         prefix="mdk",
+    #         all_books_result=all_books_result,
+    #         id_to_add=id_to_add,
+    #     )
     logger.success("Script finished successfully")
