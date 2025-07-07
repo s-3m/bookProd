@@ -325,16 +325,17 @@ async def get_gather_data():
     ) as session:
         for i in [f"{BASE_URL}/catalog/books-18030"]:
             logger.info(f"Start parsing {i}")
-            async with session.get(i, headers=headers) as resp:
-                soup = bs(await resp.text(), "lxml")
-                max_pages = int(
-                    soup.find_all("a", class_="chg-app-pagination__item")[-1].text
-                )
-                with ThreadPoolExecutor(max_workers=3) as executor:
-                    for page in range(1, max_pages + 1):
-                        if page > page_to_stop:
-                            break
-                        executor.submit(get_page_data, i, page, False)
+            resp = sync_fetch_request(i, headers=headers, cookies=cookies)
+            # async with session.get(i, headers=headers) as resp:
+            soup = bs(resp, "lxml")
+            max_pages = int(
+                soup.find_all("a", class_="chg-app-pagination__item")[-1].text
+            )
+            with ThreadPoolExecutor(max_workers=3) as executor:
+                for page in range(1, max_pages + 1):
+                    if page > page_to_stop:
+                        break
+                    executor.submit(get_page_data, i, page, False)
 
         print()
         logger.success("Main data was collected")
