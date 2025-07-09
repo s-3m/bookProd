@@ -118,10 +118,24 @@ async def check_danger_string(
     return base_string
 
 
-def sync_fetch_request(url, headers, cookies=None):
+with open(Path(__file__).parent / "proxy.txt") as f:
+    PROXIES = f.readlines()
+
+
+def sync_fetch_request(url, headers, cookies=None, use_proxy=False):
     response_status_code = None
+    if use_proxy:
+        selected_proxy = random.choice(PROXIES).strip()
+        proxy = {
+            "http": f"{selected_proxy}",
+            "https": f"{selected_proxy}",
+        }
+    else:
+        proxy = None
     for _ in range(10):
-        response = requests.get(url, headers=headers, cookies=cookies, timeout=30)
+        response = requests.get(
+            url, headers=headers, cookies=cookies, timeout=30, proxies=proxy
+        )
         time.sleep(2)
         if response.status_code == 200:
             return response.text
