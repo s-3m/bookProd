@@ -108,7 +108,7 @@ def get_book_data(book_url: str):
     link = book_url if book_url.startswith("http") else f"{BASE_URL}{book_url}"
     time.sleep(random.uniform(0.5, 3))
     try:
-        response = sync_fetch_request(link, headers, cookies)
+        response = sync_fetch_request(link, headers, cookies, use_proxy=True)
         soup = bs(response, "lxml")
 
         try:
@@ -286,12 +286,12 @@ def get_page_data(book_category_link, page_number=1, reparse_url=False):
     url = f"{book_category_link}?page={page_number}" if not reparse_url else reparse_url
     try:
         time.sleep(random.uniform(0.5, 3))
-        response = sync_fetch_request(url, headers, cookies)
+        response = sync_fetch_request(url, headers, cookies, use_proxy=True)
         soup = bs(response, "lxml")
         product_list = soup.find("div", class_="app-catalog__list")
         all_articles = product_list.find_all("article", class_="product-card")
         stop_count = 0
-        with ThreadPoolExecutor(max_workers=3) as executor:
+        with ThreadPoolExecutor(max_workers=10) as executor:
             for article in all_articles:
                 buy_possibility = article.find(
                     "div", class_="chg-app-button__content"
@@ -325,13 +325,15 @@ async def get_gather_data():
     ) as session:
         for i in [f"{BASE_URL}/catalog/books-18030"]:
             logger.info(f"Start parsing {i}")
-            resp = sync_fetch_request(i, headers=headers, cookies=cookies)
+            resp = sync_fetch_request(
+                i, headers=headers, cookies=cookies, use_proxy=True
+            )
             # async with session.get(i, headers=headers) as resp:
             soup = bs(resp, "lxml")
             max_pages = int(
                 soup.find_all("a", class_="chg-app-pagination__item")[-1].text
             )
-            with ThreadPoolExecutor(max_workers=3) as executor:
+            with ThreadPoolExecutor(max_workers=10) as executor:
                 for page in range(1, max_pages + 1):
                     if page > page_to_stop:
                         break
@@ -345,7 +347,7 @@ async def get_gather_data():
             logger.warning(f"Start reparse {len(item_error)} errors")
             new_item_list = item_error.copy()
             item_error.clear()
-            with ThreadPoolExecutor(max_workers=3) as executor:
+            with ThreadPoolExecutor(max_workers=10) as executor:
                 for item in new_item_list:
                     executor.submit(get_book_data, item)
 
@@ -354,7 +356,7 @@ async def get_gather_data():
             logger.warning(f"Start reparse {len(item_error)} pages errors")
             new_page_list = page_error.copy()
             page_error.clear()
-            with ThreadPoolExecutor(max_workers=3) as executor:
+            with ThreadPoolExecutor(max_workers=10) as executor:
                 for url in new_page_list:
                     executor.submit(get_page_data, False, 1, url)
 
