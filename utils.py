@@ -124,8 +124,8 @@ with open(Path(__file__).parent / "proxy.txt") as f:
 
 def sync_fetch_request(url, headers, cookies=None, use_proxy=False):
     response_status_code = None
+    selected_proxy = random.choice(PROXIES).strip()
     if use_proxy:
-        selected_proxy = random.choice(PROXIES).strip()
         proxy = {
             "http": f"{selected_proxy}",
             "https": f"{selected_proxy}",
@@ -133,16 +133,19 @@ def sync_fetch_request(url, headers, cookies=None, use_proxy=False):
     else:
         proxy = None
     for _ in range(10):
-        response = requests.get(
-            url, headers=headers, cookies=cookies, timeout=30, proxies=proxy
-        )
-        time.sleep(2)
-        if response.status_code == 200:
-            return response.text
-        elif response.status_code == 404:
-            return "404"
-        else:
-            response_status_code = response.status_code
+        try:
+            response = requests.get(
+                url, headers=headers, cookies=cookies, timeout=30, proxies=proxy
+            )
+            time.sleep(1)
+            if response.status_code == 200:
+                return response.text
+            elif response.status_code == 404:
+                return "404"
+            else:
+                response_status_code = response.status_code
+        except Exception as e:
+            logger.exception(f"ERROR - {e} | proxy - {selected_proxy}")
     return response_status_code
 
 
