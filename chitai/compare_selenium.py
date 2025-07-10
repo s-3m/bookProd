@@ -1,4 +1,5 @@
 import os
+import random
 import sys
 
 import requests
@@ -13,7 +14,8 @@ import time
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files, tg_send_msg
-from utils import give_me_sample, quantity_checker
+from utils import give_me_sample, quantity_checker, sync_fetch_request
+from utils import PROXIES
 from concurrent.futures import ThreadPoolExecutor
 from ozon.ozon_api import (
     get_items_list,
@@ -73,7 +75,11 @@ unique_article: dict[str, tuple] = {}  # article: (stock, price)
 
 
 def get_link_from_ajax(article):
-
+    selected_proxy = random.choice(PROXIES).strip()
+    proxy = {
+        "http": f"{selected_proxy}",
+        "https": f"{selected_proxy}",
+    }
     params = {
         "phrase": article[:-2],
         "customerCityId": "213",
@@ -87,6 +93,7 @@ def get_link_from_ajax(article):
                 params=params,
                 cookies=cookies,
                 timeout=15,
+                proxies=proxy,
             )
             response = resp.json()
             link = response["included"][0]["attributes"].get("url")
@@ -113,18 +120,13 @@ def get_main_data(book_item):
                 return
             book_item["link"] = f"{BASE_URL}/{i_link}"
 
-        response_text = ""
-        for _ in range(5):
-            response = requests.get(
-                book_item["link"], headers=headers, timeout=30, cookies=cookies
-            )
-            if response.status_code == 404:
-                book_item["stock"] = "0"
-                book_item["price"] = None
-                return
-            if response.status_code == 200:
-                response_text = response.text
-                break
+        response_text = sync_fetch_request(
+            book_item["link"], headers=headers, cookies=cookies, use_proxy=True
+        )
+        if response_text == "404":
+            book_item["stock"] = "0"
+            book_item["price"] = None
+            return
 
         soup = bs(response_text, "lxml")
 
@@ -164,7 +166,14 @@ def get_main_data(book_item):
 
 
 async def get_auth_token():
-    resp = requests.get("https://www.chitai-gorod.ru", headers=headers, cookies=cookies)
+    selected_proxy = random.choice(PROXIES).strip()
+    proxy = {
+        "http": f"{selected_proxy}",
+        "https": f"{selected_proxy}",
+    }
+    resp = requests.get(
+        "https://www.chitai-gorod.ru", headers=headers, cookies=cookies, proxies=proxy
+    )
     time.sleep(15)
     ddd = resp.cookies
     acc_token = (
