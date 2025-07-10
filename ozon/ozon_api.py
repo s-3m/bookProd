@@ -119,7 +119,7 @@ class Ozon:
                 json={
                     "items": ready_data_for_push[item : item + 100],
                 },
-                proxies=self.prx_list if self.PRX else None,
+                proxies=self.prx_list,
             )
             result = response.json().get("result")
             task_id = result.get("task_id")
@@ -149,7 +149,7 @@ class Ozon:
                 f"{self.host}/v1/product/import/info",
                 headers=self.headers,
                 json={"task_id": task},
-                proxies=self.prx_list if self.PRX else None,
+                proxies=self.prx_list,
             )
             result = response.json().get("result")
             if result:
@@ -186,6 +186,7 @@ class Ozon:
                     "filter": {"visibility": visible},
                     "limit": 1000,
                 },
+                proxies=self.prx_list,
             )
             items_list = response.json().get("items")
             if not items_list:
@@ -200,7 +201,7 @@ class Ozon:
         response = requests.post(
             f"{self.host}/v1/warehouse/list",
             headers=self.headers,
-            proxies=self.prx_list if self.PRX else None,
+            proxies=self.prx_list,
         )
         warehouses_list: list[dict] = response.json().get("result")
         for i in warehouses_list:
@@ -270,7 +271,7 @@ class Ozon:
                     "https://api-seller.ozon.ru/v1/product/import/prices",
                     headers=self.headers,
                     json=body,
-                    proxies=self.prx_list if self.PRX else None,
+                    proxies=self.prx_list,
                 )
                 results = response.json().get("result")
                 for result in results:
@@ -304,7 +305,7 @@ class Ozon:
                     f"{self.host}/v2/products/stocks",
                     headers=self.headers,
                     json=body,
-                    proxies=self.prx_list if self.PRX else None,
+                    proxies=self.prx_list,
                 )
                 results = response.json().get("result")
                 for result in results:
@@ -347,7 +348,10 @@ class Ozon:
         }
         while True:
             response = requests.post(
-                f"{self.host}/v3/product/list", headers=self.headers, json=body
+                f"{self.host}/v3/product/list",
+                headers=self.headers,
+                json=body,
+                proxies=self.prx_list,
             )
             time.sleep(0.5)
             items_list = response.json().get("result").get("items")
