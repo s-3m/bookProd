@@ -240,11 +240,11 @@ def main():
         # TG send
         df_del = df_result.loc[df_result["stock"] == "0"][["article"]]
         del_path = f"{BASE_LINUX_DIR}/chit_gor_del.xlsx"
-        df_del.to_excel(del_path, index=False)
+        df_del.to_excel(del_path, index=False, engine="openpyxl")
 
         df_without_del = df_result.loc[df_result["stock"] != "0"]
         new_stock_path = f"{BASE_LINUX_DIR}/chit_gor_new_stock.xlsx"
-        df_without_del.to_excel(new_stock_path, index=False)
+        df_without_del.to_excel(new_stock_path, index=False, engine="openpyxl")
 
         logger.success("Finish write to excel")
 
