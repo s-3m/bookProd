@@ -46,10 +46,7 @@ class Ozon:
 
     def get_proxies(self):
         prx = os.getenv("PRX")
-        proxies = {
-            "http": f"http://{prx}",
-            "https": f"http://{prx}",
-        }
+        proxies = {"http://": f"http://{prx}", "https://": f"http://{prx}"}
         return proxies
 
     def add_items(self, item_list: list[dict]) -> list[dict] | None:
