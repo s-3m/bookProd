@@ -291,7 +291,6 @@ async def get_gather_data():
             max_pagination = (
                 soup.find("ul", class_="pager__list").find_all("li")[-2].text
             )
-            max_pagination = 10
             tasks = []
             logger.info(f"Page find - {max_pagination}")
             for page in range(1, int(max_pagination) + 1):
