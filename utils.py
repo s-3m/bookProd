@@ -126,10 +126,7 @@ def sync_fetch_request(url, headers, cookies=None, use_proxy=False):
     response_status_code = None
     selected_proxy = random.choice(PROXIES).strip()
     if use_proxy:
-        proxy = {
-            "http": f"{selected_proxy}",
-            "https": f"{selected_proxy}",
-        }
+        proxy = {"http": f"{selected_proxy}", "https": f"{selected_proxy}"}
     else:
         proxy = None
     for _ in range(10):
