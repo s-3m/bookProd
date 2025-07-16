@@ -192,11 +192,11 @@ async def get_gather_data(sample):
     await get_auth_token()
 
     # Main loop
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=6) as executor:
         threads = [executor.submit(get_main_data, i) for i in sample]
 
     # Reparse item
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=6) as executor:
         threads_repars = [
             executor.submit(get_main_data, i) for i in sample if i["stock"] == "error"
         ]
