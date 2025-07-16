@@ -104,7 +104,7 @@ async def replace_photo(add_list: list[dict]) -> pd.DataFrame:
     logger.info("Start replace photo")
 
     path_to_chit = "/media/source/chitai/result/chit_gor_all.xlsx"
-    path_to_chit = "../chitai/source/result/chit_gor_all.xlsx"
+    # path_to_chit = "../chitai/source/result/chit_gor_all.xlsx"
     chit_gor_df = pd.read_excel(path_to_chit)[["ISBN", "Фото"]]
     chit_gor_df = chit_gor_df.where(chit_gor_df.notnull(), None)
 
