@@ -9,7 +9,6 @@ def logger_filter(record):
 
 
 def all_stocks_to_zero(prefix):
-    print(os.getenv("MSK_CLIENT_ID_2146613"))
     logger.info("Start to search a stocks")
     items = get_items_list(
         prefix=prefix, visibility="VISIBLE", for_parse_sample=False, get_stocks=True
