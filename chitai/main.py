@@ -109,6 +109,9 @@ def get_book_data(book_url: str):
     time.sleep(random.uniform(0.5, 3))
     try:
         response = sync_fetch_request(link, headers, cookies, use_proxy=True)
+        if response == "proxy error":
+            item_error.append(link)
+            return
         soup = bs(response, "lxml")
 
         try:
@@ -121,7 +124,7 @@ def get_book_data(book_url: str):
             title = "Нет названия"
 
         try:
-            author = soup.find("a", class_="product-info-authors__author").text.strip()
+            author = soup.find("li", class_="product-authors__link").text.strip()
         except:
             author = "Нет автора"
 
@@ -135,28 +138,33 @@ def get_book_data(book_url: str):
 
         try:
             description = soup.find(
-                "article", class_="detail-description__text"
+                "article", class_="product-detail-page__detail-text"
             ).text.strip()
             description = asyncio.run(check_danger_string(description, "description"))
         except:
             description = "Нет описания"
 
         try:
-            photo = soup.find("img", class_="product-info-gallery__poster").get("src")
+            photo = soup.find("img", class_="product-preview__placeholder").get("src")
         except:
             photo = "Нет фото"
 
         try:
-            price = soup.find("span", attrs={"itemprop": "price"}).get("content")
+            price = (
+                soup.find("span", "product-offer-price__actual")
+                .text.split(" ₽")[0]
+                .strip()
+                .replace("\xa0", "")
+            )
         except:
             price = "Цена не указана"
 
-        try:
-            stock_status = soup.find(
-                "div", class_="offer-availability-status"
-            ).text.strip()
-        except:
-            stock_status = None
+        # try:
+        #     stock_status = soup.find(
+        #         "div", class_="offer-availability-status"
+        #     ).text.strip()
+        # except:
+        #     stock_status = None
 
         try:
             stock = soup.find("link", attrs={"itemprop": "availability"})
@@ -287,6 +295,9 @@ def get_page_data(book_category_link, page_number=1, reparse_url=False):
     try:
         time.sleep(random.uniform(0.5, 3))
         response = sync_fetch_request(url, headers, cookies, use_proxy=True)
+        if response.status_code == "proxy error":
+            page_error.append(url)
+            return
         soup = bs(response, "lxml")
         product_list = soup.find("div", class_="app-catalog__list")
         all_articles = product_list.find_all("article", class_="product-card")
@@ -333,7 +344,7 @@ async def get_gather_data():
             max_pages = int(
                 soup.find_all("a", class_="chg-app-pagination__item")[-1].text
             )
-            with ThreadPoolExecutor(max_workers=5) as executor:
+            with ThreadPoolExecutor(max_workers=2) as executor:
                 for page in range(1, max_pages + 1):
                     if page > page_to_stop:
                         break
@@ -356,7 +367,7 @@ async def get_gather_data():
             logger.warning(f"Start reparse {len(item_error)} pages errors")
             new_page_list = page_error.copy()
             page_error.clear()
-            with ThreadPoolExecutor(max_workers=5) as executor:
+            with ThreadPoolExecutor(max_workers=2) as executor:
                 for url in new_page_list:
                     executor.submit(get_page_data, False, 1, url)
 

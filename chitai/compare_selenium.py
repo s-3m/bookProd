@@ -123,6 +123,9 @@ def get_main_data(book_item):
         response_text = sync_fetch_request(
             book_item["link"], headers=headers, cookies=cookies, use_proxy=True
         )
+        if response_text == "proxy error":
+            book_item["stock"] = "error"
+            return
         if response_text == "404":
             book_item["stock"] = "0"
             book_item["price"] = None

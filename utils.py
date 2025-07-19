@@ -143,6 +143,7 @@ def sync_fetch_request(url, headers, cookies=None, use_proxy=False):
                 response_status_code = response.status_code
         except Exception as e:
             logger.exception(f"ERROR - {e} | proxy - {selected_proxy}")
+            return "proxy error"
     return response_status_code
 
 
