@@ -130,7 +130,7 @@ async def replace_photo(add_list: list[dict]) -> pd.DataFrame:
     result_df = pd.DataFrame(result)
     del result_df["Фото_y"]
     result_df.rename(columns={"Фото_x": "Фото"}, inplace=True)
-
+    result_df.drop_duplicates(subset="Артикул_OZ", inplace=True)
     return result_df
 
 
