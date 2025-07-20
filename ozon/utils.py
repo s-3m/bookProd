@@ -26,4 +26,5 @@ def all_stocks_to_zero(prefix):
 
 if __name__ == "__main__":
     for i in ["mg", "mdk", "chit_gor", "msk"]:
+        logger.info(f"Start {i}")
         all_stocks_to_zero(prefix=i)
