@@ -364,7 +364,7 @@ async def get_gather_data():
 
         # Reparse page errors
         if page_error:
-            logger.warning(f"Start reparse {len(item_error)} pages errors")
+            logger.warning(f"Start reparse {len(page_error)} pages errors")
             new_page_list = page_error.copy()
             page_error.clear()
             with ThreadPoolExecutor(max_workers=2) as executor:
