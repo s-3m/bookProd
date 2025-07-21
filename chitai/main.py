@@ -295,7 +295,7 @@ def get_page_data(book_category_link, page_number=1, reparse_url=False):
     try:
         time.sleep(random.uniform(0.5, 3))
         response = sync_fetch_request(url, headers, cookies, use_proxy=True)
-        if response.status_code == "proxy error":
+        if response == "proxy error":
             page_error.append(url)
             return
         soup = bs(response, "lxml")
