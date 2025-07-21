@@ -1,5 +1,7 @@
 import os
 import sys
+
+import pandas as pd
 from fake_useragent import UserAgent
 from bs4 import BeautifulSoup as bs
 import aiohttp
@@ -16,6 +18,7 @@ from utils import (
     check_danger_string,
     fetch_request,
     write_result_files,
+    forming_add_files,
 )
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
@@ -45,10 +48,6 @@ count = 1
 result = []
 item_error = []
 page_error = []
-id_to_add = []
-
-sample_raw = get_items_list("msk", visibility="ALL")
-sample = {i["Артикул"] for i in sample_raw}
 
 last_isbn = None
 
@@ -237,16 +236,18 @@ async def get_item_data(session, item: str):
         }
         book_dict.update(details_dict)
 
-        article_for_check = article + ".0"
         item_status = soup.find("div", class_="book__shop-details")
         item_status = (
             item_status.find("span").text.lower().strip() if item_status else None
         )
 
-        if article_for_check not in sample and item_status == "в наличии":
-            id_to_add.append(book_dict)
+        if item_status == "в наличии" and category not in [
+            "Канцелярия и прочее",
+            "Канцелярские товары",
+            "CD-Rom",
+        ]:
+            result.append(book_dict)
 
-        result.append(book_dict)
         print(
             f"\rDone - {count} | Book errors - {len(item_error)} | Page errors - {len(page_error)}",
             end="",
@@ -316,11 +317,13 @@ async def get_gather_data():
 
     print()
     logger.info("Start to write data in file")
+    result_df = pd.DataFrame(result)
+    all_shops_df = forming_add_files(result_df=result_df, prefix="msk")
     write_result_files(
         base_dir=BASE_LINUX_DIR,
         prefix="msk",
         all_books_result=result,
-        id_to_add=id_to_add,
+        id_to_add=all_shops_df,
     )
     logger.success("Data was wrote in file successfully")
 

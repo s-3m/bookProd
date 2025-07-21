@@ -12,6 +12,7 @@ from typing import Literal
 import aiohttp
 import requests
 from loguru import logger
+from ozon.ozon_api import get_items_list
 
 
 def filesdata_to_dict(
@@ -186,7 +187,7 @@ def write_result_files(
     base_dir: str,
     prefix: str,
     all_books_result,
-    id_to_add: list,
+    id_to_add: list | tuple[pd.DataFrame, pd.DataFrame],
     replace_photo: bool = False,
 ):
     all_result_df = pd.DataFrame(all_books_result).drop_duplicates(subset="Артикул_OZ")
@@ -194,21 +195,70 @@ def write_result_files(
         f"{base_dir}/result/{prefix}_all.xlsx", index=False, engine="openpyxl"
     )
 
-    df_add = pd.DataFrame(id_to_add).drop_duplicates(subset="Артикул_OZ")
-    df_add = (
-        df_add.sort_values("Наличие")
-        .drop_duplicates(subset="Название", keep="last")
-        .sort_values("Артикул_OZ")
-    )
-    # Check "add books" not in archive books
-    df_add = check_archived_books(df_for_add=df_add)
+    if isinstance(id_to_add, list):
+        df_add = pd.DataFrame(id_to_add).drop_duplicates(subset="Артикул_OZ")
+        df_add = (
+            df_add.sort_values("Наличие")
+            .drop_duplicates(subset="Название", keep="last")
+            .sort_values("Артикул_OZ")
+        )
+        # Check "add books" not in archive books
+        df_add = check_archived_books(df_for_add=df_add)
 
-    if replace_photo:
-        del df_add["Фото_y"]
-        df_add.rename(columns={"Фото_x": "Фото"}, inplace=True)
-    df_add.to_excel(
-        f"{base_dir}/result/{prefix}_add.xlsx", index=False, engine="openpyxl"
+        if replace_photo:
+            del df_add["Фото_y"]
+            df_add.rename(columns={"Фото_x": "Фото"}, inplace=True)
+
+        df_add.to_excel(
+            f"{base_dir}/result/{prefix}_add.xlsx",
+            index=False,
+            engine="openpyxl"
+        )
+
+    elif isinstance(id_to_add, tuple):
+        new_shop_df = id_to_add[0]
+        old_shop_df = id_to_add[1]
+        new_shop_df.drop_duplicates(subset="Название", keep="last", inplace=True)
+        old_shop_df.drop_duplicates(subset="Название", keep="last", inplace=True)
+
+        # Check "add books" not in archive books
+        new_shop_add = check_archived_books(df_for_add=new_shop_df)
+        old_shop_add = check_archived_books(df_for_add=old_shop_df)
+
+        new_shop_add.to_excel(
+            f"{base_dir}/result/{prefix}_add_new.xlsx", index=False, engine="openpyxl"
+        )
+        old_shop_add.to_excel(
+            f"{base_dir}/result/{prefix}_add_old.xlsx", index=False, engine="openpyxl"
+        )
+
+
+def forming_add_files(
+    result_df: pd.DataFrame, prefix: str
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    polars_df = pl.from_pandas(result_df)
+    items_list_new_shop = get_items_list(
+        prefix=prefix, visibility="ALL", shop_category="new"
     )
+    items_list_old_shop = get_items_list(
+        prefix=prefix, visibility="ALL", shop_category="old"
+    )
+
+    df_items_list_new_shop = pl.DataFrame(items_list_new_shop)[["Артикул"]].rename(
+        {"Артикул": "Артикул_OZ"}
+    )
+    df_items_list_old_shop = pl.DataFrame(items_list_old_shop)[["Артикул"]].rename(
+        {"Артикул": "Артикул_OZ"}
+    )
+
+    result_new_shop = polars_df.join(
+        df_items_list_new_shop, on="Артикул_OZ", how="anti"
+    ).to_pandas()
+
+    result_old_shop = polars_df.join(
+        df_items_list_old_shop, on="Артикул_OZ", how="anti"
+    ).to_pandas()
+    return result_new_shop, result_old_shop
 
 
 def give_me_sample(

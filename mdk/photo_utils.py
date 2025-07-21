@@ -70,6 +70,7 @@ count_replace_photo = 1
 
 sem = asyncio.Semaphore(3)
 
+
 async def photo_processing(item):
     global count_replace_photo
     try:
@@ -98,11 +99,12 @@ async def photo_processing(item):
         item["Фото_x"] = "https://zapobedu21.ru/images/26.07.2017/kniga.jpg"
 
 
-async def replace_photo(add_list: list[dict]):
+async def replace_photo(add_list: list[dict]) -> pd.DataFrame:
     print()
     logger.info("Start replace photo")
 
     path_to_chit = "/media/source/chitai/result/chit_gor_all.xlsx"
+    # path_to_chit = "../chitai/source/result/chit_gor_all.xlsx"
     chit_gor_df = pd.read_excel(path_to_chit)[["ISBN", "Фото"]]
     chit_gor_df = chit_gor_df.where(chit_gor_df.notnull(), None)
 
@@ -124,7 +126,12 @@ async def replace_photo(add_list: list[dict]):
         else:
             if i["Фото_x"] is not None:
                 await photo_processing(i)
-    return result
+
+    result_df = pd.DataFrame(result)
+    del result_df["Фото_y"]
+    result_df.rename(columns={"Фото_x": "Фото"}, inplace=True)
+    result_df.drop_duplicates(subset="Артикул_OZ", inplace=True)
+    return result_df
 
 
 if __name__ == "__main__":
