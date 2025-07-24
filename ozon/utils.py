@@ -1,6 +1,4 @@
-import os
-
-from ozon_api import get_items_list, separate_records_to_client_id, start_push_to_ozon
+from .ozon_api import get_items_list, separate_records_to_client_id, start_push_to_ozon
 from loguru import logger
 
 
