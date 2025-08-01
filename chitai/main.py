@@ -341,11 +341,11 @@ async def get_gather_data():
             )
             # async with session.get(i, headers=headers) as resp:
             soup = bs(resp, "lxml")
-            max_pages = int(
-                soup.find_all("a", class_="chg-app-pagination__item")[-1].text
-            )
+            # max_pages = int(
+            #     soup.find_all("a", class_="chg-app-pagination__item")[-1].text
+            # )
             with ThreadPoolExecutor(max_workers=2) as executor:
-                for page in range(1, max_pages + 1):
+                for page in range(page_to_stop):
                     if page > page_to_stop:
                         break
                     executor.submit(get_page_data, i, page, False)
