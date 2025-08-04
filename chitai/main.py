@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup as bs
 import aiohttp
 import asyncio
 from loguru import logger
+import pandas as pd
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from ozon.ozon_api import get_items_list
@@ -15,6 +16,7 @@ from utils import (
     check_danger_string,
     sync_fetch_request,
     write_result_files,
+    exclude_else_shops_books,
 )
 from filter import filtering_cover
 
@@ -375,13 +377,34 @@ async def get_gather_data():
             f"Datas was collected. Not reparse: item errors - {len(item_error)} --- page errors - {len(page_error)}"
         )
         logger.info("Start write files")
+
+        pure_add = exclude_else_shops_books(id_to_add, exclude_shop="chit")
         write_result_files(
             base_dir=BASE_LINUX_DIR,
             prefix="chit_gor",
             all_books_result=all_books_result,
-            id_to_add=id_to_add,
+            id_to_add=pure_add,
         )
         logger.info("Finished write files")
+
+        # Тут исключаем книжки у МДК, т.к. ЧГ заканчивает парситься последним
+        logger.info("Start to exclude MDK books")
+        mdk_old = pd.read_excel("/media/source/mdk/result/mdk_add_old.xlsx").to_dict(
+            orient="records"
+        )
+        mdk_new = pd.read_excel("/media/source/mdk/result/mdk_add_new.xlsx").to_dict(
+            orient="records"
+        )
+        old_after_exclude = exclude_else_shops_books(mdk_old, exclude_shop="mdk")
+        new_after_exclude = exclude_else_shops_books(mdk_new, exclude_shop="mdk")
+        mdk_path = "/media/source/mdk/result"
+        pd.DataFrame(old_after_exclude).to_excel(
+            f"{mdk_path}/mdk_add_old.xlsx", engine="openpyxl", index=False
+        )
+        pd.DataFrame(new_after_exclude).to_excel(
+            f"{mdk_path}/mdk_add_new.xlsx", engine="openpyxl", index=False
+        )
+        logger.info("MDK was excluded")
 
 
 @logger.catch
