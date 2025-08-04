@@ -210,9 +210,7 @@ def write_result_files(
             df_add.rename(columns={"Фото_x": "Фото"}, inplace=True)
 
         df_add.to_excel(
-            f"{base_dir}/result/{prefix}_add.xlsx",
-            index=False,
-            engine="openpyxl"
+            f"{base_dir}/result/{prefix}_add.xlsx", index=False, engine="openpyxl"
         )
 
     elif isinstance(id_to_add, tuple):
@@ -231,6 +229,36 @@ def write_result_files(
         old_shop_add.to_excel(
             f"{base_dir}/result/{prefix}_add_old.xlsx", index=False, engine="openpyxl"
         )
+
+
+def exclude_else_shops_books(items_on_add: list[dict], exclude_shop: str | None = None):
+    add_df = pl.DataFrame(items_on_add, infer_schema_length=100000)
+
+    mg_path = "/media/source/mg/result/mg_all.xlsx"
+    msk_path = "/media/source/msk/result/msk_all.xlsx"
+    mdk_path = "/media/source/mdk/result/mdk_all.xlsx"
+    chit_path = "/media/source/chitai/result/chit_gor_all.xlsx"
+
+    # mg_path = "mg/source/result/mg_all.xlsx"
+    # msk_path = "msk/source/result/msk_all.xlsx"
+    # mdk_path = "mdk/source/result/mdk_all.xlsx"
+    # chit_path = "chitai/source/result/chit_gor_all.xlsx"
+
+    all_shops = {
+        "mg": mg_path,
+        "msk": msk_path,
+        "mdk": mdk_path,
+        "chit": chit_path,
+    }
+    if exclude_shop:
+        del all_shops[exclude_shop]
+
+    for shop in all_shops:
+        pl_df = pl.read_excel(all_shops[shop])
+        add_df = add_df.join(pl_df, on="ISBN", how="anti")
+
+    result = add_df.to_dicts()
+    return result
 
 
 def forming_add_files(
