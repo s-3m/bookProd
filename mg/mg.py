@@ -72,7 +72,7 @@ async def get_item_data(session, link: str):
         try:
             options = soup.find("div", class_="item_basket_cont").find_all("tr")
             for option in options:
-                item_data[option.find_all("td")[0].text.strip()] = option.find_all(
+                item_data[option.find_all("td")[0].text.strip()[:-1]] = option.find_all(
                     "td"
                 )[1].text.strip()
                 if option.find_all("td")[0].text.strip() == "ISBN:":
@@ -82,9 +82,9 @@ async def get_item_data(session, link: str):
                     "div", class_="additional_information"
                 ).find_all("tr")
                 for option in additional_options:
-                    item_data[option.find_all("td")[0].text.strip()] = option.find_all(
-                        "td"
-                    )[1].text.strip()
+                    item_data[option.find_all("td")[0].text.strip()[:-1]] = (
+                        option.find_all("td")[1].text.strip()
+                    )
             except:
                 pass
         except:
@@ -94,14 +94,14 @@ async def get_item_data(session, link: str):
         quantity_page: str = item_data.get("Страниц:")
 
         if not quantity_page:
-            item_data["Страниц:"] = "100"
+            item_data["Страниц"] = "100"
         elif not quantity_page.isdigit():
-            item_data["Страниц:"] = count_edition.split(" ")[0]
+            item_data["Страниц"] = count_edition.split(" ")[0]
 
         if not count_edition:
-            item_data["Тираж:"] = "1000"
+            item_data["Тираж"] = "1000"
         elif not count_edition.isdigit():
-            item_data["Тираж:"] = count_edition.split(" ")[0]
+            item_data["Тираж"] = count_edition.split(" ")[0]
 
         try:
             info = soup.find("div", class_="content_sm_2").find("h4")
@@ -152,42 +152,40 @@ async def get_item_data(session, link: str):
         # Cover filter
         cover_type = item_data.get("Тип обложки:")
         if cover_type:
-            item_data["Тип обложки:"] = filtering_cover(cover_type)
+            item_data["Тип обложки"] = filtering_cover(cover_type)
 
         # Author filter
-        item_data["Автор:"] = (
-            item_data["Автор:"] if item_data.get("Автор:") else "Нет автора"
+        item_data["Автор"] = (
+            item_data["Автор"] if item_data.get("Автор:") else "Нет автора"
         )
         # ISBN filter
-        item_data["ISBN:"] = (
-            item_data["ISBN:"] if item_data.get("ISBN:") else "978-5-0000-0000-0"
+        item_data["ISBN"] = (
+            item_data["ISBN"] if item_data.get("ISBN:") else "978-5-0000-0000-0"
         )
         # Publisher filter
-        item_data["Издательство:"] = (
-            item_data["Издательство:"]
-            if item_data.get("Издательство:")
-            else "Не указано"
+        item_data["Издательство"] = (
+            item_data["Издательство"] if item_data.get("Издательство") else "Не указано"
         )
 
         # Year filter
-        publish_year = item_data.get("Год публикации:")
+        publish_year = item_data.get("Год публикации")
         if publish_year:
             try:
                 int_publish_year = int(publish_year)
                 if int_publish_year < 2018:
-                    item_data["Год публикации:"] = "2018"
+                    item_data["Год публикации"] = "2018"
             except:
-                item_data["Год публикации:"] = "2018"
+                item_data["Год публикации"] = "2018"
         else:
-            item_data["Год публикации:"] = "2018"
+            item_data["Год публикации"] = "2018"
 
         # Age filter
-        age = item_data.get("Возраст от:")
+        age = item_data.get("Возраст от")
 
         if not age or age == ":":
-            item_data["Возраст от:"] = "3+"
+            item_data["Возраст от"] = "3+"
         elif "+" not in age:
-            item_data["Возраст от:"] = age + "+"
+            item_data["Возраст от"] = age + "+"
 
         if quantity == "есть в наличии":
             result.append(item_data)
