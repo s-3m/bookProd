@@ -138,7 +138,6 @@ async def get_item_data(session, item: str):
         try:
             category_area = soup.find_all("li", class_="breadcrumbs__item")
             category = category_area[-3].text.strip()
-            sub_category = category_area[-2].text.strip()
         except:
             category = "Без категории"
 
@@ -147,6 +146,8 @@ async def get_item_data(session, item: str):
             price = soup.find("div", class_="book__price")
             if price:
                 price = price.text.strip()
+                if int(price) >= 40_000:
+                    return
         except:
             price = "Цена не указана"
 

@@ -99,6 +99,8 @@ async def to_check_item(item, session):
         if price:
             price = price.text.strip().replace("\xa0", "")
             item["price"] = price
+            if int(price) >= 40_000:
+                item["stock"] = 0
         else:
             item["price"] = None
 
