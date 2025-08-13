@@ -163,7 +163,7 @@ async def get_item_data(session, item: str):
             need_data_dict = eval(a[:-1])["Products"][0]
             stock = need_data_dict["Stock"]
         except:
-            stock = "0"
+            stock = 0
 
         # Details
         try:
