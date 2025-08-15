@@ -90,8 +90,8 @@ async def get_item_data(session, link: str):
         except:
             pass
 
-        count_edition: str = item_data.get("Тираж:")
-        quantity_page: str = item_data.get("Страниц:")
+        count_edition: str = item_data.get("Тираж")
+        quantity_page: str = item_data.get("Страниц")
 
         if not quantity_page:
             item_data["Страниц"] = "100"
@@ -150,17 +150,17 @@ async def get_item_data(session, link: str):
         item_data["Артикул_OZ"] = isbn + ".0"
 
         # Cover filter
-        cover_type = item_data.get("Тип обложки:")
+        cover_type = item_data.get("Тип обложки")
         if cover_type:
             item_data["Тип обложки"] = filtering_cover(cover_type)
 
         # Author filter
         item_data["Автор"] = (
-            item_data["Автор"] if item_data.get("Автор:") else "Нет автора"
+            item_data["Автор"] if item_data.get("Автор") else "Нет автора"
         )
         # ISBN filter
         item_data["ISBN"] = (
-            item_data["ISBN"] if item_data.get("ISBN:") else "978-5-0000-0000-0"
+            item_data["ISBN"] if item_data.get("ISBN") else "978-5-0000-0000-0"
         )
         # Publisher filter
         item_data["Издательство"] = (
