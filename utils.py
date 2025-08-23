@@ -125,8 +125,9 @@ with open(Path(__file__).parent / "proxy.txt") as f:
 
 def sync_fetch_request(url, headers, cookies=None, use_proxy=False):
     response_status_code = None
-    selected_proxy = random.choice(PROXIES).strip()
+    selected_proxy = None
     if use_proxy:
+        selected_proxy = random.choice(PROXIES).strip()
         proxy = {"http": f"{selected_proxy}", "https": f"{selected_proxy}"}
     else:
         proxy = None

@@ -81,6 +81,8 @@ def get_main_data(book):
         elif response == 503:
             book["stock"] = "error"
             return
+        elif response == "proxy error":
+            raise Exception("proxy error")
         else:
             soup = bs(response, "lxml")
             quantity_area = soup.find("div", {"class": "tg-quantityholder"})
