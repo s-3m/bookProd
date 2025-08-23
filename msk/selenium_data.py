@@ -1,15 +1,17 @@
-import os
 import time
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
+from pathlib import Path
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
 import undetected_chromedriver as uc
-from bs4 import BeautifulSoup
 
 
 def get_book_data(link):
-    driver = uc.Chrome(headless=True, use_subprocess=False, version_main=138)
+    folder_path = Path(__file__).parent
+    driver = uc.Chrome(
+        headless=True,
+        use_subprocess=False,
+        driver_executable_path=folder_path / "chromedriver",
+    )
 
     try:
         driver.get(link)
@@ -52,4 +54,5 @@ def get_book_data(link):
 
 
 if __name__ == "__main__":
-    get_book_data("https://www.moscowbooks.ru/book/968695/")
+    page = get_book_data("https://www.moscowbooks.ru/book/968695/")
+    print(page)
