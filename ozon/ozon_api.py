@@ -363,6 +363,37 @@ class Ozon:
         print(len(ready_data[0]))
         return ready_data[0]
 
+    def get_info_stock(self, articles: list[str] = []):
+        result = []
+        body = {
+            "cursor": "",
+            "filter": {
+                "offer_id": articles,
+                "visibility": "ALL",
+            },
+            "limit": 1000,
+        }
+        while True:
+            response = requests.post(
+                f"{self.host}/v4/product/info/stocks",
+                headers=self.headers,
+                json=body,
+            )
+            items_data = response.json().get("items")
+            cursor = response.json().get("cursor")
+            if not items_data:
+                break
+            for item in items_data:
+                result.append(
+                    {
+                        "offer_id": item["offer_id"],
+                        "stock": item["stocks"][0].get("present"),
+                    }
+                )
+            body["cursor"] = cursor
+            time.sleep(1)
+        return result
+
 
 def start_push_to_ozon(
     separate_records: dict[str, list[dict]], prefix: str, update_price=True
@@ -450,17 +481,6 @@ def archive_items_stock_to_zero(prefix):
 
 
 # if __name__ == "__main__":
-# load_dotenv(".env")
-# from utils import give_me_sample
-#
-# sample = give_me_sample("bb/source/every_day", "bb")
-# for i in sample:
-#     i["stock"] = random.randint(3, 8)
-#
-# sep_rec = separate_records_to_client_id(sample)
-# ozon = Ozon("2173296", "4fdc3d57-5f21-416f-b032-d7fce2332d90")
-# ozon.update_stock(sep_rec["2173296"])
-
-#
-# start_push_to_ozon(sep_rec)
-# sample = archive_items_stock_to_zero("msk")
+    # load_dotenv(".env")
+    # ozon = Ozon("", "", prefix="")
+    # print(ozon.get_info_stock(["12122"]))
