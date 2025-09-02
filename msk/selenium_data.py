@@ -1,15 +1,26 @@
 import time
+import subprocess
 from pathlib import Path
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
 import undetected_chromedriver as uc
 
 
+def kill_chrome_processes():
+    try:
+        subprocess.run(["pkill", "-f", "chrome"], check=False)
+        subprocess.run(["pkill", "-f", "chromedriver"], check=False)
+        time.sleep(2)
+    except:
+        pass
+
+
 def get_book_data(link):
+    kill_chrome_processes()
     folder_path = Path(__file__).parent
     driver = uc.Chrome(
         headless=True,
-        use_subprocess=False,
+        use_subprocess=True,
         driver_executable_path=folder_path / "chromedriver",
     )
 
