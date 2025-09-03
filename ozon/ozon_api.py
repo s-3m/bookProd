@@ -202,11 +202,22 @@ class Ozon:
         )
         warehouses_list: list[dict] = response.json().get("result")
         for i in warehouses_list:
-            if i["name"] == "Волгоградка":
-                return int(i["warehouse_id"])
-            elif "скот" in i["name"].lower() and i["status"] == "created":
+            if "набережный проезд" in i["name"].lower() and i["status"] == "created":
                 return int(i["warehouse_id"])
         return None
+
+    def get_warehouse_list(self, all_warehouse=False):
+        response = requests.post(
+            f"{self.host}/v1/warehouse/list",
+            headers=self.headers,
+            proxies=self.prx_list,
+        )
+        warehouses_list: list[dict] = response.json().get("result")
+        if all_warehouse:
+            return warehouses_list
+        else:
+            enable_warehouses = [i for i in warehouses_list if i["status"] == "created"]
+            return enable_warehouses
 
     def _price_calculate(self, input_price) -> dict:
         input_price = str(input_price)
@@ -278,19 +289,35 @@ class Ozon:
                 logger.error(e)
                 continue
 
-    def update_stock(self, item_list: list[dict], update_price=True):
+    def update_stock(
+        self,
+        item_list: list[dict],
+        update_price=True,
+        to_change_warehouse=False,
+    ):
         if update_price:
             # Сначала обновляем цены, чтобы не вывелись товары со старыми ценами
             self.update_price(item_list)
-        warehouse_id = self._get_warehouse_id()
-        stocks_list = [
-            {
-                "offer_id": str(i["article"]),
-                "stock": int(i["stock"]) if str(i["stock"]).isdigit() else 0,
-                "warehouse_id": warehouse_id,
-            }
-            for i in item_list
-        ]
+
+        if not to_change_warehouse:
+            warehouse_id = self._get_warehouse_id()
+            stocks_list = [
+                {
+                    "offer_id": str(i["article"]),
+                    "stock": int(i["stock"]) if str(i["stock"]).isdigit() else 0,
+                    "warehouse_id": warehouse_id,
+                }
+                for i in item_list
+            ]
+        else:
+            stocks_list = []
+            for i in item_list:
+                warehouses_stock_data = {
+                    "offer_id": str(i["article"]),
+                    "stock": str(i["stock"]),
+                    "warehouse_id": str(i["warehouse_id"]),
+                }
+                stocks_list.append(warehouses_stock_data)
 
         for item in range(0, len(item_list), 100):
             body = {
@@ -308,7 +335,7 @@ class Ozon:
                 for result in results:
                     if result.get("errors"):
                         self.errors[self.client_id].append(result)
-                time.sleep(30)
+                time.sleep(5)
             except Exception as e:
                 logger.exception(e)
                 continue
@@ -384,12 +411,13 @@ class Ozon:
             if not items_data:
                 break
             for item in items_data:
-                result.append(
-                    {
-                        "offer_id": item["offer_id"],
-                        "stock": item["stocks"][0].get("present"),
-                    }
-                )
+                if item["stocks"]:
+                    result.append(
+                        {
+                            "article": item["offer_id"],
+                            "stock": item["stocks"][0].get("present"),
+                        }
+                    )
             body["cursor"] = cursor
             time.sleep(1)
         return result
@@ -481,6 +509,4 @@ def archive_items_stock_to_zero(prefix):
 
 
 # if __name__ == "__main__":
-    # load_dotenv(".env")
-    # ozon = Ozon("", "", prefix="")
-    # print(ozon.get_info_stock(["12122"]))
+#     load_dotenv(".env")
