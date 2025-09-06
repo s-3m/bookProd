@@ -27,33 +27,76 @@ from ozon.utils import logger_filter
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 
+cookies = {
+    "tmr_lvid": "03935c7450b807684f9dcd65334067b0",
+    "tmr_lvidTS": "1719430836103",
+    "_ym_uid": "1719430836919836282",
+    "popmechanic_sbjs_migrations": "popmechanic_1418474375998%3D1%7C%7C%7C1471519752600%3D1%7C%7C%7C1471519752605%3D1",
+    "adrcid": "A6I49NSU-aGn_FnD2kzLfwA",
+    "adrcid": "A6I49NSU-aGn_FnD2kzLfwA",
+    "_ymab_param": "NOyyliya_BgJ0VOb3JL1PA1-1gyIOZRewTIGnSgxe-t2ci28PM-AMDZfHAuZzH4TsvmxnZPeYOHvYxXI9RgNC-VeR8Q",
+    "adid": "173169335285853",
+    "analytic_id": "1731693382619506",
+    "_ga_YVB4ZXMWPL": "GS1.2.1731764757.1.1.1731765315.60.0.0",
+    "_ga": "GA1.1.1903252348.1719430836",
+    "_pk_id.1.f5fe": "739be507b513d787.1734287298.",
+    "__USER_ID_COOKIE_NAME__": "173477373250003",
+    "__P__wuid": "e9e879e0b9184ea1d0f3cef59ae944f3",
+    "stDeIdU": "e9e879e0b9184ea1d0f3cef59ae944f3",
+    "__ddgid_": "kqef4ZJd3nmCz7F5",
+    "flocktory-uuid": "0241fd6a-c187-4d15-b067-6914fd7ea4c9-9",
+    "_ga_W0V3RXZCPY": "GS2.1.s1748254899$o69$g0$t1748254899$j0$l0$h0",
+    "_ga_LN4Z31QGF4": "GS2.1.s1748254899$o68$g0$t1748254899$j60$l0$h1954308688$ddGf82hx6-g98Aa9NAsjY4lKdL5u-b15wng",
+    "_ga_6JJPBGS8QY": "GS2.1.s1748254899$o69$g0$t1748254899$j0$l0$h0",
+    "__ddg1_": "NccemJ5EAdt5mQJHUWzi",
+    "_ym_d": "1752911287",
+    "gdeslon.ru.__arc_domain": "gdeslon.ru",
+    "gdeslon.ru.user_id": "75110470-37f1-4bb5-ad12-750d369722c2",
+    "__ddg9_": "89.169.48.165",
+    "__ddgmark_": "AwUpOznqJrt8960s",
+    "__ddg5_": "IpYxxNqs0IQiLV5J",
+    "__ddg2_": "h1ncZ4olo86x2ewA",
+    "ddg_last_challenge": "1757151513546",
+    "tid-back-to": "%7B%22fullPath%22%3A%22%2F%22%2C%22hash%22%3A%22%22%2C%22query%22%3A%7B%7D%2C%22name%22%3A%22index%22%2C%22path%22%3A%22%2F%22%2C%22params%22%3A%7B%7D%2C%22meta%22%3A%7B%7D%7D",
+    "utm_custom_source": "default",
+    "tid-state": "7c1f48ba-6f7d-4017-90c6-22f1c22fcd68",
+    "tid-redirect-uri": "https%3A%2F%2Fwww.chitai-gorod.ru%2Fauth%2Ft-id-next",
+    "chg_visitor_id": "48d8b642-4794-4d55-a13b-434fb38d0c9b",
+    "_pk_ses.1.f5fe": "1",
+    "_ym_isad": "2",
+    "vIdUid": "33e05e06-7617-4ea1-857a-3198862c74a2",
+    "stLaEvTi": "1757151517626",
+    "stSeStTi": "1757151517625",
+    "_ym_visorc": "w",
+    "adrdel": "1757151517749",
+    "adrdel": "1757151517749",
+    "acs_3": "%7B%22hash%22%3A%221aa3f9523ee6c2690cb34fc702d4143056487c0d%22%2C%22nst%22%3A1757237917780%2C%22sl%22%3A%7B%22224%22%3A1757151517780%2C%221228%22%3A1757151517780%7D%7D",
+    "acs_3": "%7B%22hash%22%3A%221aa3f9523ee6c2690cb34fc702d4143056487c0d%22%2C%22nst%22%3A1757237917780%2C%22sl%22%3A%7B%22224%22%3A1757151517780%2C%221228%22%3A1757151517780%7D%7D",
+    "domain_sid": "L3BsIrNkQonH7entRBvC0%3A1757151518623",
+    "mindboxDeviceUUID": "0660d298-673e-43fc-8993-474c6e6cd4c8",
+    "directCrm-session": "%7B%22deviceGuid%22%3A%220660d298-673e-43fc-8993-474c6e6cd4c8%22%7D",
+    "tmr_detect": "0%7C1757151520135",
+    "__ddg8_": "R3UUqMEb4nerDrP0",
+    "__ddg10_": "1757151532",
+}
+
 headers = {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
     "accept-language": "ru,en;q=0.9",
-    "cache-control": "max-age=0",
-    # 'cookie': '__ddg9_=185.112.249.83; __ddg1_=R992fleg5s9uUqtWE49T; _pk_id.1.f5fe=b58316b62597714f.1743516792.; _pk_ses.1.f5fe=1; __ddgid_=QHi2XPU2bjRmnYcr; __ddgmark_=orfy5PTHwhmAnmj3; __ddg5_=rFtFVC5ujLXNhx3M; __ddg2_=EjiE0k6vT4io83Sc; __ddg8_=x2wIvvgyqOS3QoFQ; __ddg10_=1743516830',
+    "cache-control": "no-cache",
+    "pragma": "no-cache",
     "priority": "u=0, i",
     "referer": "https://www.chitai-gorod.ru/",
-    "sec-ch-ua": '"Not A(Brand";v="8", "Chromium";v="132", "YaBrowser";v="25.2", "Yowser";v="2.5"',
+    "sec-ch-ua": '"Not)A;Brand";v="8", "Chromium";v="138", "YaBrowser";v="25.8", "Yowser";v="2.5"',
     "sec-ch-ua-mobile": "?0",
     "sec-ch-ua-platform": '"Windows"',
     "sec-fetch-dest": "document",
     "sec-fetch-mode": "navigate",
     "sec-fetch-site": "same-origin",
+    "sec-fetch-user": "?1",
     "upgrade-insecure-requests": "1",
-    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 YaBrowser/25.2.0.0 Safari/537.36",
-}
-cookies = {
-    "__ddg9_": "185.112.249.83",
-    "__ddg1_": "R992fleg5s9uUqtWE49T",
-    "_pk_id.1.f5fe": "b58316b62597714f.1743516792.",
-    "_pk_ses.1.f5fe": "1",
-    "__ddgid_": "QHi2XPU2bjRmnYcr",
-    "__ddgmark_": "orfy5PTHwhmAnmj3",
-    "__ddg5_": "rFtFVC5ujLXNhx3M",
-    "__ddg2_": "EjiE0k6vT4io83Sc",
-    "__ddg8_": "x2wIvvgyqOS3QoFQ",
-    "__ddg10_": "1743516830",
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 YaBrowser/25.8.0.0 Safari/537.36",
+    # 'cookie': 'tmr_lvid=03935c7450b807684f9dcd65334067b0; tmr_lvidTS=1719430836103; _ym_uid=1719430836919836282; popmechanic_sbjs_migrations=popmechanic_1418474375998%3D1%7C%7C%7C1471519752600%3D1%7C%7C%7C1471519752605%3D1; adrcid=A6I49NSU-aGn_FnD2kzLfwA; adrcid=A6I49NSU-aGn_FnD2kzLfwA; _ymab_param=NOyyliya_BgJ0VOb3JL1PA1-1gyIOZRewTIGnSgxe-t2ci28PM-AMDZfHAuZzH4TsvmxnZPeYOHvYxXI9RgNC-VeR8Q; adid=173169335285853; analytic_id=1731693382619506; _ga_YVB4ZXMWPL=GS1.2.1731764757.1.1.1731765315.60.0.0; _ga=GA1.1.1903252348.1719430836; _pk_id.1.f5fe=739be507b513d787.1734287298.; __USER_ID_COOKIE_NAME__=173477373250003; __P__wuid=e9e879e0b9184ea1d0f3cef59ae944f3; stDeIdU=e9e879e0b9184ea1d0f3cef59ae944f3; __ddgid_=kqef4ZJd3nmCz7F5; flocktory-uuid=0241fd6a-c187-4d15-b067-6914fd7ea4c9-9; _ga_W0V3RXZCPY=GS2.1.s1748254899$o69$g0$t1748254899$j0$l0$h0; _ga_LN4Z31QGF4=GS2.1.s1748254899$o68$g0$t1748254899$j60$l0$h1954308688$ddGf82hx6-g98Aa9NAsjY4lKdL5u-b15wng; _ga_6JJPBGS8QY=GS2.1.s1748254899$o69$g0$t1748254899$j0$l0$h0; __ddg1_=NccemJ5EAdt5mQJHUWzi; _ym_d=1752911287; gdeslon.ru.__arc_domain=gdeslon.ru; gdeslon.ru.user_id=75110470-37f1-4bb5-ad12-750d369722c2; __ddg9_=89.169.48.165; __ddgmark_=AwUpOznqJrt8960s; __ddg5_=IpYxxNqs0IQiLV5J; __ddg2_=h1ncZ4olo86x2ewA; ddg_last_challenge=1757151513546; access-token=Bearer%20eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTczMTk1MTYsImlhdCI6MTc1NzE1MTUxNiwiaXNzIjoiL2FwaS92MS9hdXRoL2Fub255bW91cyIsInN1YiI6ImI3NTdjNWQ5NWQ2ZDNmOTQyNjYxMDVlOGM4NDlhMTU1YTE5YTgwYjU0OGYxNzJiYzhjNDQyNjhlMTM2ZjliN2EiLCJ0eXBlIjoxMH0.JkEd3M1DCeQ5hcqNGPfbW8J7-fQwGllfSmDDOh3nnvM; tid-back-to=%7B%22fullPath%22%3A%22%2F%22%2C%22hash%22%3A%22%22%2C%22query%22%3A%7B%7D%2C%22name%22%3A%22index%22%2C%22path%22%3A%22%2F%22%2C%22params%22%3A%7B%7D%2C%22meta%22%3A%7B%7D%7D; utm_custom_source=default; tid-state=7c1f48ba-6f7d-4017-90c6-22f1c22fcd68; tid-redirect-uri=https%3A%2F%2Fwww.chitai-gorod.ru%2Fauth%2Ft-id-next; chg_visitor_id=48d8b642-4794-4d55-a13b-434fb38d0c9b; _pk_ses.1.f5fe=1; _ym_isad=2; vIdUid=33e05e06-7617-4ea1-857a-3198862c74a2; stLaEvTi=1757151517626; stSeStTi=1757151517625; _ym_visorc=w; adrdel=1757151517749; adrdel=1757151517749; acs_3=%7B%22hash%22%3A%221aa3f9523ee6c2690cb34fc702d4143056487c0d%22%2C%22nst%22%3A1757237917780%2C%22sl%22%3A%7B%22224%22%3A1757151517780%2C%221228%22%3A1757151517780%7D%7D; acs_3=%7B%22hash%22%3A%221aa3f9523ee6c2690cb34fc702d4143056487c0d%22%2C%22nst%22%3A1757237917780%2C%22sl%22%3A%7B%22224%22%3A1757151517780%2C%221228%22%3A1757151517780%7D%7D; domain_sid=L3BsIrNkQonH7entRBvC0%3A1757151518623; mindboxDeviceUUID=0660d298-673e-43fc-8993-474c6e6cd4c8; directCrm-session=%7B%22deviceGuid%22%3A%220660d298-673e-43fc-8993-474c6e6cd4c8%22%7D; tmr_detect=0%7C1757151520135; __ddg8_=R3UUqMEb4nerDrP0; __ddg10_=1757151532',
 }
 
 DEBUG = True if sys.platform.startswith("win") else False
@@ -93,7 +136,6 @@ def get_link_from_ajax(article):
                 params=params,
                 cookies=cookies,
                 timeout=15,
-                proxies=proxy,
             )
             response = resp.json()
             link = response["included"][0]["attributes"].get("url")
@@ -121,7 +163,7 @@ def get_main_data(book_item):
             book_item["link"] = f"{BASE_URL}/{i_link}"
 
         response_text = sync_fetch_request(
-            book_item["link"], headers=headers, cookies=cookies, use_proxy=True
+            book_item["link"], headers=headers, cookies=cookies, use_proxy=False
         )
         if response_text == "proxy error":
             book_item["stock"] = "error"
@@ -174,9 +216,7 @@ async def get_auth_token():
         "http": f"{selected_proxy}",
         "https": f"{selected_proxy}",
     }
-    resp = requests.get(
-        "https://www.chitai-gorod.ru", headers=headers, cookies=cookies, proxies=proxy
-    )
+    resp = requests.get("https://www.chitai-gorod.ru", headers=headers, cookies=cookies)
     time.sleep(15)
     ddd = resp.cookies
     acc_token = (
