@@ -1,4 +1,3 @@
-from debugpy.adapter import access_token
 from playwright.sync_api import sync_playwright, ProxySettings
 from urllib.parse import urlparse
 import time
