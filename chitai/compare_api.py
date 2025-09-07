@@ -323,7 +323,6 @@ def main():
 
 def super_main():
     load_dotenv("../.env")
-    main()
     schedule.every().day.at("16:00").do(main)
 
     while True:
