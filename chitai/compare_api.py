@@ -117,6 +117,7 @@ logger.add(
     filter=logger_filter,
 )
 count = 1
+error_count = 0
 unique_article: dict[str, tuple] = {}  # article: (stock, price)
 
 
@@ -171,6 +172,8 @@ def get_book_data_from_ajax(book_url):
             price = book_data.get("price")
             return stock, price
         return None
+    elif response.status_code == 404:
+        return "404"
     else:
         logger.error(
             f"Error in ajax request - {response.status_code} | {response.text}"
@@ -180,6 +183,7 @@ def get_book_data_from_ajax(book_url):
 
 def get_main_data(book_item):
     global unique_article
+    global error_count
     if book_item["article"] in unique_article:  # check on parse was
         book_item["stock"] = unique_article[book_item["article"]][0]
         book_item["price"] = unique_article[book_item["article"]][1]
@@ -195,12 +199,14 @@ def get_main_data(book_item):
             book_item["link"] = f"{BASE_URL}/{i_link}"
 
         book_data = get_book_data_from_ajax(book_item["link"])
-        if book_data:
+        if book_data and book_data != "404":
             stock = book_data[0]
             price = book_data[1]
             if stock and price:
-                book_item["stock"] = stock
-                book_item["price"] = price
+                book_item["stock"] = str(stock)
+                book_item["price"] = str(price)
+        elif book_data and book_data == "404":
+            book_item["stock"] = "0"
         else:
             book_item["stock"] = "0"
 
@@ -209,9 +215,10 @@ def get_main_data(book_item):
     except Exception as e:
         book_item["stock"] = "error"
         logger.exception(f"ERROR - {book_item['link']}")
+        error_count += 1
     finally:
         global count
-        print(f"\rDone - {count}", end="")
+        print(f"\rDone - {count} | error - {error_count}", end="")
         count += 1
 
 
