@@ -237,17 +237,17 @@ class Ozon:
             raw_price = raw_price - (raw_price * 0.15)
         # profit calculate
         profit = (raw_price * 50) / 100
-        # Фиксированная сумма (обработка, доставка - 135р)
-        fixed_margin = raw_price + profit + 135
+        # Цена с профитом
+        fixed_margin = raw_price + profit
         # Сумма с учетом минимальной комиссии за задержку отправлений (100р)
-        additional_coef = 0
-        if self.prefix == "chit_gor":
-            additional_coef = 100
-        elif self.prefix == "mdk":
-            additional_coef = 50
-        price_with_delay_tax = fixed_margin + additional_coef
-        # Сумма с учетом комиссии озон и эквайринга (32,5% и 2%)
-        price_with_main_tax = price_with_delay_tax * 34.5 / 65.5 + price_with_delay_tax
+        # additional_coef = 0
+        # if self.prefix == "chit_gor":
+        #     additional_coef = 100
+        # elif self.prefix == "mdk":
+        #     additional_coef = 50
+        # price_with_delay_tax = fixed_margin + additional_coef
+        # Сумма с учетом суммарной комиссии озона в зависимости от магаза
+        price_with_main_tax = fixed_margin * self.fee / (100 - self.fee) + fixed_margin
         # Конечная сумма с учётом акции 15%
         finish_price = round(price_with_main_tax * 15 / 85 + price_with_main_tax, 0)
 
