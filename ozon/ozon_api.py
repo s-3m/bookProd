@@ -37,12 +37,23 @@ class Ozon:
         self.PRX = prx
         self.prx_list = self.get_proxies() if prx else None
         self.prefix = prefix
+        self.fee = self.get_fees()
 
         self.headers = {
             "Client-Id": str(self.client_id),
             "Api-Key": self.api_key,
             "Content-Type": "application/json",
         }
+
+    def get_fees(self):
+        if self.prefix == "chit_gor" or self.prefix == "mdk":
+            return 50
+        elif self.prefix == "mg":
+            return 45
+        elif self.prefix == "msk":
+            return 42
+        else:
+            return 50
 
     def get_proxies(self):
         prx = os.getenv("PRX")
