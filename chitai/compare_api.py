@@ -256,6 +256,7 @@ def get_auth_token():
 
 
 def get_gather_data(sample):
+    global error_count
     logger.info("Start collect data")
     print()
     get_auth_token()
@@ -263,6 +264,9 @@ def get_gather_data(sample):
     # Main loop
     with ThreadPoolExecutor(max_workers=5) as executor:
         threads = [executor.submit(get_main_data, i) for i in sample]
+
+    logger.info(f"Start reparse {error_count} errors")
+    error_count = 0
 
     # Reparse item
     with ThreadPoolExecutor(max_workers=5) as executor:
@@ -278,8 +282,9 @@ def get_gather_data(sample):
     global count
     global unique_article
     count = 1
+    error_count = 0
     unique_article.clear()
-    logger.success("Finish collect data")
+    logger.success(f"Finish collect data with {error_count} errors")
 
 
 def main():
