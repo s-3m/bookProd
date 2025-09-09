@@ -346,7 +346,7 @@ class Ozon:
                 for result in results:
                     if result.get("errors"):
                         self.errors[self.client_id].append(result)
-                time.sleep(5)
+                time.sleep(7)
             except Exception as e:
                 logger.exception(e)
                 continue
