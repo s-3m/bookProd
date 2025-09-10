@@ -343,6 +343,8 @@ class Ozon:
                     proxies=self.prx_list,
                 )
                 results = response.json().get("result")
+                if not results:
+                    logger.warning(f"Something wrong with response - {response.json()}")
                 for result in results:
                     if result.get("errors"):
                         self.errors[self.client_id].append(result)
