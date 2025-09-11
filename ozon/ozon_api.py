@@ -341,7 +341,7 @@ class Ozon:
                     headers=self.headers,
                     json=body,
                     proxies=self.prx_list,
-                    timeout=30
+                    timeout=30,
                 )
                 results = response.json().get("result")
                 if not results:
@@ -349,7 +349,7 @@ class Ozon:
                 for result in results:
                     if result.get("errors"):
                         self.errors[self.client_id].append(result)
-                time.sleep(7)
+                time.sleep(15)
             except Exception as e:
                 logger.exception(e)
                 continue
