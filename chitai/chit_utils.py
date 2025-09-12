@@ -1,9 +1,11 @@
+import random
 from playwright.sync_api import sync_playwright, ProxySettings
+from utils import PROXIES
 from urllib.parse import urlparse
 import time
 
 
-def parse_with_playwright_proxy(proxy_url, target_url):
+def parse_with_playwright_proxy(proxy_url, target_url) -> str | None:
     with sync_playwright() as p:
         # Парсим прокси URL
         parsed = urlparse(proxy_url)
@@ -57,24 +59,24 @@ def parse_with_playwright_proxy(proxy_url, target_url):
                 target_url,
                 timeout=30000,
             )
-            wait_until = "networkidle"
+            # wait_until = "networkidle"
             # Ждем загрузки контента
-            page.wait_for_load_state("networkidle")
-            time.sleep(2)
+            # page.wait_for_load_state("networkidle")
+            time.sleep(8)
 
             print("✅ Страница успешно загружена!")
 
             # Проверяем, что мы не попали на защиту
-            content = page.content()
-            access_token = None
-            if "DDoS-Guard" in content or "cloudflare" in content.lower():
-                print("⚠️ Обнаружена защита, пытаемся обойти...")
-                # Дополнительные действия для обхода защиты
-                page.wait_for_timeout(5000)
-                cookies = page.context.cookies()
-                for cookie in cookies:
-                    if cookie["name"] == "access-token":
-                        access_token = cookie["value"]
+            # content = page.content()
+            # access_token = None
+            # if "DDoS-Guard" in content or "cloudflare" in content.lower():
+            #     print("⚠️ Обнаружена защита, пытаемся обойти...")
+            # Дополнительные действия для обхода защиты
+            page.wait_for_timeout(10000)
+            cookies = page.context.cookies()
+            for cookie in cookies:
+                if cookie["name"] == "access-token":
+                    access_token = cookie["value"]
 
             return access_token
 
@@ -87,3 +89,15 @@ def parse_with_playwright_proxy(proxy_url, target_url):
 
         finally:
             browser.close()
+
+
+def get_auth_token():
+    selected_proxy = random.choice(PROXIES).strip()
+    target_url = "https://www.chitai-gorod.ru"
+
+    response_cookies = parse_with_playwright_proxy(
+        target_url=target_url, proxy_url=selected_proxy
+    )
+    acc_token = response_cookies.replace("%20", " ")
+    print(acc_token)
+    return acc_token
