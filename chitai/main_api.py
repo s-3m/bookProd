@@ -5,22 +5,18 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 import pandas.io.formats.excel
 import requests
-from bs4 import BeautifulSoup as bs
-import aiohttp
 import asyncio
 from loguru import logger
 import pandas as pd
-
-from chitai.main import sample
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from chitai.chit_utils import get_auth_token
 from ozon.ozon_api import get_items_list
 from utils import (
     check_danger_string,
-    sync_fetch_request,
     write_result_files,
     exclude_else_shops_books,
+    PROXIES,
 )
 from filter import filtering_cover
 
@@ -110,16 +106,168 @@ last_isbn = None
 
 
 def get_book_data(book_url: str):
-    link = book_url if book_url.startswith("http") else f"{BASE_URL}{book_url}"
+    link = book_url if book_url.startswith("http") else f"{BASE_URL}/{book_url}"
+    book_slug = book_url.split("/")[-1]
+    selected_proxy = random.choice(PROXIES).strip()
+    proxy = {
+        "http": selected_proxy,
+        "https": selected_proxy,
+    }
+    book_dict = {}
+    try:
+        response = requests.get(
+            f"https://web-agr.chitai-gorod.ru/web/api/v1/products/slug/{book_slug}",
+            headers=headers,
+            cookies=cookies,
+            proxies=proxy,
+            timeout=15,
+        )
+        time.sleep(1)
+        if response.status_code == 200:
+            book_data = response.json().get("data")
+            if book_data:
+                article = book_data.get("id")
+                title = book_data.get("title")
+                title = asyncio.run(check_danger_string(title, "title"))
+                if not title:
+                    logger.warning(f"Delete DANGER book: {link}")
+                    return
+
+                stock = book_data.get("availability")
+
+                # переплет
+                category = book_data.get("category").get("title")
+
+                description = book_data.get("description")
+                description = asyncio.run(
+                    check_danger_string(description, "description")
+                )
+
+                photo = f"https://content.img-gorod.ru/{book_data.get("picture")}?width=304&height=438&fit=bounds"
+                price = book_data.get("price")
+
+                need_chars = {}
+                chars = book_data.get("characteristics")
+                for char in chars:
+                    if char.get("title") not in [
+                        "Издательский бренд",
+                        "Раздел",
+                        "Серия",
+                        "Код",
+                        "Формат",
+                    ]:
+                        need_chars[char.get("title")] = char.get("items")[0].get(
+                            "value"
+                        )
+
+                book_dict["Артикул_OZ"] = str(article) + ".0"
+                book_dict["Ссылка"] = str(link)
+                book_dict["Название"] = str(title)
+                book_dict["Категория"] = str(category)
+                book_dict["Описание"] = str(description)
+                book_dict["Фото"] = str(photo)
+                book_dict["Цена"] = str(price)
+                book_dict["Наличие"] = str(stock)
+
+                book_dict.update(need_chars)
+
+                # Filter on some piece
+                count_edition: str = book_dict.get("Тираж")
+                quantity_page: str = book_dict.get("Кол-во страниц")
+
+                if not quantity_page:
+                    book_dict["Количество страниц"] = "100"
+                if not count_edition:
+                    book_dict["Тираж"] = "1000"
+
+                # Cover filter
+                cover_type = book_dict.get("Тип обложки")
+                book_dict["Тип обложки"] = (
+                    filtering_cover(cover_type) if cover_type else "Мягкая обложка"
+                )
+                # ISBN filter
+                isbn = book_dict.get("ISBN")
+                global last_isbn
+                if isbn:
+                    last_isbn = isbn
+                else:
+                    book_dict["ISBN"] = last_isbn
+
+                # Year filter
+                publish_year = book_dict.get("Год издания")
+                if publish_year:
+                    if (
+                        "<2018" in publish_year
+                        or "< 2018" in publish_year
+                        or ">2024" in publish_year
+                        or "> 2024" in publish_year
+                        or len(publish_year) < 4
+                    ):
+                        book_dict["Год издания"] = "2018"
+
+                # Publisher filter
+                publisher = book_dict.get("Издательство")
+                if not publisher:
+                    book_dict["Издательство"] = "АСТ"
+
+                if book_dict.get("Артикул_OZ") not in sample:
+                    id_to_add.append(book_dict)
+                all_books_result.append(book_dict)
+
+                global done_count
+                done_count += 1
+                print(
+                    f"\rDone - {done_count} | Item error - {len(item_error)} | Page error - {len(page_error)}",
+                    end="",
+                )
+        else:
+            raise Exception(f"Status code - {response.status_code}")
+    except Exception as e:
+        item_error.append(book_url)
+        logger.exception(f"Error with {link} | {e}")
+
+
+def get_page_data(page_api_url, request_body):
+    selected_proxy = random.choice(PROXIES).strip()
+    proxy = {
+        "http": selected_proxy,
+        "https": selected_proxy,
+    }
+    new_books = []
+    try:
+        page_response = requests.get(
+            page_api_url,
+            params=request_body,
+            headers=headers,
+            proxies=proxy,
+            timeout=15,
+        )
+        items_list = page_response.json()["data"]
+        for item in items_list:
+            if item["attributes"]["status"] == "canBuy":
+                new_books.append(item["attributes"]["url"])
+
+        if new_books:
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                for book in new_books:
+                    executor.submit(get_book_data, book)
+    except Exception as e:
+        logger.exception(f"Page error with {e}")
+        page_error.append(request_body["products[page]"])
 
 
 def get_gather_data():
+    selected_proxy = random.choice(PROXIES).strip()
+    proxy = {
+        "http": selected_proxy,
+        "https": selected_proxy,
+    }
     logger.info("Начинаю сбор данных")
     jwt = get_auth_token()
     headers["Authorization"] = jwt
 
     body = {
-        "include": "translators,illustrators,publisher,publisherBrand,manufacturer,manufacturerBrand,publisherSeries,productTexts,dates,isbns,binding,ageRestriction,printing,dimensions,files,rating,purchaseStats,seo,schoolProperties,tbks,ekns,literatureWorkCycle,literatureWorkCycleVolume,tags,commonProperties,bookProperties,stationeryProperties,comicProperties,gameProperties,constructorProperties,souvenirProperties,toyProperties,giftProperties,attendedForeignAgents",
+        "include": "isbns",
         "forceFilters[categories]": "18030",
         "forceFilters[onlyNotOnSale]": "1",
         "product[status]": "canBuy",
@@ -132,20 +280,12 @@ def get_gather_data():
         page_api_url,
         params=body,
         headers=headers,
+        proxies=proxy,
     )
-    page_count = response.json()["meta"]["total_pages"]
-    for page in range(page_count + 1):
-        new_books = []
-        page_response = requests.get(page_api_url, params=body, headers=headers)
-        items_list = page_response.json()["data"]
-        for item in items_list:
-            if item["id"] + ".0" not in sample:
-                new_books.append(item["attributes"]["url"])
-
-        if new_books:
-            with ThreadPoolExecutor(max_workers=5) as executor:
-                for book in new_books:
-                    executor.submit(get_book_data, book)
+    page_count = response.json()["meta"]["pagination"]["total_pages"]
+    for page in range(1, page_count + 1):
+        get_page_data(page_api_url, body)
+        body["products[page]"] = str(page + 1)
 
     print()
     logger.success("Main data was collected")
@@ -164,9 +304,9 @@ def get_gather_data():
         logger.warning(f"Start reparse {len(page_error)} pages errors")
         new_page_list = page_error.copy()
         page_error.clear()
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            for url in new_page_list:
-                executor.submit(get_page_data, False, 1, url)
+        for page in new_page_list:
+            body["products[page]"] = str(page)
+            get_page_data(page_api_url, body)
 
     logger.warning(
         f"Datas was collected. Not reparse: item errors - {len(item_error)} --- page errors - {len(page_error)}"
