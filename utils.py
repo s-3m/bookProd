@@ -269,10 +269,17 @@ def forming_add_files(
     items_list_new_shop = get_items_list(
         prefix=prefix, visibility="ALL", shop_category="new"
     )
+    arch_items_list_new_shop = get_items_list(
+        prefix=prefix, visibility="ARCHIVED", shop_category="new"
+    )
     items_list_old_shop = get_items_list(
         prefix=prefix, visibility="ALL", shop_category="old"
     )
-
+    arch_items_list_old_shop = get_items_list(
+        prefix=prefix, visibility="ARCHIVED", shop_category="old"
+    )
+    items_list_new_shop.extend(arch_items_list_new_shop)
+    items_list_old_shop.extend(arch_items_list_old_shop)
     df_items_list_new_shop = pl.DataFrame(items_list_new_shop)[["Артикул"]].rename(
         {"Артикул": "Артикул_OZ"}
     )
