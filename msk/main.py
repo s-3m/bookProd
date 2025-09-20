@@ -145,7 +145,7 @@ async def get_item_data(session, item: str):
         try:
             price = soup.find("div", class_="book__price")
             if price:
-                price = price.text.strip()
+                price = price.text.strip().replace("\xa0", "")
                 if int(price) >= 40_000:
                     return
         except:
