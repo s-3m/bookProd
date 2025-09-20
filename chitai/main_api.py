@@ -333,12 +333,13 @@ def get_gather_data():
     old_after_exclude = exclude_else_shops_books(mdk_old, exclude_shop="mdk")
     new_after_exclude = exclude_else_shops_books(mdk_new, exclude_shop="mdk")
     mdk_path = "/media/source/mdk/result"
-    pd.DataFrame(old_after_exclude).to_excel(
-        f"{mdk_path}/mdk_add_old.xlsx", engine="openpyxl", index=False
-    )
-    pd.DataFrame(new_after_exclude).to_excel(
-        f"{mdk_path}/mdk_add_new.xlsx", engine="openpyxl", index=False
-    )
+    old_df = pd.DataFrame(old_after_exclude)
+    old_df["Артикул_OZ"] = old_df["Артикул_OZ"].astype(str)
+    old_df.to_excel(f"{mdk_path}/mdk_add_old.xlsx", engine="openpyxl", index=False)
+
+    new_df = pd.DataFrame(new_after_exclude)
+    new_df["Артикул_OZ"] = new_df["Артикул_OZ"].astype(str)
+    new_df.to_excel(f"{mdk_path}/mdk_add_new.xlsx", engine="openpyxl", index=False)
     logger.info("MDK was excluded")
 
 
