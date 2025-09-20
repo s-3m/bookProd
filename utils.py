@@ -184,6 +184,19 @@ def check_archived_books(df_for_add: pd.DataFrame) -> pd.DataFrame:
         return df_result
 
 
+def clean_excel_text(text):
+    """Безопасная очистка текста для Excel"""
+    if not isinstance(text, str):
+        return text
+
+    # Удаляем управляющие символы (кроме табуляции, новой строки и возврата каретки)
+    text = re.sub(r"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]", "", text)
+
+    # Заменяем проблемные кавычки на обычные (опционально)
+    text = text.replace("«", '"').replace("»", '"').replace("\n\n", "\n")
+    return text
+
+
 def write_result_files(
     base_dir: str,
     prefix: str,
@@ -192,25 +205,25 @@ def write_result_files(
     replace_photo: bool = False,
 ):
     all_result_df = pd.DataFrame(all_books_result).drop_duplicates(subset="Артикул_OZ")
-    all_result_df.to_excel(
+    clear_all_result_df = all_result_df.map(clean_excel_text)
+    clear_all_result_df.to_excel(
         f"{base_dir}/result/{prefix}_all.xlsx", index=False, engine="openpyxl"
     )
 
     if isinstance(id_to_add, list):
         df_add = pd.DataFrame(id_to_add).drop_duplicates(subset="Артикул_OZ")
-        df_add = (
-            df_add.sort_values("Наличие")
-            .drop_duplicates(subset="Название", keep="last")
-            .sort_values("Артикул_OZ")
-        )
+        clean_df_add = df_add.map(clean_excel_text)
+        clean_df_add.sort_values("Наличие").drop_duplicates(
+            subset="Название", keep="last"
+        ).sort_values("Артикул_OZ")
         # Check "add books" not in archive books
-        df_add = check_archived_books(df_for_add=df_add)
+        clean_df_add = check_archived_books(df_for_add=df_add)
 
         if replace_photo:
-            del df_add["Фото_y"]
-            df_add.rename(columns={"Фото_x": "Фото"}, inplace=True)
+            del clean_df_add["Фото_y"]
+            clean_df_add.rename(columns={"Фото_x": "Фото"}, inplace=True)
 
-        df_add.to_excel(
+        clean_df_add.to_excel(
             f"{base_dir}/result/{prefix}_add.xlsx", index=False, engine="openpyxl"
         )
 
