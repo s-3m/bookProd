@@ -413,9 +413,7 @@ class Ozon:
                 )
         return ready_data, wrong_article
 
-    def get_items_list(
-        self, visibility, for_parse_sample=True, offer_id_starts_with_archive=False
-    ):
+    def get_items_list(self, visibility, for_parse_sample=True, offer_id_starts_with_archive=False):
         result = []
         body = {
             "filter": {"visibility": visibility},
