@@ -93,6 +93,8 @@ def start_changes_warehouses(prefix) -> None:
 def skip_archive_process(ozon: Ozon):
     archived_list = ozon.get_items_list("ARCHIVED")
     items_info = ozon.get_items_info(archived_list)
+    for i in items_info:
+        i["stock"] = "0"
     ready_data_for_push = [
         {
             "attributes": [
@@ -137,6 +139,7 @@ def skip_archive_process(ozon: Ozon):
         for i in items_info
     ]
     ozon.add_items(ready_data_for_push)
+    ozon.update_stock(items_info, update_price=False)
     ozon.change_articles([i["offer_id"] for i in items_info])
 
 

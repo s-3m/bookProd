@@ -337,9 +337,10 @@ class Ozon:
 
         if not to_change_warehouse:
             warehouse_id = self._get_warehouse_id()
+            article_name = "article" if item_list[0].get("article") else "offer_id"
             stocks_list = [
                 {
-                    "offer_id": str(i["article"]),
+                    "offer_id": str(i[article_name]),
                     "stock": int(i["stock"]) if str(i["stock"]).isdigit() else 0,
                     "warehouse_id": warehouse_id,
                 }
@@ -374,7 +375,7 @@ class Ozon:
                 for result in results:
                     if result.get("errors"):
                         self.errors[self.client_id].append(result)
-                time.sleep(15)
+                time.sleep(1)
             except Exception as e:
                 logger.exception(e)
                 continue
@@ -413,7 +414,9 @@ class Ozon:
                 )
         return ready_data, wrong_article
 
-    def get_items_list(self, visibility, for_parse_sample=True, offer_id_starts_with_archive=False):
+    def get_items_list(
+        self, visibility, for_parse_sample=True, offer_id_starts_with_archive=False
+    ):
         result = []
         body = {
             "filter": {"visibility": visibility},
