@@ -1,7 +1,7 @@
 import os
 from concurrent.futures import ThreadPoolExecutor
 
-from .ozon_api import (
+from ozon_api import (
     get_items_list,
     separate_records_to_client_id,
     start_push_to_ozon,
@@ -90,7 +90,69 @@ def start_changes_warehouses(prefix) -> None:
                 logger.critical(e)
 
 
+def skip_archive_process(ozon: Ozon):
+    archived_list = ozon.get_items_list("ARCHIVED")
+    items_info = ozon.get_items_info(archived_list)
+    ready_data_for_push = [
+        {
+            "attributes": [
+                {
+                    "id": 4180,
+                    "values": [{"value": f"archive_{i["offer_id"][:-2]}"}],
+                },
+                {
+                    "id": 7,
+                    "values": [{"value": "АСТ"}],
+                },
+                {
+                    "id": 23273,
+                    "values": [{"dictionary_value_id": "972842193", "value": "Проза"}],
+                },
+                {
+                    "id": 4182,
+                    "values": [{"value": "Нет автора"}],
+                },
+                {"id": 4184, "values": [{"value": "1234567890"}]},
+                {"id": 4191, "values": [{"value": "Автор рекомендует книгу."}]},
+            ],
+            "description_category_id": 200001483,  # Печатные книги, журналы, комиксы (с 2011 г.)
+            "new_description_category_id": 200001483,
+            "depth": 80,  # длина
+            "dimension_unit": "mm",
+            "height": 40,  # высота
+            "images": [
+                "https://disk.yandex.ru/i/SjGVhWbFaEp6Kw",
+            ],
+            "primary_image": "https://disk.yandex.ru/i/SjGVhWbFaEp6Kw",
+            "old_price": i["price"],
+            "price": i["price"],
+            "name": f"archive_{i["offer_id"][:-2]}",
+            "offer_id": f"{i["offer_id"]}",
+            "type_id": 971445087,  # Печатная книга
+            "vat": "0",
+            "weight": 200,  # вес
+            "weight_unit": "g",
+            "width": 100,  # ширина
+        }
+        for i in items_info
+    ]
+    ozon.add_items(ready_data_for_push)
+    ozon.change_articles([i["offer_id"] for i in items_info])
+
+
+def skip_all_archive_items(prefix):
+    shop_list = []
+    for key, value in os.environ.items():
+        if key.startswith(prefix.upper()):
+            new_shop_flag = True if key.split("_")[-2] == "PRX" else False
+            shop_list.append((key.split("_")[-1], value, new_shop_flag))
+    with ThreadPoolExecutor(max_workers=20) as executor:
+        futures = []
+        for item in shop_list:
+            ozon = Ozon(client_id=item[0], api_key=item[1], prefix=prefix, prx=item[2])
+            task = executor.submit(skip_archive_process, ozon)
+            futures.append(task)
+
+
 if __name__ == "__main__":
-    for i in ["mg", "mdk", "chit_gor", "msk"]:
-        logger.info(f"Start {i}")
-        all_stocks_to_zero(prefix=i)
+    skip_all_archive_items("chit_gor")
