@@ -6,7 +6,6 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import time
-
 from dotenv import load_dotenv
 from loguru import logger
 
@@ -60,72 +59,80 @@ class Ozon:
         proxies = {"http://": f"http://{prx}", "https://": f"http://{prx}"}
         return proxies
 
-    def add_items(self, item_list: list[dict]) -> list[dict] | None:
+    def add_items(self, request_body: list[dict]) -> list[dict] | None:
+        """
+        :param request_body: ready list of json object for request body
+        :return:
+        """
 
-        ready_data_for_push = [
-            {
-                "attributes": [
-                    {
-                        "id": 4180,
-                        "values": [{"value": i["Название"]}],
-                    },
-                    {"id": 9356, "values": [{"value": i["Тип обложки"]}]},
-                    {"id": 4052, "values": [{"value": str(i["Тираж"])}]},
-                    {
-                        "id": 8862,
-                        "values": [{"value": i["Возраст"] if i["Возраст"] else "0+"}],
-                    },
-                    {
-                        "id": 9070,
-                        "values": [
-                            {"value": "true" if "18" in i["Возраст"] else "false"}
-                        ],
-                    },
-                    {"id": 4191, "values": [{"value": i["description"]}]},
-                    {"id": 4051, "values": [{"value": str(i["Страниц"])}]},
-                    {"id": 4081, "values": [{"value": str(i["Год производства"])}]},
-                    {
-                        "id": 7,
-                        "values": [{"value": p} for p in i["Издательство"].split(";")],
-                    },
-                    {"id": 8229, "values": [{"value": "Художественная литература"}]},
-                    {
-                        "id": 4182,
-                        "values": [
-                            {"value": i["author"] if i["author"] else "Нет автора"}
-                        ],
-                    },
-                    {"id": 4184, "values": [{"value": str(i["ISBN"])}]},
-                ],
-                "description_category_id": 200001483,  # Печатные книги, журналы, комиксы (с 2011 г.)
-                "depth": 80,  # длина
-                "dimension_unit": "mm",
-                "height": 40,  # высота
-                "images": [i["Фото"]],
-                "primary_image": "",
-                "name": i["Название"],
-                "offer_id": str(i["Артикул_OZ"]),
-                "old_price": self._price_calculate(i["Цена"])["old_price"],
-                "price": self._price_calculate(i["Цена"])["price"],
-                "type_id": 971445081,  # проза других жанров
-                "vat": "0",
-                "weight": 200,  # вес
-                "weight_unit": "g",
-                "width": 100,  # ширина
-                "stock": "4",
-            }
-            for i in item_list
-        ]
+        # ready_data_for_push = [
+        #     {
+        #         "attributes": [
+        #             {
+        #                 "id": 4180,
+        #                 "values": [{"value": i["Название"]}],
+        #             },
+        #             {
+        #                 "id": 23273,
+        #                 "values": [{"value": "Художественная литература"}],
+        #             },
+        #             {"id": 9356, "values": [{"value": i["Тип обложки"]}]},
+        #             {"id": 4052, "values": [{"value": str(i["Тираж"])}]},
+        #             {
+        #                 "id": 8862,
+        #                 "values": [{"value": i["Возраст"] if i["Возраст"] else "0+"}],
+        #             },
+        #             {
+        #                 "id": 9070,
+        #                 "values": [
+        #                     {"value": "true" if "18" in i["Возраст"] else "false"}
+        #                 ],
+        #             },
+        #             {"id": 4191, "values": [{"value": i["description"]}]},
+        #             {"id": 4051, "values": [{"value": str(i["Страниц"])}]},
+        #             {"id": 4081, "values": [{"value": str(i["Год производства"])}]},
+        #             {
+        #                 "id": 7,
+        #                 "values": [{"value": p} for p in i["Издательство"].split(";")],
+        #             },
+        #             {"id": 8229, "values": [{"value": "Художественная литература"}]},
+        #             {
+        #                 "id": 4182,
+        #                 "values": [
+        #                     {"value": i["author"] if i["author"] else "Нет автора"}
+        #                 ],
+        #             },
+        #             {"id": 4184, "values": [{"value": str(i["ISBN"])}]},
+        #         ],
+        #         "description_category_id": 200001483,  # Печатные книги, журналы, комиксы (с 2011 г.)
+        #         "depth": 80,  # длина
+        #         "dimension_unit": "mm",
+        #         "height": 40,  # высота
+        #         "images": [i["Фото"]],
+        #         "primary_image": "",
+        #         "name": i["Название"],
+        #         "offer_id": str(i["Артикул_OZ"]),
+        #         "old_price": self._price_calculate(i["Цена"])["old_price"],
+        #         "price": self._price_calculate(i["Цена"])["price"],
+        #         "type_id": 971445081,  # проза других жанров 971445087
+        #         "vat": "0",
+        #         "weight": 200,  # вес
+        #         "weight_unit": "g",
+        #         "width": 100,  # ширина
+        #         "stock": "4",
+        #     }
+        #     for i in item_list
+        # ]
+
         logger.info("Начал добавлять товары")
-        items_stock = [
-            {"article": str(i["Артикул_OZ"]), "stock": i["Наличие"]} for i in item_list
-        ]
-        for item in range(0, len(item_list), 100):
+        items_stock = [{"article": str(i["offer_id"])} for i in request_body]
+
+        for item in range(0, len(request_body), 100):
             response = requests.post(
                 f"{self.host}/v3/product/import",
                 headers=self.headers,
                 json={
-                    "items": ready_data_for_push[item : item + 100],
+                    "items": request_body[item : item + 100],
                 },
                 proxies=self.prx_list,
             )
@@ -137,7 +144,7 @@ class Ozon:
                 print(result)
             time.sleep(2)
         print(self.tasks_id)
-        time.sleep(300)
+        time.sleep(100)
         error_articles = [i["article"] for i in self.check_tasks_status()]
         for item in items_stock:
             if error_articles:
@@ -145,6 +152,24 @@ class Ozon:
                     items_stock.remove(item)
 
         return items_stock
+
+    def change_articles(self, articles: list[str]):
+        for item in range(0, len(articles), 250):
+            body = {
+                "update_offer_id": [
+                    {"new_offer_id": f"archive{article[:-2]}", "offer_id": article}
+                    for article in articles[item : item + 250]
+                ]
+            }
+            response = requests.post(
+                f"{self.host}/v1/product/update/offer-id",
+                headers=self.headers,
+                json=body,
+            )
+            result = response.json().get("errors")
+            if result:
+                for error in result:
+                    print(error)
 
     def check_tasks_status(self, tasks: list[str] = None) -> list[dict]:
         """Проверяем все таски на добавление товаров, возвращаем только ошибки в формате списка словарей (артикул - ошибка)"""
@@ -265,7 +290,7 @@ class Ozon:
         list_for_price_update = []
         for i in item_list:
             if i["price"] is not None:
-                if not i["price"].isdigit():
+                if not str(i["price"]).isdigit():
                     logger.warning(i)
                     continue
 
@@ -357,11 +382,22 @@ class Ozon:
             logger.warning(self.errors)
 
     def _prepare_for_sample(
-        self, raw_data: list[dict], for_parse_sample: bool = True
+        self,
+        raw_data: list[dict],
+        for_parse_sample: bool = True,
+        offer_id_starts_with_archive=False,
     ) -> tuple[list, list]:
         ready_data = []
         wrong_article = []
         if for_parse_sample:
+            if offer_id_starts_with_archive:
+                for item in raw_data:
+                    if item["offer_id"].startswith("archive"):
+                        ready_data.append(
+                            {"Артикул": item["offer_id"], "seller_id": self.client_id}
+                        )
+                return ready_data, wrong_article
+
             for item in raw_data:
                 if item["offer_id"].endswith(".0"):
                     ready_data.append(
@@ -377,7 +413,9 @@ class Ozon:
                 )
         return ready_data, wrong_article
 
-    def get_items_list(self, visibility, for_parse_sample=True):
+    def get_items_list(
+        self, visibility, for_parse_sample=True, offer_id_starts_with_archive=False
+    ):
         result = []
         body = {
             "filter": {"visibility": visibility},
@@ -398,11 +436,31 @@ class Ozon:
             if not items_list:
                 break
             result.extend(items_list)
-        ready_data = self._prepare_for_sample(result, for_parse_sample)
+        ready_data = self._prepare_for_sample(
+            result, for_parse_sample, offer_id_starts_with_archive
+        )
         if ready_data[1]:
             self.update_stock(ready_data[1], update_price=False)
         print(len(ready_data[0]))
         return ready_data[0]
+
+    def get_items_info(self, items_articles: list[dict]) -> list[dict]:
+        """
+        :param items_articles: list[dict] - must have required parameter - "Артикул"
+        :return: list[dict] - something like {"offer_id": 12334.0, "price": 1234.00}
+        """
+        result = []
+        for items in range(0, len(items_articles), 1000):
+            body = {
+                "offer_id": [i["Артикул"] for i in items_articles[items : items + 1000]]
+            }
+            response = requests.post(
+                f"{self.host}/v3/product/info/list", headers=self.headers, json=body
+            )
+            response_data = response.json().get("items")
+            for i in response_data:
+                result.append({"offer_id": i["offer_id"], "price": i["price"]})
+        return result
 
     def get_info_stock(self, articles: list[str] = []):
         result = []
