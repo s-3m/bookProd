@@ -46,11 +46,13 @@ class Ozon:
 
     def get_fees(self):
         if self.prefix == "chit_gor" or self.prefix == "mdk":
-            return 50
+            return 61
         elif self.prefix == "mg":
-            return 45
+            return 58
         elif self.prefix == "msk":
-            return 42
+            return 45
+        elif self.prefix == "mdk":
+            return 61
         else:
             return 50
 
@@ -274,7 +276,8 @@ class Ozon:
         # Сумма с учетом суммарной комиссии озона в зависимости от магаза
         price_with_main_tax = fixed_margin * self.fee / (100 - self.fee) + fixed_margin
         # Конечная сумма с учётом акции 15%
-        finish_price = round(price_with_main_tax * 15 / 85 + price_with_main_tax, 0)
+        # finish_price = round(price_with_main_tax * 15 / 85 + price_with_main_tax, 0)
+        finish_price = round(price_with_main_tax + (price_with_main_tax * 15 / 100), 0)
 
         if finish_price < 999:
             finish_price = 999
