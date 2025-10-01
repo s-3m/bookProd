@@ -498,6 +498,55 @@ class Ozon:
             time.sleep(1)
         return result
 
+    def get_finance_statement(
+        self,
+        period_from: str,
+        period_to: str,
+        page=1,
+        with_details=True,
+        page_size=10,
+    ) -> dict[str, dict]:
+        """
+
+        :param period_from: date in format dd-mm-yy
+        :param period_to: date in format dd-mm-yy
+        :param page:
+        :param with_details:
+        :param page_size:
+        :return:
+        """
+
+        start_period = period_from.split("-")
+        end_period = period_to.split("-")
+        body = {
+            "date": {
+                "from": f"{start_period[2]}-{start_period[1]}-{start_period[0]}T00:00:00.000Z",
+                "to": f"{end_period[2]}-{end_period[1]}-{end_period[0]}T00:00:00.000Z",
+            },
+            "with_details": with_details,
+            "page": page,
+            "page_size": page_size,
+        }
+        response = requests.post(
+            f"{self.host}/v1/finance/cash-flow-statement/list",
+            headers=self.headers,
+            json=body,
+        )
+        response = response.json().get("result")
+        order_amount = 0
+        return_amount = 0
+        commission_amount = 0
+        delivery_return_amount = 0
+        services_amount = 0
+        for i in response["cash_flows"]:
+            order_amount += i["orders_amount"]
+            commission_amount += i["commission_amount"]
+            return_amount += i["returns_amount"]
+            delivery_return_amount += i["item_delivery_and_return_amount"]
+            services_amount += i["services_amount"]
+
+        return response
+
 
 def start_push_to_ozon(
     separate_records: dict[str, list[dict]], prefix: str, update_price=True
