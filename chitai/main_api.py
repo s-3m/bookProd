@@ -27,6 +27,8 @@ BASE_URL = "https://www.chitai-gorod.ru"
 BASE_LINUX_DIR = "/media/source/chitai" if not DEBUG else "source"
 
 sample_raw = get_items_list("chit_gor", visibility="ALL")
+archived_items = get_items_list("chit_gor", visibility="ARCHIVED")
+sample_raw.extend(archived_items)
 sample = {i["Артикул"] for i in sample_raw}
 
 headers = {
