@@ -212,7 +212,11 @@ def write_result_files(
 
     if isinstance(id_to_add, list):
         df_add = pd.DataFrame(id_to_add).drop_duplicates(subset="Артикул_OZ")
-        clean_df_add = df_add.map(clean_excel_text)
+        clean_df_add = df_add.apply(
+            lambda col: col.apply(
+                lambda x: clean_excel_text(x) if isinstance(x, str) else x
+            )
+        )
         clean_df_add.sort_values("Наличие").drop_duplicates(
             subset="Название", keep="last"
         ).sort_values("Артикул_OZ")
