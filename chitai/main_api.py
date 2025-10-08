@@ -17,7 +17,6 @@ from utils import (
     write_result_files,
     exclude_else_shops_books,
     PROXIES,
-    check_wrong_chars,
 )
 from filter import filtering_cover
 
@@ -70,7 +69,6 @@ cookies = {
     "__P__wuid": "7ced6ae9c151dda37671045d4e0bf2e9",
     "stDeIdU": "7ced6ae9c151dda37671045d4e0bf2e9",
     "chg_visitor_id": "9dd3ba69-35f3-4fc3-872a-a3f08a99dbd6",
-    "adrdel": "1741588150140",
     "adrdel": "1741588150140",
     "acs_3": "%7B%22hash%22%3A%22be483547539f1e5fb43aa6ae1ea56ef0a5c5be24%22%2C%22nst%22%3A1741674550175%2C%22sl%22%3A%7B%22224%22%3A1741588150175%2C%221228%22%3A1741588150175%7D%7D",
     "acs_3": "%7B%22hash%22%3A%22be483547539f1e5fb43aa6ae1ea56ef0a5c5be24%22%2C%22nst%22%3A1741674550175%2C%22sl%22%3A%7B%22224%22%3A1741588150175%2C%221228%22%3A1741588150175%7D%7D",
@@ -145,8 +143,6 @@ def get_book_data(book_url: str):
                 description = asyncio.run(
                     check_danger_string(description, "description")
                 )
-                description = check_wrong_chars(description)
-
                 photo = f"https://content.img-gorod.ru/{book_data.get("picture")}?width=304&height=438&fit=bounds"
                 price = book_data.get("price")
 
