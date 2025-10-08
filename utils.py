@@ -118,6 +118,7 @@ async def check_danger_string(
 
     return base_string
 
+
 def check_wrong_chars(base_string):
     cleaned_chars = []
     for char in base_string:
