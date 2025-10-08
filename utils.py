@@ -118,6 +118,20 @@ async def check_danger_string(
 
     return base_string
 
+def check_wrong_chars(base_string):
+    cleaned_chars = []
+    for char in base_string:
+        if (
+            char == "\t" or char == "\n" or char == "\r"
+        ):  # разрешаем табуляцию, перевод строки
+            cleaned_chars.append(char)
+        elif char.isprintable():  # разрешаем печатные символы
+            cleaned_chars.append(char)
+        # Все остальные символы игнорируются
+
+    text = "".join(cleaned_chars)
+    return text
+
 
 with open(Path(__file__).parent / "proxy.txt") as f:
     PROXIES = f.readlines()
@@ -191,7 +205,6 @@ def clean_excel_text(text):
 
     # Удаляем управляющие символы (кроме табуляции, новой строки и возврата каретки)
     text = re.sub(r"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]", "", text)
-
     # Заменяем проблемные кавычки на обычные (опционально)
     text = text.replace("«", '"').replace("»", '"').replace("\n\n", "\n")
     return text

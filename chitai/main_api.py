@@ -17,6 +17,7 @@ from utils import (
     write_result_files,
     exclude_else_shops_books,
     PROXIES,
+    check_wrong_chars,
 )
 from filter import filtering_cover
 
@@ -144,6 +145,7 @@ def get_book_data(book_url: str):
                 description = asyncio.run(
                     check_danger_string(description, "description")
                 )
+                description = check_wrong_chars(description)
 
                 photo = f"https://content.img-gorod.ru/{book_data.get("picture")}?width=304&height=438&fit=bounds"
                 price = book_data.get("price")
