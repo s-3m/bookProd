@@ -1,7 +1,7 @@
 import os
 from concurrent.futures import ThreadPoolExecutor
 
-from .ozon_api import (
+from ozon_api import (
     get_items_list,
     separate_records_to_client_id,
     start_push_to_ozon,
@@ -157,5 +157,86 @@ def skip_all_archive_items(prefix):
             futures.append(task)
 
 
-if __name__ == "__main__":
-    skip_all_archive_items("chit_gor")
+def get_period_ozon_real_fees(ozon: Ozon, start_period, end_period):
+    response = ozon.get_finance_statement(
+        period_from=start_period, period_to=end_period
+    )
+    order_amount = 0
+    return_amount = 0
+    commission_amount = 0
+    delivery_amount = 0
+    agent_amount = 0
+    services_amount = 0
+    for period in response["cash_flows"]:
+        order_amount += period["orders_amount"]
+        return_amount += period["returns_amount"]
+        commission_amount += period["commission_amount"]
+
+    for period in response["details"]:
+        for i in period["delivery"]["delivery_services"]["items"]:
+            if i.get("name") == "MarketplaceServiceItemDropoff":
+                delivery_amount += i["price"]
+            elif i.get("name") == "MarketplaceServiceItemDirectFlowLogisticSum":
+                delivery_amount += i["price"]
+            elif i.get("name") == "MarketplaceServiceItemRedistributionDropoff":
+                agent_amount += i["price"]
+            elif i.get("name") == "MarketplaceServiceItemRedistributionLastMileCourier":
+                agent_amount += i["price"]
+
+        if period.get("return"):
+            delivery_amount += period.get("return").get("return_services").get("total")
+
+        for i in period["others"]["items"]:
+            if i.get("name") == "MarketplaceRedistributionOfAcquiringOperation":
+                agent_amount += i["price"]
+
+        services_amount += period["services"]["total"]
+
+    tax_summary = (
+        return_amount
+        + commission_amount
+        + delivery_amount
+        + agent_amount
+        + services_amount
+    )
+
+    fees_percent = round(abs(tax_summary * 100 / order_amount))
+    return fees_percent
+
+
+def start_monthly_fees_calculate(prefix, start_period, end_period) -> None:
+    """
+    Достаточно передать сюда префикс магазина
+    :param prefix: префикс магазина
+    :param start_period: начало периода
+    :param end_period: окончание периода
+    :return: None
+    """
+    shop_list = []
+    ready_result = []
+    for key, value in os.environ.items():
+        if key.startswith(prefix.upper()):
+            new_shop_flag = True if key.split("_")[-2] == "PRX" else False
+            shop_list.append((key.split("_")[-1], value, new_shop_flag))
+
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        futures = []
+        for item in shop_list:
+            ozon = Ozon(client_id=item[0], api_key=item[1], prefix=prefix, prx=item[2])
+            task = executor.submit(
+                get_period_ozon_real_fees, ozon, start_period, end_period
+            )
+            futures.append(task)
+        for i in futures:
+            try:
+                ready_result.append(i.result())
+            except Exception as e:
+                logger.critical(e)
+        print(f"{prefix} - {round(sum(ready_result)/len(ready_result))}")
+
+
+# if __name__ == "__main__":
+#     start_monthly_fees_calculate("chit_gor", "01-09-2025", "30-09-2025")
+#     start_monthly_fees_calculate("mdk", "01-09-2025", "30-09-2025")
+#     start_monthly_fees_calculate("msk", "01-09-2025", "30-09-2025")
+#     start_monthly_fees_calculate("mg", "01-09-2025", "30-09-2025")

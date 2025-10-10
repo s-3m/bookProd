@@ -531,19 +531,10 @@ class Ozon:
             f"{self.host}/v1/finance/cash-flow-statement/list",
             headers=self.headers,
             json=body,
+            timeout=10,
         )
+
         response = response.json().get("result")
-        order_amount = 0
-        return_amount = 0
-        commission_amount = 0
-        delivery_return_amount = 0
-        services_amount = 0
-        for i in response["cash_flows"]:
-            order_amount += i["orders_amount"]
-            commission_amount += i["commission_amount"]
-            return_amount += i["returns_amount"]
-            delivery_return_amount += i["item_delivery_and_return_amount"]
-            services_amount += i["services_amount"]
 
         return response
 
@@ -634,4 +625,4 @@ def archive_items_stock_to_zero(prefix):
 
 
 # if __name__ == "__main__":
-#     load_dotenv(".env")
+
