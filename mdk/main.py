@@ -74,8 +74,11 @@ async def get_item_data(session, book: str):
         soup = bs(response, "lxml")
 
         in_arbat = soup.find("div", {"class": "shop_on_map", "data-id": "1"})
-        if not in_arbat:
+        if in_arbat:
             return
+        else:
+            shops_div = soup.find_all("div", {"class": "shop_on_map"})
+            stock_shops = ", ".join([i.get("data-name").strip() for i in shops_div])
 
         # Название книги
         try:
@@ -137,6 +140,7 @@ async def get_item_data(session, book: str):
             "Ссылка": link,
             "Название": title,
             "Артикул_OZ": article,
+            "Магазин": stock_shops,
             "Фото": photo,
             "Автор": author,
             "Цена": price,
@@ -326,27 +330,25 @@ async def get_gather_data():
 
         combined_df = pd.concat([new_shops_df, old_shops_df]).drop_duplicates()
         # Сброс индекса
-        combined_df = combined_df.reset_index(drop=True)
-        id_to_add = combined_df.to_dict("records")
 
         logger.info("Start write files")
+        # try:
+        #     new_id_to_add_df = await replace_photo(id_to_add)
+        #     new_id_to_add_df.set_index("Артикул_OZ", inplace=True)
+        #     new_shops_df.set_index("Артикул_OZ", inplace=True)
+        #     old_shops_df.set_index("Артикул_OZ", inplace=True)
+        #
+        #     new_shops_df.update(new_id_to_add_df[["Фото"]])
+        #     old_shops_df.update(new_id_to_add_df[["Фото"]])
+        #     new_shops_df.reset_index(inplace=True)
+        #     old_shops_df.reset_index(inplace=True)
         try:
-            new_id_to_add_df = await replace_photo(id_to_add)
-            new_id_to_add_df.set_index("Артикул_OZ", inplace=True)
-            new_shops_df.set_index("Артикул_OZ", inplace=True)
-            old_shops_df.set_index("Артикул_OZ", inplace=True)
-
-            new_shops_df.update(new_id_to_add_df[["Фото"]])
-            old_shops_df.update(new_id_to_add_df[["Фото"]])
-            new_shops_df.reset_index(inplace=True)
-            old_shops_df.reset_index(inplace=True)
-
             write_result_files(
                 base_dir=BASE_LINUX_DIR,
                 prefix="mdk",
                 all_books_result=all_books_result,
-                id_to_add=(new_shops_df, old_shops_df),
-                replace_photo=True,
+                id_to_add=[combined_df],
+                replace_photo=False,
             )
         except Exception as e:
             logger.exception(e)
