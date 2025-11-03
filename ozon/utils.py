@@ -1,7 +1,7 @@
 import os
 from concurrent.futures import ThreadPoolExecutor
 
-from ozon_api import (
+from ozon.ozon_api import (
     get_items_list,
     separate_records_to_client_id,
     start_push_to_ozon,
