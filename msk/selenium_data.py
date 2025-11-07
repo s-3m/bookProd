@@ -19,10 +19,10 @@ def get_book_data(link):
     kill_chrome_processes()
     folder_path = Path(__file__).parent
     options = uc.ChromeOptions()
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
-    options.add_argument('--disable-gpu')
-    options.add_argument('--remote-debugging-port=0')
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--remote-debugging-port=0")
     driver = uc.Chrome(
         headless=True,
         use_subprocess=True,
