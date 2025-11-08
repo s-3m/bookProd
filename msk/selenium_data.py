@@ -1,32 +1,9 @@
 import time
 import subprocess
-from pathlib import Path
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
 import undetected_chromedriver as uc
-
-
-def get_chrome_version():
-    """Получаем версию установленного Chrome"""
-    try:
-        result = subprocess.run(
-            ["google-chrome", "--version"], capture_output=True, text=True
-        )
-        version_str = result.stdout.strip()
-        # Извлекаем номер версии (например, "139.0.7258.138")
-        version = version_str.split()[-1].split(".")[0]  # Возвращает "139"
-        print(version)
-        return int(version)
-    except:
-        try:
-            result = subprocess.run(
-                ["chromium-browser", "--version"], capture_output=True, text=True
-            )
-            version_str = result.stdout.strip()
-            version = version_str.split()[-1].split(".")[0]
-            return int(version)
-        except:
-            return None
+from loguru import logger
 
 
 def kill_chrome_processes():
@@ -39,11 +16,9 @@ def kill_chrome_processes():
 
 
 def get_book_data(link):
-    chrome_version = 139
     kill_chrome_processes()
     for attempt in range(6):
         try:
-            folder_path = Path(__file__).parent
             options = uc.ChromeOptions()
             options.add_argument("--no-sandbox")
             options.add_argument("--disable-dev-shm-usage")
@@ -53,7 +28,6 @@ def get_book_data(link):
                 headless=True,
                 use_subprocess=True,
                 options=options,
-                version=chrome_version,
             )
 
             try:
@@ -95,7 +69,7 @@ def get_book_data(link):
                 driver.quit()
                 time.sleep(2)
         except Exception as e:
-            chrome_version = get_chrome_version()
+            logger.info("Неудачная попытка создать драйвер!")
     return None
 
 
