@@ -6,6 +6,29 @@ from selenium.webdriver.support.select import Select
 import undetected_chromedriver as uc
 
 
+def get_chrome_version():
+    """Получаем версию установленного Chrome"""
+    try:
+        result = subprocess.run(
+            ["google-chrome", "--version"], capture_output=True, text=True
+        )
+        version_str = result.stdout.strip()
+        # Извлекаем номер версии (например, "139.0.7258.138")
+        version = version_str.split()[-1].split(".")[0]  # Возвращает "139"
+        print(version)
+        return int(version)
+    except:
+        try:
+            result = subprocess.run(
+                ["chromium-browser", "--version"], capture_output=True, text=True
+            )
+            version_str = result.stdout.strip()
+            version = version_str.split()[-1].split(".")[0]
+            return int(version)
+        except:
+            return None
+
+
 def kill_chrome_processes():
     try:
         subprocess.run(["pkill", "-f", "chrome"], check=False)
@@ -16,9 +39,10 @@ def kill_chrome_processes():
 
 
 def get_book_data(link):
-    for attempt in range(5):
+    chrome_version = 139
+    kill_chrome_processes()
+    for attempt in range(6):
         try:
-            kill_chrome_processes()
             folder_path = Path(__file__).parent
             options = uc.ChromeOptions()
             options.add_argument("--no-sandbox")
@@ -28,8 +52,8 @@ def get_book_data(link):
             driver = uc.Chrome(
                 headless=True,
                 use_subprocess=True,
-                driver_executable_path=folder_path / "chromedriver",
                 options=options,
+                version=chrome_version,
             )
 
             try:
@@ -71,8 +95,7 @@ def get_book_data(link):
                 driver.quit()
                 time.sleep(2)
         except Exception as e:
-            print(f"Попытка {attempt + 1} не удалась: {e}")
-            time.sleep(5)
+            chrome_version = get_chrome_version()
     return None
 
 
