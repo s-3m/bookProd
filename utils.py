@@ -302,12 +302,11 @@ def forming_add_files(
     items_list_old_shop = get_items_list(
         prefix=prefix, visibility="ALL", shop_category="old"
     )
-    # archived_items_list_old_shop = get_items_list(
-    #     prefix=prefix, visibility="ARCHIVED", shop_category="old")
+    archived_items_list_old_shop = get_items_list(
+        prefix=prefix, visibility="ARCHIVED", shop_category="old"
+    )
 
-    archived_items_list_old_shop = (
-        []
-    )  # Поменяно на время, после нужно удалить это и раскоментировать строки выше
+    # archived_items_list_old_shop = ([])  # Поменяно на время, после нужно удалить это и раскоментировать строки выше
     items_list_new_shop.extend(archived_items_list_new_shop)
     items_list_old_shop.extend(archived_items_list_old_shop)
 
