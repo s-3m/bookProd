@@ -46,11 +46,11 @@ class Ozon:
 
     def get_fees(self):
         if self.prefix == "chit_gor" or self.prefix == "mdk":
-            return 61
-        elif self.prefix == "mg":
             return 58
+        elif self.prefix == "mg":
+            return 60
         elif self.prefix == "msk":
-            return 45
+            return 48
         elif self.prefix == "mdk":
             return 61
         else:
