@@ -69,6 +69,8 @@ async def to_check_item(item, session):
         script_index = 1
         if age_control:
             closed_page = get_book_data(link)
+            if not closed_page:
+                return
             soup = bs(closed_page, "lxml")
             script_index = 5  # 5 for linux server, for windows - 2
 
