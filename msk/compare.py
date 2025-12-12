@@ -81,6 +81,10 @@ async def to_check_item(item, session):
 
         else:
             need_element = soup.find_all("script")
+            for index, i in enumerate(need_element):
+                if "window.MbPageInfo =" in i.text:
+                    script_index = index
+                    break
             a = (
                 need_element[script_index]
                 .text.split("MbPageInfo = ")[1]
