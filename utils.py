@@ -248,15 +248,24 @@ def write_result_files(
         old_shop_df.drop_duplicates(subset="Название", keep="last", inplace=True)
 
         # Check "add books" not in archive books
-        new_shop_add = check_archived_books(df_for_add=new_shop_df)
-        old_shop_add = check_archived_books(df_for_add=old_shop_df)
-
-        new_shop_add.to_excel(
-            f"{base_dir}/result/{prefix}_add_new.xlsx", index=False, engine="openpyxl"
-        )
-        old_shop_add.to_excel(
-            f"{base_dir}/result/{prefix}_add_old.xlsx", index=False, engine="openpyxl"
-        )
+        if not new_shop_df.empty:
+            new_shop_add = check_archived_books(df_for_add=new_shop_df)
+            new_shop_add.to_excel(
+                f"{base_dir}/result/{prefix}_add_new.xlsx",
+                index=False,
+                engine="openpyxl",
+            )
+        else:
+            logger.warning("New shop data is empty")
+        if not old_shop_df.empty:
+            old_shop_add = check_archived_books(df_for_add=old_shop_df)
+            old_shop_add.to_excel(
+                f"{base_dir}/result/{prefix}_add_old.xlsx",
+                index=False,
+                engine="openpyxl",
+            )
+        else:
+            logger.warning("Old shop data is empty")
 
 
 def exclude_else_shops_books(items_on_add: list[dict], exclude_shop: str | None = None):
@@ -313,17 +322,21 @@ def forming_add_files(
     df_items_list_new_shop = pl.DataFrame(items_list_new_shop)[["Артикул"]].rename(
         {"Артикул": "Артикул_OZ"}
     )
-    df_items_list_old_shop = pl.DataFrame(items_list_old_shop)[["Артикул"]].rename(
-        {"Артикул": "Артикул_OZ"}
-    )
+
+    if items_list_old_shop:
+        df_items_list_old_shop = pl.DataFrame(items_list_old_shop)[["Артикул"]].rename(
+            {"Артикул": "Артикул_OZ"}
+        )
+        result_old_shop = polars_df.join(
+            df_items_list_old_shop, on="Артикул_OZ", how="anti"
+        ).to_pandas()
+    else:
+        result_old_shop = pl.DataFrame(items_list_old_shop).to_pandas()
 
     result_new_shop = polars_df.join(
         df_items_list_new_shop, on="Артикул_OZ", how="anti"
     ).to_pandas()
 
-    result_old_shop = polars_df.join(
-        df_items_list_old_shop, on="Артикул_OZ", how="anti"
-    ).to_pandas()
     return result_new_shop, result_old_shop
 
 
