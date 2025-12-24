@@ -333,13 +333,16 @@ async def get_gather_data():
         try:
             new_id_to_add_df = await replace_photo(id_to_add)
             new_id_to_add_df.set_index("Артикул_OZ", inplace=True)
-            new_shops_df.set_index("Артикул_OZ", inplace=True)
-            old_shops_df.set_index("Артикул_OZ", inplace=True)
 
-            new_shops_df.update(new_id_to_add_df[["Фото"]])
-            old_shops_df.update(new_id_to_add_df[["Фото"]])
-            new_shops_df.reset_index(inplace=True)
-            old_shops_df.reset_index(inplace=True)
+            if not new_shops_df.empty:
+                new_shops_df.set_index("Артикул_OZ", inplace=True)
+                new_shops_df.update(new_id_to_add_df[["Фото"]])
+                new_shops_df.reset_index(inplace=True)
+
+            if not old_shops_df.empty:
+                old_shops_df.set_index("Артикул_OZ", inplace=True)
+                old_shops_df.update(new_id_to_add_df[["Фото"]])
+                old_shops_df.reset_index(inplace=True)
 
             write_result_files(
                 base_dir=BASE_LINUX_DIR,
