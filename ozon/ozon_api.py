@@ -46,15 +46,15 @@ class Ozon:
 
     def get_fees(self):
         if self.prefix == "chit_gor" or self.prefix == "mdk":
-            return 58
+            return 64
         elif self.prefix == "mg":
-            return 60
+            return 62
         elif self.prefix == "msk":
-            return 48
+            return 59
         elif self.prefix == "mdk":
-            return 61
+            return 64
         else:
-            return 50
+            return 60
 
     def get_proxies(self):
         prx = os.getenv("PRX")
@@ -284,9 +284,9 @@ class Ozon:
         old_price = finish_price * 2
         min_price = finish_price * self.discount
         return {
-            "price": str(finish_price),
-            "old_price": str(old_price),
-            "min_price": str(min_price),
+            "price": str(finish_price + 30),
+            "old_price": str(old_price + 30),
+            "min_price": str(min_price + 30),
         }
 
     def update_price(self, item_list: list[dict]) -> None:
