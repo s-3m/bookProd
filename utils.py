@@ -393,7 +393,7 @@ def quantity_checker(sample: list[dict]) -> bool:
         if i["stock"] in (0, "0"):
             zero_count += 1
 
-    percent = (len(sample) * 50) / 100
+    percent = (len(sample) * 80) / 100
     if zero_count > percent:
         return False
     else:
