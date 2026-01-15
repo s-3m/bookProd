@@ -13,7 +13,7 @@ from loguru import logger
 import pandas.io.formats.excel
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from ozon.ozon_api import get_items_list
+from ozon.ozon_api import Ozon
 from utils import (
     check_danger_string,
     fetch_request,
@@ -315,6 +315,15 @@ async def get_gather_data():
                 asyncio.create_task(get_item_data(session, i)) for i in item_error
             ]
             await asyncio.gather(*items_error_tasks)
+
+    # Устанавливаем свою цену
+    ozon = Ozon("None", "None", "msk")
+    for i in result:
+        try:
+            parse_price = i["price"]
+            i["price"] = ozon._price_calculate(parse_price)
+        except Exception as e:
+            logger.exception(f"Error with price calculate - {e}")
 
     print()
     logger.info("Start to write data in file")

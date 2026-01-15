@@ -10,6 +10,7 @@ import asyncio
 from loguru import logger
 
 from filter import filtering_cover
+from ozon.ozon_api import Ozon
 from photo_utils import replace_photo
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -317,8 +318,16 @@ async def get_gather_data():
             ]
             await asyncio.gather(*item_err)
 
-        # Replace photo
+        # Устанавливаем свою цену
+        ozon = Ozon("None", "None", "mdk")
+        for i in all_books_result:
+            try:
+                parse_price = i["price"]
+                i["price"] = ozon._price_calculate(parse_price)
+            except Exception as e:
+                logger.exception(f"Error with price calculate - {e}")
 
+        # Replace photos
         all_books_result_df = pd.DataFrame(all_books_result)
         new_shops_df, old_shops_df = forming_add_files(
             result_df=all_books_result_df, prefix="mdk"

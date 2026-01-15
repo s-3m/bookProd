@@ -12,7 +12,7 @@ import asyncio
 from loguru import logger
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from ozon.ozon_api import get_items_list
+from ozon.ozon_api import Ozon
 from utils import (
     check_danger_string,
     fetch_request,
@@ -265,6 +265,14 @@ async def get_gather_data():
                 except Exception as e:
                     continue
             await asyncio.gather(*reparse_tasks)
+
+        ozon = Ozon("None", "None", "mg")
+        for i in result:
+            try:
+                parse_price = i["price"]
+                i["price"] = ozon._price_calculate(parse_price)
+            except Exception as e:
+                logger.exception(f"Error with price calculate - {e}")
 
         logger.info("Start to write to excel")
         result_df = pd.DataFrame(result)
