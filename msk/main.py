@@ -320,8 +320,8 @@ async def get_gather_data():
     ozon = Ozon("None", "None", "msk")
     for i in result:
         try:
-            parse_price = i["price"]
-            i["price"] = ozon._price_calculate(parse_price)
+            parse_price = i["Цена"]
+            i["Цена"] = ozon._price_calculate(parse_price)
         except Exception as e:
             logger.exception(f"Error with price calculate - {e}")
 
