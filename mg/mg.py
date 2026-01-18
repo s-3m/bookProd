@@ -42,6 +42,7 @@ count = 1
 item_error = []
 cat_error = []
 unique_title = set()
+ozon = Ozon("None", "None", "mg")
 
 
 async def get_item_data(session, link: str):
@@ -122,9 +123,16 @@ async def get_item_data(session, link: str):
                 .text.strip()
                 .split(".")[0]
             )
-            item_data["price"] = price
+            price = ozon._price_calculate(input_price=price)
+            price["price"] = price["price"][:-2]
+            price["old_price"] = price["old_price"][:-2]
+            if int(price["price"]) >= 60_000:
+                return
+            item_data["price"] = price["price"]
+            item_data["old_price"] = price["old_price"]
         except:
             item_data["price"] = "Цена не указана"
+            item_data["old_price"] = "Цена не указана"
 
         item_id = soup.find("div", class_="wish_list_btn_box").find(
             "a", class_="btn_desirable2 to_wishlist"
@@ -265,14 +273,6 @@ async def get_gather_data():
                 except Exception as e:
                     continue
             await asyncio.gather(*reparse_tasks)
-
-        ozon = Ozon("None", "None", "mg")
-        for i in result:
-            try:
-                parse_price = i["price"]
-                i["price"] = ozon._price_calculate(parse_price)
-            except Exception as e:
-                logger.exception(f"Error with price calculate - {e}")
 
         logger.info("Start to write to excel")
         result_df = pd.DataFrame(result)

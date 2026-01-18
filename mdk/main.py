@@ -57,6 +57,7 @@ logger.add("mdk_error.log", format="{time} {level} {message}", level="ERROR")
 semaphore = asyncio.Semaphore(50)
 unique_book_links = set()
 last_isbn = None
+ozon = Ozon("None", "None", "mdk")
 
 
 async def get_item_data(session, book: str):
@@ -99,14 +100,21 @@ async def get_item_data(session, book: str):
                 i.text for i in soup.find_all("a", {"class": "itempage-author"})
             ]
             author = " ".join(author_list)
+            if author in ("", " "):
+                author = "Нет автора"
         except:
             author = "Нет автора"
 
         # Цена
         try:
             price = soup.find("span", {"class": "itempage-price_inet"}).text[:-1]
+            price = ozon._price_calculate(input_price=price)
+            price["price"] = price["price"][:-2]
+            price["old_price"] = price["old_price"][:-2]
+            if int(price["price"]) >= 60_000:
+                return
         except:
-            price = "Нет цены"
+            price = {"price": "Нет цены", "old_price": "Нет цены"}
 
         # Описание
         try:
@@ -140,7 +148,8 @@ async def get_item_data(session, book: str):
             "Артикул_OZ": article,
             "Фото": photo,
             "Автор": author,
-            "Цена": price,
+            "Цена": price["price"],
+            "Цена до скидки": price["old_price"],
             "Описание": description,
             "Наличие": str(stock),
         }
@@ -317,15 +326,6 @@ async def get_gather_data():
                 for book_url in item_error_copy
             ]
             await asyncio.gather(*item_err)
-
-        # Устанавливаем свою цену
-        ozon = Ozon("None", "None", "mdk")
-        for i in all_books_result:
-            try:
-                parse_price = i["Цена"]
-                i["Цена"] = ozon._price_calculate(parse_price)
-            except Exception as e:
-                logger.exception(f"Error with price calculate - {e}")
 
         # Replace photos
         all_books_result_df = pd.DataFrame(all_books_result)

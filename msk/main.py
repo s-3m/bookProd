@@ -50,6 +50,7 @@ item_error = []
 page_error = []
 
 last_isbn = None
+ozon = Ozon("None", "None", "msk")
 
 
 async def check_empty_element(session, item_dict, item, check_price=False):
@@ -110,15 +111,24 @@ async def get_item_data(session, item: str):
             author_div = soup.find("div", class_="page-header__author")
             author_list = [i.text.strip() for i in author_div.find_all("a")]
             author = ", ".join(author_list)
+            if author in ("", " "):
+                author = "Нет автора"
         except:
             author = "Нет автора"
 
         # Photo
         try:
-            img = soup.find("div", class_="book__cover").find("a").get("href")
-
+            img = (
+                soup.find("div", class_="book__cover")
+                .find("a")
+                .get("href")
+                .replace("https", "http")
+                .replace("orig", "w259")
+            )
             if "capellabook" not in img:
-                img = f"{BASE_URL}{img}"
+                img = f"{BASE_URL}{img}".replace("https", "http").replace(
+                    "orig", "w259"
+                )
         except:
             img = "Нет фото"
 
@@ -146,10 +156,13 @@ async def get_item_data(session, item: str):
             price = soup.find("div", class_="book__price")
             if price:
                 price = price.text.strip().replace("\xa0", "")
-                if int(price) >= 40_000:
+                price = ozon._price_calculate(input_price=price)
+                price["price"] = price["price"][:-2]
+                price["old_price"] = price["old_price"][:-2]
+                if int(price["price"]) >= 60_000:
                     return
         except:
-            price = "Цена не указана"
+            price = {"price": "Цена не указана", "old_price": "Цена не указана"}
 
         # Stock
         try:
@@ -231,7 +244,8 @@ async def get_item_data(session, item: str):
             "description": description,
             "Категория": category,
             "Подкатегория": category,
-            "Цена": price,
+            "Цена": price["price"],
+            "Цена до скидки": price["old_price"],
             "Наличие": stock if stock != 9999999 else 1,
             "Фото": img,
         }
@@ -315,15 +329,6 @@ async def get_gather_data():
                 asyncio.create_task(get_item_data(session, i)) for i in item_error
             ]
             await asyncio.gather(*items_error_tasks)
-
-    # Устанавливаем свою цену
-    ozon = Ozon("None", "None", "msk")
-    for i in result:
-        try:
-            parse_price = i["Цена"]
-            i["Цена"] = ozon._price_calculate(parse_price)
-        except Exception as e:
-            logger.exception(f"Error with price calculate - {e}")
 
     print()
     logger.info("Start to write data in file")
