@@ -10,7 +10,6 @@ import asyncio
 from loguru import logger
 
 from filter import filtering_cover
-from ozon.ozon_api import Ozon
 from photo_utils import replace_photo
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -20,6 +19,7 @@ from utils import (
     write_result_files,
     forming_add_files,
 )
+from ozon.ozon_api import Ozon
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 DEBUG = True if sys.platform.startswith("win") else False
