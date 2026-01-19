@@ -280,7 +280,7 @@ class Ozon:
         finish_price = round(price_with_main_tax + (price_with_main_tax * 15 / 100), 0)
 
         if finish_price < 999:
-            finish_price = 999
+            finish_price = 999.0
         old_price = finish_price * 2
         min_price = finish_price * self.discount
         return {
