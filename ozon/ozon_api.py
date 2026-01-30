@@ -259,7 +259,9 @@ class Ozon:
 
     def _price_calculate(self, input_price) -> dict:
         input_price = str(input_price)
-        raw_price = round(float(input_price.replace(",", ".").replace("\xa0", "")), 2)
+        raw_price = round(
+            float(input_price.replace(",", ".").replace("\xa0", "").replace(" ", "")), 2
+        )
         if self.prefix == "mg":
             raw_price = raw_price - (raw_price * 0.15)
         # profit calculate

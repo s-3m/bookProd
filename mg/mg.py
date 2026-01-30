@@ -130,7 +130,8 @@ async def get_item_data(session, link: str):
                 return
             item_data["price"] = price["price"]
             item_data["old_price"] = price["old_price"]
-        except:
+        except Exception as e:
+            logger.error(e)
             item_data["price"] = "Цена не указана"
             item_data["old_price"] = "Цена не указана"
 
