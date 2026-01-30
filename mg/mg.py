@@ -112,11 +112,11 @@ async def get_item_data(session, link: str):
                 info = "Описание отсутствует"
             info = await check_danger_string(info, "description")
             if len(info) < 5:
-                item_data["description"] = "Автор рекомендует книгу ко прочтению!"
+                item_data["description"] = "Автор рекомендует книгу к прочтению!"
             else:
                 item_data["description"] = info
         except:
-            item_data["description"] = "Автор рекомендует книгу ко прочтению!"
+            item_data["description"] = "Автор рекомендует книгу к прочтению!"
         try:
             price = (
                 soup.find_all("div", class_="product_item_price")[1]
@@ -132,8 +132,8 @@ async def get_item_data(session, link: str):
             item_data["old_price"] = price["old_price"]
         except Exception as e:
             logger.error(e)
-            item_data["price"] = "Цена не указана"
-            item_data["old_price"] = "Цена не указана"
+            item_data["price"] = "0"
+            item_data["old_price"] = "0"
 
         item_id = soup.find("div", class_="wish_list_btn_box").find(
             "a", class_="btn_desirable2 to_wishlist"
@@ -173,7 +173,7 @@ async def get_item_data(session, link: str):
         )
         # Publisher filter
         item_data["Издательство"] = (
-            item_data["Издательство"] if item_data.get("Издательство") else "Не указано"
+            item_data["Издательство"] if item_data.get("Издательство") else "АСТ"
         )
 
         # Year filter
