@@ -4,6 +4,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
 import undetected_chromedriver as uc
 from loguru import logger
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 
 
 def kill_chrome_processes():
@@ -23,10 +25,12 @@ def get_book_data(link):
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-gpu")
         options.add_argument("--remote-debugging-port=0")
+        service = Service(ChromeDriverManager().install())
         driver = uc.Chrome(
             headless=True,
             use_subprocess=True,
             options=options,
+            service=service,
         )
 
         try:
