@@ -17,8 +17,10 @@ from utils import (
     write_result_files,
     exclude_else_shops_books,
     PROXIES,
+    clean_excel_text,
 )
 from filter import filtering_cover
+
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 logger.add("chitai_error.log", format="{time} {level} {message}", level="ERROR")
@@ -120,7 +122,7 @@ def get_book_data(book_url: str):
             f"https://web-agr.chitai-gorod.ru/web/api/v1/products/slug/{book_slug}",
             headers=headers,
             cookies=cookies,
-            proxies=proxy,
+            # proxies=proxy,
             timeout=15,
         )
         time.sleep(1)
@@ -239,7 +241,7 @@ def get_page_data(page_api_url, request_body):
             page_api_url,
             params=request_body,
             headers=headers,
-            proxies=proxy,
+            # proxies=proxy,
             timeout=15,
         )
         items_list = page_response.json()["data"]
@@ -280,7 +282,7 @@ def get_gather_data():
         page_api_url,
         params=body,
         headers=headers,
-        proxies=proxy,
+        # proxies=proxy,
     )
     page_count = response.json()["meta"]["pagination"]["total_pages"]
     for page in range(1, page_count + 1):
@@ -313,34 +315,48 @@ def get_gather_data():
     )
     logger.info("Start write files")
 
-    pure_add = exclude_else_shops_books(id_to_add, exclude_shop="chit")
-    write_result_files(
-        base_dir=BASE_LINUX_DIR,
-        prefix="chit_gor",
-        all_books_result=all_books_result,
-        id_to_add=pure_add,
+    # УДАЛИТЬ ПОСЛЕ ПАРСА
+    all_result_df = pd.DataFrame(all_books_result).drop_duplicates(subset="Артикул_OZ")
+    clear_all_result_df = all_result_df.map(clean_excel_text)
+    clear_all_result_df.to_excel(
+        f"{BASE_LINUX_DIR}/result/chit_all.xlsx", index=False, engine="openpyxl"
     )
-    logger.info("Finished write files")
+    # УДАЛИТЬ ПОСЛЕ ПАРСА
 
-    # Тут исключаем книжки у МДК, т.к. ЧГ заканчивает парситься последним
-    logger.info("Start to exclude MDK books")
-    mdk_old = pd.read_excel("/media/source/mdk/result/mdk_add_old.xlsx").to_dict(
-        orient="records"
-    )
-    mdk_new = pd.read_excel("/media/source/mdk/result/mdk_add_new.xlsx").to_dict(
-        orient="records"
-    )
-    old_after_exclude = exclude_else_shops_books(mdk_old, exclude_shop="mdk")
-    new_after_exclude = exclude_else_shops_books(mdk_new, exclude_shop="mdk")
-    mdk_path = "/media/source/mdk/result"
-    old_df = pd.DataFrame(old_after_exclude)
-    old_df["Артикул_OZ"] = old_df["Артикул_OZ"].astype(str)
-    old_df.to_excel(f"{mdk_path}/mdk_add_old.xlsx", engine="openpyxl", index=False)
+    # Раскоментировать --------------
 
-    new_df = pd.DataFrame(new_after_exclude)
-    new_df["Артикул_OZ"] = new_df["Артикул_OZ"].astype(str)
-    new_df.to_excel(f"{mdk_path}/mdk_add_new.xlsx", engine="openpyxl", index=False)
-    logger.info("MDK was excluded")
+    # pure_add = exclude_else_shops_books(id_to_add, exclude_shop="chit")
+    # write_result_files(
+    #     base_dir=BASE_LINUX_DIR,
+    #     prefix="chit_gor",
+    #     all_books_result=all_books_result,
+    #     id_to_add=pure_add,
+    # )
+    # logger.info("Finished write files")
+
+    # Раскоментировать --------------
+    #
+    # # Тут исключаем книжки у МДК, т.к. ЧГ заканчивает парситься последним
+    # logger.info("Start to exclude MDK books")
+    # mdk_old = pd.read_excel("/media/source/mdk/result/mdk_add_old.xlsx").to_dict(
+    #     orient="records"
+    # )
+    # mdk_new = pd.read_excel("/media/source/mdk/result/mdk_add_new.xlsx").to_dict(
+    #     orient="records"
+    # )
+    # old_after_exclude = exclude_else_shops_books(mdk_old, exclude_shop="mdk")
+    # new_after_exclude = exclude_else_shops_books(mdk_new, exclude_shop="mdk")
+    # mdk_path = "/media/source/mdk/result"
+    # old_df = pd.DataFrame(old_after_exclude)
+    # old_df["Артикул_OZ"] = old_df["Артикул_OZ"].astype(str)
+    # old_df.to_excel(f"{mdk_path}/mdk_add_old.xlsx", engine="openpyxl", index=False)
+    #
+    # new_df = pd.DataFrame(new_after_exclude)
+    # new_df["Артикул_OZ"] = new_df["Артикул_OZ"].astype(str)
+    # new_df.to_excel(f"{mdk_path}/mdk_add_new.xlsx", engine="openpyxl", index=False)
+    # logger.info("MDK was excluded")
+
+    # Раскоментировать --------------
 
 
 @logger.catch
