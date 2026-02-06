@@ -110,7 +110,7 @@ def get_book_data(book_url: str):
     link = book_url if book_url.startswith("http") else f"{BASE_URL}{book_url}"
     time.sleep(random.uniform(0.5, 3))
     try:
-        response = sync_fetch_request(link, headers, cookies, use_proxy=True)
+        response = sync_fetch_request(link, headers, cookies, use_proxy=False)
         if response == "proxy error":
             item_error.append(link)
             return
@@ -296,7 +296,7 @@ def get_page_data(book_category_link, page_number=1, reparse_url=False):
     url = f"{book_category_link}?page={page_number}" if not reparse_url else reparse_url
     try:
         time.sleep(random.uniform(0.5, 3))
-        response = sync_fetch_request(url, headers, cookies, use_proxy=True)
+        response = sync_fetch_request(url, headers, cookies, use_proxy=False)
         if response == "proxy error":
             page_error.append(url)
             return
@@ -339,7 +339,7 @@ async def get_gather_data():
         for i in [f"{BASE_URL}/catalog/books-18030"]:
             logger.info(f"Start parsing {i}")
             resp = sync_fetch_request(
-                i, headers=headers, cookies=cookies, use_proxy=True
+                i, headers=headers, cookies=cookies, use_proxy=False
             )
             # async with session.get(i, headers=headers) as resp:
             soup = bs(resp, "lxml")
