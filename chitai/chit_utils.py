@@ -27,7 +27,7 @@ def parse_with_playwright_proxy(proxy_url, target_url) -> str | None:
         )
         browser = p.chromium.launch(
             headless=True,  # True для production
-            proxy=poxy_settings,
+            # proxy=poxy_settings,
             args=[
                 "--disable-blink-features=AutomationControlled",
                 "--no-sandbox",
