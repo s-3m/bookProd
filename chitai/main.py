@@ -9,6 +9,7 @@ import aiohttp
 import asyncio
 from loguru import logger
 import pandas as pd
+from utils import clean_excel_text
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from ozon.ozon_api import get_items_list
@@ -378,33 +379,45 @@ async def get_gather_data():
         )
         logger.info("Start write files")
 
-        pure_add = exclude_else_shops_books(id_to_add, exclude_shop="chit")
-        write_result_files(
-            base_dir=BASE_LINUX_DIR,
-            prefix="chit_gor",
-            all_books_result=all_books_result,
-            id_to_add=pure_add,
+        # УДАЛИТЬ ПОСЛЕ ПАРСА
+        all_result_df = pd.DataFrame(all_books_result).drop_duplicates(
+            subset="Артикул_OZ"
         )
-        logger.info("Finished write files")
+        clear_all_result_df = all_result_df.map(clean_excel_text)
+        clear_all_result_df.to_excel(
+            f"{BASE_LINUX_DIR}/result/chit_all.xlsx", index=False, engine="openpyxl"
+        )
+        # УДАЛИТЬ ПОСЛЕ ПАРСА
 
-        # Тут исключаем книжки у МДК, т.к. ЧГ заканчивает парситься последним
-        logger.info("Start to exclude MDK books")
-        mdk_old = pd.read_excel("/media/source/mdk/result/mdk_add_old.xlsx").to_dict(
-            orient="records"
-        )
-        mdk_new = pd.read_excel("/media/source/mdk/result/mdk_add_new.xlsx").to_dict(
-            orient="records"
-        )
-        old_after_exclude = exclude_else_shops_books(mdk_old, exclude_shop="mdk")
-        new_after_exclude = exclude_else_shops_books(mdk_new, exclude_shop="mdk")
-        mdk_path = "/media/source/mdk/result"
-        pd.DataFrame(old_after_exclude).to_excel(
-            f"{mdk_path}/mdk_add_old.xlsx", engine="openpyxl", index=False
-        )
-        pd.DataFrame(new_after_exclude).to_excel(
-            f"{mdk_path}/mdk_add_new.xlsx", engine="openpyxl", index=False
-        )
-        logger.info("MDK was excluded")
+        # Раскоментировать --------------
+        # pure_add = exclude_else_shops_books(id_to_add, exclude_shop="chit")
+        # write_result_files(
+        #     base_dir=BASE_LINUX_DIR,
+        #     prefix="chit_gor",
+        #     all_books_result=all_books_result,
+        #     id_to_add=pure_add,
+        # )
+        # logger.info("Finished write files")
+        #
+        # # Тут исключаем книжки у МДК, т.к. ЧГ заканчивает парситься последним
+        # logger.info("Start to exclude MDK books")
+        # mdk_old = pd.read_excel("/media/source/mdk/result/mdk_add_old.xlsx").to_dict(
+        #     orient="records"
+        # )
+        # mdk_new = pd.read_excel("/media/source/mdk/result/mdk_add_new.xlsx").to_dict(
+        #     orient="records"
+        # )
+        # old_after_exclude = exclude_else_shops_books(mdk_old, exclude_shop="mdk")
+        # new_after_exclude = exclude_else_shops_books(mdk_new, exclude_shop="mdk")
+        # mdk_path = "/media/source/mdk/result"
+        # pd.DataFrame(old_after_exclude).to_excel(
+        #     f"{mdk_path}/mdk_add_old.xlsx", engine="openpyxl", index=False
+        # )
+        # pd.DataFrame(new_after_exclude).to_excel(
+        #     f"{mdk_path}/mdk_add_new.xlsx", engine="openpyxl", index=False
+        # )
+        # logger.info("MDK was excluded")
+        # Раскоментировать ------------
 
 
 @logger.catch
