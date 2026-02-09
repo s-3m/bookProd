@@ -5,6 +5,8 @@ from selenium.webdriver.support.select import Select
 import undetected_chromedriver as uc
 from loguru import logger
 from selenium.webdriver.chrome.service import Service
+from playwright.async_api import async_playwright
+
 from webdriver_manager.chrome import ChromeDriverManager
 
 
@@ -15,6 +17,60 @@ def kill_chrome_processes():
         time.sleep(2)
     except:
         pass
+
+
+async def pw_get_book_data(link):
+    async with async_playwright() as pw:
+        browser_type = pw.chromium
+
+        context = await browser_type.launch_persistent_context(
+            user_data_dir="./browser_data",
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+            headless=True,
+        )
+        # Добавляем stealth скрипты
+        await context.add_init_script(
+            """
+            delete navigator.__proto__.webdriver;
+            Object.defineProperty(navigator, 'webdriver', { 
+                get: () => undefined 
+            });
+        """
+        )
+
+        new_page = await context.new_page()
+        try:
+            print("🔄 Переходим на сайт...")
+            await new_page.goto(
+                link,
+                timeout=30000,
+            )
+            time.sleep(1)
+            print("✅ Страница успешно загружена!")
+
+            # Ждем загрузки формы
+            await new_page.wait_for_selector("#age_verification_form")
+
+            # Выбираем день: 1
+            await new_page.select_option("#avf_day", value="1")
+
+            # Выбираем месяц: 1 (Январь)
+            await new_page.select_option("#avf_month", value="1")
+
+            # Выбираем год: 1990
+            await new_page.select_option("#avf_year", value="1990")
+
+            # Нажимаем кнопку "Подтвердить"
+            await new_page.click("input[type='submit'][value='Подтвердить']")
+
+            # Ждем навигации или проверяем результат
+            await new_page.wait_for_timeout(2000)  # Подождать 2 секунды
+
+            return await new_page.content()
+
+        except Exception as e:
+            logger.exception(f"❌ Ошибка: {e}")
+            return None
 
 
 def get_book_data(link):
