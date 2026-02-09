@@ -12,7 +12,7 @@ from fake_useragent import UserAgent
 from bs4 import BeautifulSoup as bs
 import time
 
-from selenium_data import get_book_data
+from selenium_data import pw_get_book_data
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files, tg_send_msg
@@ -68,7 +68,7 @@ async def to_check_item(item, session):
         age_control = soup.find("input", id="age_verification_form_mode")
         script_index = 1
         if age_control:
-            closed_page = get_book_data(link)
+            closed_page = await pw_get_book_data(link)
             if not closed_page:
                 return
             soup = bs(closed_page, "lxml")
