@@ -50,9 +50,9 @@ class Ozon:
         elif self.prefix == "mg":
             return 62
         elif self.prefix == "msk":
-            return 59
+            return 54
         elif self.prefix == "mdk":
-            return 64
+            return 62
         else:
             return 60
 
