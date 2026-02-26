@@ -316,23 +316,23 @@ def get_gather_data():
     logger.info("Start write files")
 
     # УДАЛИТЬ ПОСЛЕ ПАРСА
-    all_result_df = pd.DataFrame(all_books_result).drop_duplicates(subset="Артикул_OZ")
-    clear_all_result_df = all_result_df.map(clean_excel_text)
-    clear_all_result_df.to_excel(
-        f"{BASE_LINUX_DIR}/result/chit_all.xlsx", index=False, engine="openpyxl"
-    )
+    # all_result_df = pd.DataFrame(all_books_result).drop_duplicates(subset="Артикул_OZ")
+    # clear_all_result_df = all_result_df.map(clean_excel_text)
+    # clear_all_result_df.to_excel(
+    #     f"{BASE_LINUX_DIR}/result/chit_all.xlsx", index=False, engine="openpyxl"
+    # )
     # УДАЛИТЬ ПОСЛЕ ПАРСА
 
     # Раскоментировать --------------
 
-    # pure_add = exclude_else_shops_books(id_to_add, exclude_shop="chit")
-    # write_result_files(
-    #     base_dir=BASE_LINUX_DIR,
-    #     prefix="chit_gor",
-    #     all_books_result=all_books_result,
-    #     id_to_add=pure_add,
-    # )
-    # logger.info("Finished write files")
+    pure_add = exclude_else_shops_books(id_to_add, exclude_shop="chit")
+    write_result_files(
+        base_dir=BASE_LINUX_DIR,
+        prefix="chit_gor",
+        all_books_result=all_books_result,
+        id_to_add=pure_add,
+    )
+    logger.info("Finished write files")
 
     # Раскоментировать --------------
     #
