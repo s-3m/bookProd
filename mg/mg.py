@@ -165,8 +165,10 @@ async def get_item_data(session, link: str):
 
         # Author filter
         item_data["Автор"] = (
-            item_data["Автор"] if item_data.get("Автор") else "Нет автора"
+            item_data["Автор"] if item_data.get("Автор") else "Автор не указан"
         )
+        if item_data["Автор"] in [" ", "  "]:
+            item_data["Автор"] = "Автор не указан"
         # ISBN filter
         item_data["ISBN"] = (
             item_data["ISBN"] if item_data.get("ISBN") else "978-5-0000-0000-0"

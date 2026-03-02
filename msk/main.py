@@ -112,9 +112,9 @@ async def get_item_data(session, item: str):
             author_list = [i.text.strip() for i in author_div.find_all("a")]
             author = ", ".join(author_list)
             if author in ("", " "):
-                author = "Нет автора"
+                author = "Автор не указан"
         except:
-            author = "Нет автора"
+            author = "Автор не указан"
 
         # Photo
         try:
