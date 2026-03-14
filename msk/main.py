@@ -8,7 +8,7 @@ import aiohttp
 import asyncio
 
 from filter import filtering_cover
-from selenium_data import get_book_data
+from msk.selenium_data import pw_get_book_data
 from loguru import logger
 import pandas.io.formats.excel
 
@@ -93,7 +93,7 @@ async def get_item_data(session, item: str):
         script_index = 1
         if age_control:
             logger.warning("Age Control found")
-            closed_page = get_book_data(link)
+            closed_page = await pw_get_book_data(link)
             soup = bs(closed_page, "lxml")
             script_index = 5
 
