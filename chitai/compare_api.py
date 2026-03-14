@@ -221,6 +221,7 @@ def get_main_data(book_item):
         print(f"\rDone - {count} | error - {error_count}", end="")
         count += 1
 
+
 def get_gather_data(sample):
     global error_count
     logger.info("Start collect data")
@@ -229,14 +230,14 @@ def get_gather_data(sample):
     headers["Authorization"] = acc_token
 
     # Main loop
-    with ThreadPoolExecutor(max_workers=5) as executor:
+    with ThreadPoolExecutor(max_workers=4) as executor:
         threads = [executor.submit(get_main_data, i) for i in sample]
 
     logger.info(f"Start reparse {error_count} errors")
     error_count = 0
 
     # Reparse item
-    with ThreadPoolExecutor(max_workers=5) as executor:
+    with ThreadPoolExecutor(max_workers=3) as executor:
         threads_repars = [
             executor.submit(get_main_data, i) for i in sample if i["stock"] == "error"
         ]
