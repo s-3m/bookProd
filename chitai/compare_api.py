@@ -14,8 +14,8 @@ import time
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files, tg_send_msg
-from chit_utils import parse_with_playwright_proxy
-from utils import give_me_sample, quantity_checker, sync_fetch_request
+from chit_utils import get_auth_token
+from utils import give_me_sample, quantity_checker
 from utils import PROXIES
 from concurrent.futures import ThreadPoolExecutor
 from ozon.ozon_api import (
@@ -221,45 +221,12 @@ def get_main_data(book_item):
         print(f"\rDone - {count} | error - {error_count}", end="")
         count += 1
 
-
-def get_auth_token():
-    selected_proxy = random.choice(PROXIES).strip()
-    target_url = "https://www.chitai-gorod.ru"
-    proxy = {
-        "http": selected_proxy,
-        "https": selected_proxy,
-    }
-    resp = requests.get(
-        target_url,
-        headers=headers,
-        cookies=cookies,
-        timeout=15,
-        allow_redirects=True,
-        proxies=proxy,
-    )
-    time.sleep(5)
-    if resp.status_code == 200:
-        response_cookies = resp.cookies
-        acc_token = (
-            str(response_cookies["access-token"])
-            .split("access-token=")[0]
-            .split(";")[0]
-            .replace("%20", " ")
-        )
-    elif resp.status_code == 403:
-        response_cookies = parse_with_playwright_proxy(
-            target_url=target_url, proxy_url=selected_proxy
-        )
-        acc_token = response_cookies.replace("%20", " ")
-    print(acc_token)
-    headers["Authorization"] = acc_token
-
-
 def get_gather_data(sample):
     global error_count
     logger.info("Start collect data")
     print()
-    get_auth_token()
+    acc_token = get_auth_token()
+    headers["Authorization"] = acc_token
 
     # Main loop
     with ThreadPoolExecutor(max_workers=5) as executor:
