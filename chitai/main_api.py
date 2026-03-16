@@ -174,7 +174,7 @@ def get_book_data(book_url: str):
                 book_dict.update(need_chars)
 
                 if not book_dict.get("Автор") or book_dict.get("Автор") in (" ", "  "):
-                    book_dict["Автор"] = "Автор не указан"
+                    book_dict["Автор"] = "Не указан"
 
                 # Filter on some piece
                 count_edition: str = book_dict.get("Тираж")
