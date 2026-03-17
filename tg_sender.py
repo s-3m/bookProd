@@ -3,20 +3,27 @@ from aiogram import Bot
 from aiogram.types.input_file import FSInputFile
 import os
 from aiogram.types.input_media_document import InputMediaDocument
+from aiogram.exceptions import TelegramNetworkError
 from loguru import logger
 
 
 @logger.catch
 async def tg_send_files(files: list[str], subject):
     bot = Bot(os.getenv("BOT_TOKEN"))
-    files_list = []
-    for file in files:
-        file = FSInputFile(file)
-        file = InputMediaDocument(media=file, caption=subject)
-        files_list.append(file)
-    await bot.send_media_group(os.getenv("CHAT_ID"), files_list)
-    await bot.session.close()
-    logger.success(f"Files ({subject}) was send successfully")
+    try:
+        files_list = []
+        for file in files:
+            file = FSInputFile(file)
+            file = InputMediaDocument(media=file, caption=subject)
+            files_list.append(file)
+        await bot.send_media_group(os.getenv("CHAT_ID"), files_list)
+        logger.success(f"Files ({subject}) was send successfully")
+    except TelegramNetworkError as e:
+        logger.warning(f"Telegram Network Error: {e}")
+    except Exception as e:
+        logger.error(f"Telegram unknowing Error: {e}")
+    finally:
+        await bot.session.close()
 
 
 @logger.catch
