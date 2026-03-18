@@ -276,7 +276,6 @@ async def get_item_data(session, item: str):
 async def get_page_data(session, page_link):
     async with semaphore:
         try:
-            print(f"------------{page_link}-----------------")
             page_html = await fetch_request(session, page_link, headers)
             # page_html = await page_response.text()
             soup = bs(page_html, "lxml")
