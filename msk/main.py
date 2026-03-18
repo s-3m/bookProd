@@ -8,7 +8,7 @@ import aiohttp
 import asyncio
 
 from filter import filtering_cover
-from msk.selenium_data import pw_get_book_data
+from selenium_data import pw_get_book_data
 from loguru import logger
 import pandas.io.formats.excel
 
