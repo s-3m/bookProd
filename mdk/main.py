@@ -101,9 +101,9 @@ async def get_item_data(session, book: str):
             ]
             author = " ".join(author_list)
             if author in ("", " "):
-                author = "Автор не указан"
+                author = "Не указан"
         except:
-            author = "Автор не указан"
+            author = "Не указан"
 
         # Цена
         try:

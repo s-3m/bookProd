@@ -11,7 +11,7 @@ import pandas as pd
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from chitai.chit_utils import get_auth_token
-from ozon.ozon_api import get_items_list
+from ozon.ozon_api import get_items_list, Ozon
 from utils import (
     check_danger_string,
     write_result_files,
@@ -106,6 +106,7 @@ done_count = 0
 item_error = []
 page_error = []
 last_isbn = None
+ozon = Ozon("None", "None", "chit_gor")
 
 
 def get_book_data(book_url: str):
@@ -147,6 +148,11 @@ def get_book_data(book_url: str):
                 )
                 photo = f"https://content.img-gorod.ru/{book_data.get("picture")}?width=304&height=438&fit=bounds"
                 price = book_data.get("price")
+                price = ozon._price_calculate(str(price))
+                price["price"] = price["price"][:-2]
+                price["old_price"] = price["old_price"][:-2]
+                if int(price["price"]) >= 60_000:
+                    return
 
                 need_chars = {}
                 chars = book_data.get("characteristics")
@@ -168,13 +174,14 @@ def get_book_data(book_url: str):
                 book_dict["Категория"] = str(category)
                 book_dict["Описание"] = str(description)
                 book_dict["Фото"] = str(photo)
-                book_dict["Цена"] = str(price)
+                book_dict["Цена"] = str(price["price"])
+                book_dict["Цена до скидки"] = str(price["old_price"])
                 book_dict["Наличие"] = str(stock)
 
                 book_dict.update(need_chars)
 
                 if not book_dict.get("Автор") or book_dict.get("Автор") in (" ", "  "):
-                    book_dict["Автор"] = "Автор не указан"
+                    book_dict["Автор"] = "Не указан"
 
                 # Filter on some piece
                 count_edition: str = book_dict.get("Тираж")
