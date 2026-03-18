@@ -276,6 +276,7 @@ async def get_item_data(session, item: str):
 async def get_page_data(session, page_link):
     async with semaphore:
         try:
+            print(f"------------{page_link}-----------------")
             page_html = await fetch_request(session, page_link, headers)
             # page_html = await page_response.text()
             soup = bs(page_html, "lxml")
@@ -332,6 +333,7 @@ async def get_gather_data():
 
     print()
     logger.info("Start to write data in file")
+    logger.info(f"Total book quantity - {len(result)}")
     result_df = pd.DataFrame(result)
     all_shops_df = forming_add_files(result_df=result_df, prefix="msk")
     write_result_files(
