@@ -165,7 +165,7 @@ def sync_fetch_request(url, headers, cookies=None, use_proxy=False):
 
 
 async def fetch_request(session, url, headers: dict, sleep=4, proxy=None):
-    for _ in range(20):
+    for count in range(20):
         try:
             async with session.get(url, headers=headers, proxy=proxy) as resp:
                 await asyncio.sleep(sleep) if sleep else None
@@ -176,7 +176,7 @@ async def fetch_request(session, url, headers: dict, sleep=4, proxy=None):
                 elif resp.status == 503:
                     return "503"
         except TimeoutError as e:
-            logger.exception(e)
+            logger.warning(f"TimeoutError - {url} | loop - {count}")
             continue
         except aiohttp.client_exceptions.ClientConnectorError as e:
             logger.exception(e)
