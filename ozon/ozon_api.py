@@ -234,11 +234,11 @@ class Ozon:
 
     def _get_warehouse_id(self):
         response = requests.post(
-            f"{self.host}/v1/warehouse/list",
+            f"{self.host}/v2/warehouse/list",
             headers=self.headers,
             proxies=self.prx_list,
         )
-        warehouses_list: list[dict] = response.json().get("result")
+        warehouses_list: list[dict] = response.json().get("warehouses")
         for i in warehouses_list:
             if "набережный проезд" in i["name"].lower() and i["status"] == "created":
                 return int(i["warehouse_id"])
