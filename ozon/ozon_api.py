@@ -286,9 +286,9 @@ class Ozon:
         old_price = finish_price * 2
         min_price = finish_price * self.discount
         return {
-            "price": str(finish_price + 30),
-            "old_price": str(old_price + 30),
-            "min_price": str(min_price + 30),
+            "price": str(finish_price + 100),
+            "old_price": str(old_price + 100),
+            "min_price": str(min_price + 100),
         }
 
     def update_price(self, item_list: list[dict]) -> None:
