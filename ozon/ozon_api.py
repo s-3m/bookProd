@@ -11,6 +11,8 @@ from loguru import logger
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
+ibra_shops = [i.split("_")[-1] for i in os.environ.keys() if "_IBRA_" in i]
+
 
 def separate_records_to_client_id(books_records: list[dict]) -> dict[str, list[dict]]:
     result_dict = {}
@@ -240,7 +242,7 @@ class Ozon:
         )
         warehouses_list: list[dict] = response.json().get("warehouses")
         for i in warehouses_list:
-            if "набережный проезд" in i["name"].lower() and i["status"] == "created":
+            if i["status"] == "created":
                 return int(i["warehouse_id"])
         return None
 
@@ -405,7 +407,11 @@ class Ozon:
                 return ready_data, wrong_article
 
             for item in raw_data:
-                if item["offer_id"].endswith(".0"):
+                if (
+                    item["offer_id"].endswith(".0")
+                    or item["offer_id"].startswith("a")
+                    or item["offer_id"].startswith("m")
+                ):
                     ready_data.append(
                         {"Артикул": item["offer_id"], "seller_id": self.client_id}
                     )
@@ -547,6 +553,8 @@ def start_push_to_ozon(
     with ThreadPoolExecutor(max_workers=20) as executor:
         futures = []
         for item in separate_records:
+            if item in ibra_shops:
+                update_price = False
             seller_id = item
             for key, value in os.environ.items():
                 prx = False
