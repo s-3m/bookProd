@@ -16,7 +16,7 @@ from selenium_data import pw_get_book_data
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files, tg_send_msg
-from utils import give_me_sample, fetch_request, quantity_checker
+from utils import give_me_sample, fetch_request, quantity_checker, article_adapter
 from ozon.ozon_api import (
     separate_records_to_client_id,
     start_push_to_ozon,
@@ -57,14 +57,11 @@ async def to_check_item(item, session):
     global error_count
     global unique_article
 
-    universal_article = (
-        f"{item["article"][1:]}.0"
-        if not item["article"].endswith(".0")
-        else item["article"]
-    )
+    universal_article = article_adapter(item["article"])
+
     if universal_article in unique_article:  # check on parse was
-        item["stock"] = unique_article[item["article"]][0]
-        item["price"] = unique_article[item["article"]][1]
+        item["stock"] = unique_article[universal_article][0]
+        item["price"] = unique_article[universal_article][1]
         return
 
     link = f"{BASE_URL}/book/{universal_article[:-2]}"
