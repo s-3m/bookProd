@@ -165,22 +165,22 @@ def main():
         logger.warning("Detected too many ZERO items")
         asyncio.run(tg_send_msg("'МДК'"))
 
-    # logger.info("Start write files")
-    #
-    # df = pd.DataFrame(sample)
-    # df.drop_duplicates(inplace=True, subset="article", keep="last")
-    #
-    # df_del = df.loc[df["stock"] == "0"][["article"]]
-    # del_path = f"{BASE_LINUX_DIR}/mdk_del.xlsx"
-    # df_del.to_excel(del_path, index=False)
-    #
-    # df_without_del = df.loc[df["stock"] != "0"]
-    # new_stock_path = f"{BASE_LINUX_DIR}/mdk_new_stock.xlsx"
-    # df_without_del.to_excel(new_stock_path, index=False)
-    #
-    # logger.success("Finish write to excel")
+    logger.info("Start write files")
 
-    # asyncio.run(tg_send_files([new_stock_path, del_path], "mdk"))
+    df = pd.DataFrame(sample)
+    df.drop_duplicates(inplace=True, subset="article", keep="last")
+
+    df_del = df.loc[df["stock"] == "0"][["article"]]
+    del_path = f"{BASE_LINUX_DIR}/mdk_del.xlsx"
+    df_del.to_excel(del_path, index=False)
+
+    df_without_del = df.loc[df["stock"] != "0"]
+    new_stock_path = f"{BASE_LINUX_DIR}/mdk_new_stock.xlsx"
+    df_without_del.to_excel(new_stock_path, index=False)
+
+    logger.success("Finish write to excel")
+
+    asyncio.run(tg_send_files([new_stock_path, del_path], "mdk"))
 
     logger.success("Script was finished successfully")
     global count

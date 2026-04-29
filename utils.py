@@ -406,7 +406,7 @@ def article_adapter(item_article: str) -> str:
     Приведение артикулов к единому виду для проверки уже отработанных позиций
     """
     if not item_article.endswith(".0"):
-        clear_article = f"{item_article["article"][1:]}.0"
+        clear_article = f"{item_article[1:]}.0"
     else:
         clear_article = item_article
 
