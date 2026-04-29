@@ -1,6 +1,7 @@
 import asyncio
 import sys
 import os
+from concurrent.futures import ThreadPoolExecutor
 
 import schedule
 from dotenv import load_dotenv
@@ -16,7 +17,13 @@ from selenium_data import pw_get_book_data
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files, tg_send_msg
-from utils import give_me_sample, fetch_request, quantity_checker, article_adapter
+from utils import (
+    give_me_sample,
+    fetch_request,
+    quantity_checker,
+    article_adapter,
+    sync_fetch_request,
+)
 from ozon.ozon_api import (
     separate_records_to_client_id,
     start_push_to_ozon,
@@ -52,7 +59,7 @@ error_count = 0
 unique_article: dict[str, tuple] = {}  # article: (stock, price)
 
 
-async def to_check_item(item, session):
+def to_check_item(item):
     global count
     global error_count
     global unique_article
@@ -66,12 +73,12 @@ async def to_check_item(item, session):
 
     link = f"{BASE_URL}/book/{universal_article[:-2]}"
     try:
-        response = await fetch_request(session, link, headers=headers, sleep=None)
+        response = sync_fetch_request(url=link, headers=headers)
         soup = bs(response, "lxml")
         age_control = soup.find("input", id="age_verification_form_mode")
         script_index = 1
         if age_control:
-            closed_page = await pw_get_book_data(link)
+            closed_page = asyncio.run(pw_get_book_data(link))
             if not closed_page:
                 return
             soup = bs(closed_page, "lxml")
@@ -132,18 +139,17 @@ async def get_compare():
         ozon_in_sale=books_in_sale,
     )
 
-    async with aiohttp.ClientSession(
-        connector=aiohttp.TCPConnector(ssl=False), trust_env=True
-    ) as session:
+    with ThreadPoolExecutor(max_workers=10) as executor:
         for item in sample:
-            await to_check_item(item, session)
+            executor.submit(to_check_item, item)
 
-        print()  # empty print for clear info visualization
-        logger.warning("Start reparse error")
+    print()  # empty print for clear info visualization
+    logger.warning("Start reparse error")
 
+    with ThreadPoolExecutor(max_workers=10) as executor:
         for item in sample:
             if item["stock"] == "error":
-                await to_check_item(item, session)
+                executor.submit(to_check_item, item)
     global count
     global unique_article
     count = 1
