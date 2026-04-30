@@ -18,6 +18,7 @@ from utils import (
     fetch_request,
     write_result_files,
     forming_add_files,
+    check_religions_book,
 )
 from filter import filtering_cover
 
@@ -66,6 +67,10 @@ async def get_item_data(session, link: str):
             title = soup.find("h1").text.strip()
             title = await check_danger_string(title, "title")
             if not title or title in unique_title:
+                return
+            religions_flag = check_religions_book(title)
+            if religions_flag:
+                logger.warning(f"Pass RELIGIONS book: {link}")
                 return
             item_data["Название"] = title
         except:

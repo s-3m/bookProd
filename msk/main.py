@@ -19,6 +19,7 @@ from utils import (
     fetch_request,
     write_result_files,
     forming_add_files,
+    check_religions_book,
 )
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
@@ -102,6 +103,10 @@ async def get_item_data(session, item: str):
             title = soup.find("h1").text.strip()
             title = await check_danger_string(title, "title")
             if not title:
+                return
+            religions_flag = check_religions_book(title)
+            if religions_flag:
+                logger.warning(f"Pass RELIGIONS book: {link}")
                 return
         except:
             title = "Название не указано"

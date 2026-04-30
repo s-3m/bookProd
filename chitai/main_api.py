@@ -18,6 +18,7 @@ from utils import (
     exclude_else_shops_books,
     PROXIES,
     clean_excel_text,
+    check_religions_book,
 )
 from filter import filtering_cover
 
@@ -133,6 +134,11 @@ def get_book_data(book_url: str):
                 article = book_data.get("id")
                 title = book_data.get("title")
                 title = asyncio.run(check_danger_string(title, "title"))
+                religions_flag = check_religions_book(title)
+                if religions_flag:
+                    logger.warning(f"Pass RELIGIONS book: {link}")
+                    return
+
                 if not title:
                     logger.warning(f"Delete DANGER book: {link}")
                     return
