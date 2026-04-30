@@ -546,6 +546,27 @@ class Ozon:
 
         return response
 
+    def push_items_to_archive(self, items_articles: list[int | str]):
+        """
+        Перемещает список товаров в архив. Нужно передавать именно артикулы ozon, а не продавца
+        """
+        for item in range(0, len(items_articles), 100):
+            request_body = {
+                "product_id": items_articles[item : item + 100],
+            }
+            try:
+                response = requests.post(
+                    f"{self.host}/v1/product/archive",
+                    headers=self.headers,
+                    json=request_body,
+                )
+                if response.status_code == 200:
+                    print("ok")
+                else:
+                    print(response.json())
+            except Exception as e:
+                logger.exception(f"Ошибка при добавлении товаров в архив - {e}")
+
 
 def start_push_to_ozon(
     separate_records: dict[str, list[dict]], prefix: str, update_price=True
