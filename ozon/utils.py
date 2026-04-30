@@ -1,5 +1,9 @@
 import os
+import re
 from concurrent.futures import ThreadPoolExecutor
+from typing import Any
+
+import pandas as pd
 
 from ozon.ozon_api import (
     get_items_list,
@@ -8,6 +12,8 @@ from ozon.ozon_api import (
     Ozon,
 )
 from loguru import logger
+
+from utils import anti_pattern, pattern
 
 
 def logger_filter(record):
@@ -233,6 +239,25 @@ def start_monthly_fees_calculate(prefix, start_period, end_period) -> None:
             except Exception as e:
                 logger.critical(e)
         print(f"{prefix} - {round(sum(ready_result)/len(ready_result))}")
+
+
+def transfer_to_archive() -> tuple[list[Any], list[Any]]:
+    """
+    Из файла эксель с товарами формирует список ozon_id и offer_id
+    :return: ([offer_id], [ozon_id])
+    """
+    ozon_id = []
+    seller_articles = []
+    book_list = pd.read_excel("123.xlsx").to_dict(orient="records")
+    for i in book_list:
+        text = i["Название товара"].lower()
+        if bool(anti_pattern.search(text)):
+            continue
+        if bool(pattern.search(text)):
+            ozon_id.append(i["Ozon Product ID"])
+            seller_articles.append({"article": i["Артикул"][1:], "stock": "0"})
+    print(len(ozon_id))
+    return seller_articles, ozon_id
 
 
 # if __name__ == "__main__":
