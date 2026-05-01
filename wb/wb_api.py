@@ -1,3 +1,4 @@
+import time
 from typing import Any, Literal
 
 import requests
@@ -31,11 +32,10 @@ class Wildberries:
                 json=body,
             )
             raw_list = response.json()
+            time.sleep(0.4)
             for i in raw_list["cards"]:
                 result.append(i)
             if raw_list["cursor"]["total"] < 100:
-                break
-            if len(result) >= 100:
                 break
             body["settings"]["cursor"]["updatedAt"] = raw_list["cursor"]["updatedAt"]
             body["settings"]["cursor"]["nmID"] = raw_list["cursor"]["nmID"]
