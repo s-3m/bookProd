@@ -17,7 +17,7 @@ from wb.utils import prepare_to_daily_parse, push_stock_to_wb
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files, tg_send_msg
 from chit_utils import get_auth_token
-from utils import give_me_sample, quantity_checker
+from utils import give_me_sample, quantity_checker, article_adapter
 from utils import PROXIES
 from concurrent.futures import ThreadPoolExecutor
 from ozon.ozon_api import (
@@ -186,14 +186,17 @@ def get_book_data_from_ajax(book_url):
 def get_main_data(book_item):
     global unique_article
     global error_count
-    if book_item["article"] in unique_article:  # check on parse was
-        book_item["stock"] = unique_article[book_item["article"]][0]
-        book_item["price"] = unique_article[book_item["article"]][1]
+
+    universal_article = article_adapter(book_item["article"])
+
+    if universal_article in unique_article:  # check on parse was
+        book_item["stock"] = unique_article[universal_article["article"]][0]
+        book_item["price"] = unique_article[universal_article["article"]][1]
         return
 
     try:
         if not book_item["link"]:
-            i_link = get_link_from_ajax(book_item["article"])
+            i_link = get_link_from_ajax(universal_article)
             if not i_link:
                 book_item["stock"] = "0"
                 book_item["price"] = None
@@ -212,7 +215,7 @@ def get_main_data(book_item):
         else:
             book_item["stock"] = "0"
 
-        unique_article[book_item["article"]] = (book_item["stock"], book_item["price"])
+        unique_article[universal_article] = (book_item["stock"], book_item["price"])
 
     except Exception as e:
         book_item["stock"] = "error"
@@ -329,5 +332,5 @@ def super_main():
 
 
 if __name__ == "__main__":
-    # main()
+    main()
     super_main()
