@@ -48,11 +48,11 @@ class Ozon:
 
     def get_fees(self):
         if self.prefix == "chit_gor" or self.prefix == "mdk":
-            return 64
+            return 68
         elif self.prefix == "mg":
-            return 62
+            return 66
         elif self.prefix == "msk":
-            return 54
+            return 61
         elif self.prefix == "mdk":
             return 62
         else:
@@ -270,27 +270,27 @@ class Ozon:
         profit = (raw_price * 50) / 100
         # Цена с профитом
         fixed_margin = raw_price + profit
-        # Сумма с учетом минимальной комиссии за задержку отправлений (100р)
-        # additional_coef = 0
-        # if self.prefix == "chit_gor":
-        #     additional_coef = 100
-        # elif self.prefix == "mdk":
-        #     additional_coef = 50
-        # price_with_delay_tax = fixed_margin + additional_coef
-        # Сумма с учетом суммарной комиссии озона в зависимости от магаза
-        price_with_main_tax = fixed_margin * self.fee / (100 - self.fee) + fixed_margin
-        # Конечная сумма с учётом акции 15%
-        # finish_price = round(price_with_main_tax * 15 / 85 + price_with_main_tax, 0)
-        finish_price = round(price_with_main_tax + (price_with_main_tax * 15 / 100), 0)
+        additional_cost = {"mg": 50, "chit_gor": 100, "mdk": 100, "msk": 50}
 
-        if finish_price < 999:
-            finish_price = 999.0
+        price_with_main_tax = (fixed_margin + additional_cost[self.prefix]) / (
+            (1 - (self.fee / 100)) * 0.85
+        )
+
+        finish_price = round(price_with_main_tax, 0)
+
+        if float(input_price) < 100:
+            finish_price = 1049
+        elif 200 > float(input_price) >= 100:
+            finish_price = 1299
+        elif 410 > float(input_price) >= 200:
+            finish_price = 1699
+
         old_price = finish_price * 2
         min_price = finish_price * self.discount
         return {
-            "price": str(finish_price + 100),
-            "old_price": str(old_price + 100),
-            "min_price": str(min_price + 100),
+            "price": str(finish_price),
+            "old_price": str(old_price),
+            "min_price": str(min_price),
         }
 
     def update_price(self, item_list: list[dict]) -> None:
