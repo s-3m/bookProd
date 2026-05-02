@@ -175,7 +175,7 @@ async def get_compare():
             else:
                 ozon_items.append(i)
         # Push to OZON with API
-        separate_records = separate_records_to_client_id(sample)
+        separate_records = separate_records_to_client_id(ozon_items)
         logger.info("Start push to ozon")
         start_push_to_ozon(separate_records, prefix="msk")
         logger.success("Data was pushed to ozon")
