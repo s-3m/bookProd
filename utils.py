@@ -338,8 +338,8 @@ def check_wrong_chars(base_string):
     return text
 
 
-# with open(Path(__file__).parent / "proxy.txt") as f:
-#     PROXIES = f.readlines()
+with open(Path(__file__).parent / "proxy.txt") as f:
+    PROXIES = f.readlines()
 
 
 def sync_fetch_request(url, headers, cookies=None, use_proxy=False):
