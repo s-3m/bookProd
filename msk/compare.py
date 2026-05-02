@@ -14,6 +14,7 @@ from bs4 import BeautifulSoup as bs
 import time
 
 from selenium_data import pw_get_book_data
+from wb.utils import prepare_to_daily_parse, push_stock_to_wb
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files, tg_send_msg
@@ -131,6 +132,7 @@ def to_check_item(item):
 
 
 async def get_compare():
+    # ozon sample
     books_in_sale = get_items_list("msk")
     sample = give_me_sample(
         base_dir=PATH_TO_FILES,
@@ -138,6 +140,9 @@ async def get_compare():
         without_merge=True,
         ozon_in_sale=books_in_sale,
     )
+    # wb sample
+    wb_sample = prepare_to_daily_parse(prefix="msk")
+    sample.extend(wb_sample)
 
     with ThreadPoolExecutor(max_workers=10) as executor:
         for item in sample:
@@ -162,11 +167,22 @@ async def get_compare():
 
     checker = quantity_checker(sample)
     if checker:
+        wb_items = []
+        ozon_items = []
+        for i in sample:
+            if i.get("marketplace") == "wb":
+                wb_items.append(i)
+            else:
+                ozon_items.append(i)
         # Push to OZON with API
         separate_records = separate_records_to_client_id(sample)
         logger.info("Start push to ozon")
         start_push_to_ozon(separate_records, prefix="msk")
         logger.success("Data was pushed to ozon")
+
+        # Push to WB with API
+        logger.info("Start push to WB")
+        push_stock_to_wb(wb_items)
     else:
         logger.warning("Detected too many ZERO items")
         await tg_send_msg("'Москва'")
