@@ -10,6 +10,8 @@ from bs4 import BeautifulSoup as bs
 import asyncio
 import pandas as pd
 
+from wb.utils import prepare_to_daily_parse, push_stock_to_wb
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files, tg_send_msg
 from utils import give_me_sample, sync_fetch_request, quantity_checker, article_adapter
@@ -145,6 +147,7 @@ async def get_gather_data(sample):
 
 def main():
     logger.info("Start script")
+    # ozon sample
     books_in_sale = get_items_list("mdk")
     sample = give_me_sample(
         base_dir=BASE_LINUX_DIR,
@@ -152,15 +155,31 @@ def main():
         without_merge=True,
         ozon_in_sale=books_in_sale,
     )
+
+    # wb sample
+    wb_sample = prepare_to_daily_parse(prefix="mdk")
+    sample.extend(wb_sample)
+
     asyncio.run(get_gather_data(sample))
 
     checker = quantity_checker(sample)
     if checker:
+        wb_items = []
+        ozon_items = []
+        for i in sample:
+            if i.get("marketplace") == "wb":
+                wb_items.append(i)
+            else:
+                ozon_items.append(i)
         # Push to OZON with API
         separate_records = separate_records_to_client_id(sample)
         logger.info("Start push to ozon")
         start_push_to_ozon(separate_records, prefix="mdk")
         logger.success("Data was pushed to ozon")
+
+        # Push to WB with API
+        logger.info("Start push to WB")
+        push_stock_to_wb(wb_items)
     else:
         logger.warning("Detected too many ZERO items")
         asyncio.run(tg_send_msg("'МДК'"))
@@ -194,12 +213,10 @@ def main():
 
 def super_main():
     load_dotenv("../.env")
-    main()
-
-    # schedule.every().day.at("18:25").do(main)
-    #
-    # while True:
-    #     schedule.run_pending()
+    # main()
+    schedule.every().day.at("18:25").do(main)
+    while True:
+        schedule.run_pending()
 
 
 if __name__ == "__main__":
