@@ -178,7 +178,6 @@ def main():
         logger.success("Data was pushed to ozon")
 
         # Push to WB with API
-        logger.info("Start push to WB")
         push_stock_to_wb(wb_items)
     else:
         logger.warning("Detected too many ZERO items")
