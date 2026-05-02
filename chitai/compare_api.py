@@ -315,7 +315,7 @@ def main():
         asyncio.run(tg_send_files([new_stock_path, del_path], "Chit_gor"))
 
         logger.success("Script was finished successfully")
-        archive_items_stock_to_zero(prefix="chit_gor")
+        # archive_items_stock_to_zero(prefix="chit_gor")
         print(
             "\n---------------------------------------------------------------------------------------------\n"
         )
