@@ -194,12 +194,10 @@ def main():
 
 def super_main():
     load_dotenv("../.env")
-    main()
+    schedule.every().day.at("18:25").do(main)
 
-    # schedule.every().day.at("18:25").do(main)
-    #
-    # while True:
-    #     schedule.run_pending()
+    while True:
+        schedule.run_pending()
 
 
 if __name__ == "__main__":
