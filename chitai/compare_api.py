@@ -268,8 +268,10 @@ def main():
         sample = give_me_sample(
             base_dir=BASE_LINUX_DIR, prefix="chit_gor", ozon_in_sale=books_in_sale
         )
+
         # wb sample
         wb_sample = prepare_to_daily_parse(prefix="chit_gor")
+
         sample.extend(wb_sample)
         print(len(sample))
         get_gather_data(sample)
@@ -332,5 +334,4 @@ def super_main():
 
 
 if __name__ == "__main__":
-    main()
     super_main()
