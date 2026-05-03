@@ -12,9 +12,8 @@ import asyncio
 import pandas as pd
 import time
 
-from wb.utils import prepare_to_daily_parse, push_stock_to_wb
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from wb.utils import prepare_to_daily_parse, push_stock_to_wb
 from tg_sender import tg_send_files, tg_send_msg
 from chit_utils import get_auth_token
 from utils import give_me_sample, quantity_checker, article_adapter
