@@ -1,6 +1,8 @@
 import os
+import pickle
 import random
 import sys
+from pathlib import Path
 
 import requests
 from dotenv import load_dotenv
@@ -189,8 +191,8 @@ def get_main_data(book_item):
     universal_article = article_adapter(book_item["article"])
 
     if universal_article in unique_article:  # check on parse was
-        book_item["stock"] = unique_article[universal_article["article"]][0]
-        book_item["price"] = unique_article[universal_article["article"]][1]
+        book_item["stock"] = unique_article[universal_article][0]
+        book_item["price"] = unique_article[universal_article][1]
         return
 
     try:
@@ -245,10 +247,17 @@ def get_gather_data(sample):
         threads_repars = [
             executor.submit(get_main_data, i) for i in sample if i["stock"] == "error"
         ]
-
+    stock_not_digit = []
     for i in sample:
         if i["stock"] == "error":
             i["stock"] = "0"
+        elif i["stock"] == "":
+            stock_not_digit.append(i)
+
+    if stock_not_digit:
+        path_to_stock = Path(__file__).parent / "stock_not_digit.pkl"
+        with open(path_to_stock, "wb") as f:
+            pickle.dump(stock_not_digit, f)
 
     print()
     global count

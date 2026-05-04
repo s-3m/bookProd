@@ -44,7 +44,7 @@ class Wildberries:
 
     def update_stocks(self, array_of_items: list[dict[str, str]] = None):
         body_data = [
-            {"chrtId": int(i["chrtID"]), "amount": int(i["stock"])}
+            {"chrtId": int(i["chrtID"]), "amount": int(i["stock"] or 0)}
             for i in array_of_items
         ]
 
