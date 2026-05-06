@@ -16,7 +16,7 @@ import time
 from selenium_data import pw_get_book_data
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from wb.utils import prepare_to_daily_parse, push_stock_to_wb
+from wb.wb_utils import prepare_to_daily_parse, push_stock_to_wb
 from tg_sender import tg_send_files, tg_send_msg
 from utils import (
     give_me_sample,
