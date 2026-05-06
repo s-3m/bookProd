@@ -1,10 +1,13 @@
 import os
+import sys
 from pathlib import Path
 from typing import Literal
 import pickle
 import gzip
 
 from loguru import logger
+
+from utils import check_religions_book
 from wb.wb_api import Wildberries
 
 
@@ -21,8 +24,12 @@ def load_local_db():
     return data
 
 
-def get_all_items_from_wb(wb: Wildberries):
+def get_all_items_from_wb(wb: Wildberries, item_filter="religions"):
     all_items = wb.get_items_list()
+    if item_filter == "religions":
+        all_items = [
+            item for item in all_items if not check_religions_book(item["title"])
+        ]
     return all_items
 
 
@@ -55,7 +62,7 @@ def prepare_to_daily_parse(
     if prefix == "chit_gor":
         wb_api = os.getenv("WB_TOKEN")
         wb = Wildberries(wb_api)
-        all_items = get_all_items_from_wb(wb)
+        all_items = get_all_items_from_wb(wb, item_filter="religions")
         create_local_db(all_items)
     else:
         all_items = load_local_db()
@@ -82,3 +89,29 @@ def push_stock_to_wb(items_list: list[dict]):
     logger.info(f"Start pushing items to WB")
     wb.update_stocks(items_list)
     logger.info(f"End pushing items to WB")
+
+
+def reset_stocks_to_zero(items):
+    religin_books = []
+    for item in items:
+        if check_religions_book(item["title"]):
+            religin_books.append(
+                {
+                    "article": item["vendorCode"],
+                    "stock": "0",
+                    "price": "",
+                    "seller_id": "",
+                    "marketplace": "wb",
+                    "chrtID": item["sizes"][0]["chrtID"],
+                    "link": None,
+                }
+            )
+    return religin_books
+
+
+# if __name__ == "__main__":
+#     with gzip.open("1.pkl.gz", "rb") as f:
+#         items = pickle.load(f)
+#     rel_books = reset_stocks_to_zero(items)
+#     print(len(rel_books))
+#     push_stock_to_wb(rel_books)
