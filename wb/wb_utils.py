@@ -91,27 +91,57 @@ def push_stock_to_wb(items_list: list[dict]):
     logger.info(f"End pushing items to WB")
 
 
-def reset_stocks_to_zero(items):
-    religin_books = []
-    for item in items:
-        if check_religions_book(item["title"]):
-            religin_books.append(
-                {
-                    "article": item["vendorCode"],
-                    "stock": "0",
-                    "price": "",
-                    "seller_id": "",
-                    "marketplace": "wb",
-                    "chrtID": item["sizes"][0]["chrtID"],
-                    "link": None,
-                }
-            )
-    return religin_books
+def reset_stocks_to_zero(
+    prefix: Literal["mg", "chit_gor", "msk", "mdk"],
+    all_books=True,
+    religions=False,
+):
+    """
+    Скинуть остатки конкретного магазина на 0 (вывести из продажи). Можно вывести все книги конкретного магазина,
+    либо религиозные книги во всех магазинах, в соответствии с переданными параметрами.
+    :param prefix:
+    :param all_books:
+    :param religions:
+    :return:
+    """
+    all_items_from_db = load_local_db()
+
+    if all_books:
+        shop_items = separate_items_to_store(
+            items_list=all_items_from_db, prefix=prefix
+        )
+        zero_stocks_list = [
+            {
+                "article": item[0],
+                "stock": "0",
+                "price": "",
+                "seller_id": "",
+                "marketplace": "wb",
+                "chrtID": item[1],
+                "link": None,
+            }
+            for item in shop_items
+        ]
+        push_stock_to_wb(items_list=zero_stocks_list)
+
+    if religions:
+        religin_books = []
+        for item in all_items_from_db:
+            if check_religions_book(item["title"]):
+                religin_books.append(
+                    {
+                        "article": item["vendorCode"],
+                        "stock": "0",
+                        "price": "",
+                        "seller_id": "",
+                        "marketplace": "wb",
+                        "chrtID": item["sizes"][0]["chrtID"],
+                        "link": None,
+                    }
+                )
+        return religin_books
+    return None
 
 
-# if __name__ == "__main__":
-#     with gzip.open("1.pkl.gz", "rb") as f:
-#         items = pickle.load(f)
-#     rel_books = reset_stocks_to_zero(items)
-#     print(len(rel_books))
-#     push_stock_to_wb(rel_books)
+if __name__ == "__main__":
+    reset_stocks_to_zero(prefix="chit_gor")

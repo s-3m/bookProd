@@ -49,19 +49,30 @@ class Wildberries:
         ]
 
         warehouse_id = 1658946
+        session = requests.Session()
 
         for i in range(0, len(body_data), 1000):
             body = {"stocks": body_data[i : i + 1000]}
-            try:
-                response = requests.put(
-                    f"https://marketplace-api.wildberries.ru/api/v3/stocks/{warehouse_id}",
-                    headers=self.headers,
-                    json=body,
-                )
-                if response.status_code != 204:
+            for request in range(5):
+                try:
+                    time.sleep(1)
+                    response = session.put(
+                        f"https://marketplace-api.wildberries.ru/api/v3/stocks/{warehouse_id}",
+                        headers=self.headers,
+                        json=body,
+                    )
+                    if response.status_code == 204:
+                        break
+                    if response.status_code == 429:
+                        time.sleep(5)
+                        continue
+
                     logger.warning(f"Ошибка обновления остатков WB - {response.json()}")
-            except Exception as e:
-                logger.exception(e)
+                    break
+
+                except Exception as e:
+                    logger.exception(e)
+                    time.sleep(5)
 
     def get_warehouses(self):
         response = requests.get(
