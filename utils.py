@@ -518,6 +518,18 @@ def forming_add_files(
     result_df: pd.DataFrame, prefix: str
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     polars_df = pl.from_pandas(result_df)
+
+    litera_shop = {
+        "mdk": "a",
+        "msk": "m",
+    }
+    # меняем артикула в ДФ для ибры
+    ibra_result_df = polars_df.with_columns(
+        (
+            pl.lit(litera_shop["prefix"]) + pl.col("article").str.replace(r"\.0$", "")
+        ).alias("Артикул_OZ")
+    )
+
     items_list_new_shop = get_items_list(
         prefix=prefix, visibility="ALL", shop_category="new"
     )
@@ -534,6 +546,9 @@ def forming_add_files(
     ibra_list = get_items_list(prefix=prefix, visibility="ALL", ibra=True)
     ibra_archive_list = get_items_list(prefix=prefix, visibility="ARCHIVED", ibra=True)
     ibra_list.extend(ibra_archive_list)
+    df_ibra_shop = pl.DataFrame(ibra_list)[["Артикул"]].rename(
+        {"Артикул": "Артикул_OZ"}
+    )
 
     # archived_items_list_old_shop = ([])  # Поменяно на время, после нужно удалить это и раскоментировать строки выше
     items_list_new_shop.extend(archived_items_list_new_shop)
@@ -556,8 +571,8 @@ def forming_add_files(
     result_new_shop = polars_df.join(
         df_items_list_new_shop, on="Артикул_OZ", how="anti"
     ).to_pandas()
-    result_ibra_shop = polars_df.join(
-        ibra_list, on="Артикул_OZ", how="anti"
+    result_ibra_shop = ibra_result_df.join(
+        df_ibra_shop, on="Артикул_OZ", how="anti"
     ).to_pandas()
 
     return result_new_shop, result_old_shop, result_ibra_shop
