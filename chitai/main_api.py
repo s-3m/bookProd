@@ -153,8 +153,10 @@ def get_book_data(book_url: str):
                     check_danger_string(description, "description")
                 )
                 photo = f"https://content.img-gorod.ru/{book_data.get("picture")}?width=304&height=438&fit=bounds"
-                price = book_data.get("price")
-                price = ozon._price_calculate(str(price))
+
+                # цена
+                raw_price = book_data.get("price")
+                price = ozon._price_calculate(str(raw_price))
                 price["price"] = price["price"][:-2]
                 price["old_price"] = price["old_price"][:-2]
                 if int(price["price"]) >= 60_000:
@@ -180,6 +182,7 @@ def get_book_data(book_url: str):
                 book_dict["Категория"] = str(category)
                 book_dict["Описание"] = str(description)
                 book_dict["Фото"] = str(photo)
+                book_dict["Цена магазина"] = str(raw_price)
                 book_dict["Цена"] = str(price["price"])
                 book_dict["Цена до скидки"] = str(price["old_price"])
                 book_dict["Наличие"] = str(stock)

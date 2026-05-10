@@ -419,7 +419,7 @@ def write_result_files(
     base_dir: str,
     prefix: str,
     all_books_result,
-    id_to_add: list | tuple[pd.DataFrame, pd.DataFrame],
+    id_to_add: list | tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame],
     replace_photo: bool = False,
 ):
     logger.info(f"Total result before writing - {len(all_books_result)}")
@@ -449,8 +449,10 @@ def write_result_files(
     elif isinstance(id_to_add, tuple):
         new_shop_df = id_to_add[0]
         old_shop_df = id_to_add[1]
+        ibra_shop_df = id_to_add[2]
         new_shop_df.drop_duplicates(subset="Название", keep="last", inplace=True)
         old_shop_df.drop_duplicates(subset="Название", keep="last", inplace=True)
+        ibra_shop_df.drop_duplicates(subset="Название", keep="last", inplace=True)
 
         # Check "add books" not in archive books
         if not new_shop_df.empty:
@@ -471,6 +473,15 @@ def write_result_files(
             )
         else:
             logger.warning("Old shop data is empty")
+        if not ibra_shop_df.empty:
+            ibra_shop_add = check_archived_books(df_for_add=ibra_shop_df)
+            ibra_shop_add.to_excel(
+                f"{base_dir}/result/{prefix}_add_ibrahim.xlsx",
+                index=False,
+                engine="openpyxl",
+            )
+        else:
+            logger.warning("IBRA data is empty")
 
 
 def exclude_else_shops_books(items_on_add: list[dict], exclude_shop: str | None = None):
@@ -505,7 +516,7 @@ def exclude_else_shops_books(items_on_add: list[dict], exclude_shop: str | None 
 
 def forming_add_files(
     result_df: pd.DataFrame, prefix: str
-) -> tuple[pd.DataFrame, pd.DataFrame]:
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     polars_df = pl.from_pandas(result_df)
     items_list_new_shop = get_items_list(
         prefix=prefix, visibility="ALL", shop_category="new"
@@ -519,6 +530,10 @@ def forming_add_files(
     archived_items_list_old_shop = get_items_list(
         prefix=prefix, visibility="ARCHIVED", shop_category="old"
     )
+    # IBRA shops
+    ibra_list = get_items_list(prefix=prefix, visibility="ALL", ibra=True)
+    ibra_archive_list = get_items_list(prefix=prefix, visibility="ARCHIVED", ibra=True)
+    ibra_list.extend(ibra_archive_list)
 
     # archived_items_list_old_shop = ([])  # Поменяно на время, после нужно удалить это и раскоментировать строки выше
     items_list_new_shop.extend(archived_items_list_new_shop)
@@ -541,8 +556,11 @@ def forming_add_files(
     result_new_shop = polars_df.join(
         df_items_list_new_shop, on="Артикул_OZ", how="anti"
     ).to_pandas()
+    result_ibra_shop = polars_df.join(
+        ibra_list, on="Артикул_OZ", how="anti"
+    ).to_pandas()
 
-    return result_new_shop, result_old_shop
+    return result_new_shop, result_old_shop, result_ibra_shop
 
 
 def give_me_sample(

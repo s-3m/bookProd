@@ -113,14 +113,15 @@ async def get_item_data(session, book: str):
 
         # Цена
         try:
-            price = soup.find("span", {"class": "itempage-price_inet"}).text[:-1]
-            price = ozon._price_calculate(input_price=price)
+            raw_price = soup.find("span", {"class": "itempage-price_inet"}).text[:-1]
+            price = ozon._price_calculate(input_price=raw_price)
             price["price"] = price["price"][:-2]
             price["old_price"] = price["old_price"][:-2]
             if int(price["price"]) >= 60_000:
                 return
         except:
             price = {"price": "Нет цены", "old_price": "Нет цены"}
+            raw_price = "Нет цены"
 
         # Описание
         try:
@@ -154,6 +155,7 @@ async def get_item_data(session, book: str):
             "Артикул_OZ": article,
             "Фото": photo,
             "Автор": author,
+            "Цена магазина": raw_price,
             "Цена": price["price"],
             "Цена до скидки": price["old_price"],
             "Описание": description,

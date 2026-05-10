@@ -157,17 +157,18 @@ async def get_item_data(session, item: str):
             category = "Без категории"
 
         # Price
+        price = {"price": "Цена не указана", "old_price": "Цена не указана"}
         try:
-            price = soup.find("div", class_="book__price")
-            if price:
-                price = price.text.strip().replace("\xa0", "")
-                price = ozon._price_calculate(input_price=price)
+            raw_price = soup.find("div", class_="book__price")
+            if raw_price:
+                raw_price = raw_price.text.strip().replace("\xa0", "")
+                price = ozon._price_calculate(input_price=raw_price)
                 price["price"] = price["price"][:-2]
                 price["old_price"] = price["old_price"][:-2]
                 if int(price["price"]) >= 60_000:
                     return
-        except:
-            price = {"price": "Цена не указана", "old_price": "Цена не указана"}
+        except Exception:
+            raw_price = "Цена не указана"
 
         # Stock
         try:
@@ -249,6 +250,7 @@ async def get_item_data(session, item: str):
             "description": description,
             "Категория": category,
             "Подкатегория": category,
+            "Цена магазина": raw_price,
             "Цена": price["price"],
             "Цена до скидки": price["old_price"],
             "Наличие": stock if stock != 9999999 else 1,

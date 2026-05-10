@@ -602,21 +602,31 @@ def get_items_list(
     for_parse_sample=True,
     get_stocks=False,
     shop_category: Literal["new", "old", "all"] = "all",
+    ibra=False,
 ):
     shop_list = []
     ready_result = []
+
     for key, value in os.environ.items():
-        prx = False
-        if key.startswith(prefix.upper()):
-            new_shop_flag = True if key.split("_")[-2] == "PRX" else False
-            if shop_category == "new":
-                if new_shop_flag:
-                    shop_list.append((key.split("_")[-1], value, new_shop_flag))
-            elif shop_category == "old":
-                if not new_shop_flag:
-                    shop_list.append((key.split("_")[-1], value, new_shop_flag))
-            else:
-                shop_list.append((key.split("_")[-1], value, new_shop_flag))
+        if not key.startswith(prefix.upper()):
+            continue
+
+        parts = key.split("_")
+
+        is_ibra = "IBRA" in parts
+        is_new = parts[-2] == "PRX"
+        shop_id = parts[-1]
+
+        if ibra != is_ibra:
+            continue
+
+        if shop_category == "new" and not is_new:
+            continue
+
+        if shop_category == "old" and is_new:
+            continue
+
+        shop_list.append((shop_id, value, is_new))
 
     with ThreadPoolExecutor(max_workers=20) as executor:
         futures = []
