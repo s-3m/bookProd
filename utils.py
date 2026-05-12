@@ -526,7 +526,7 @@ def forming_add_files(
     # меняем артикула в ДФ для ибры
     ibra_result_df = polars_df.with_columns(
         (
-            pl.lit(litera_shop[prefix]) + pl.col("Артикул").str.replace(r"\.0$", "")
+            pl.lit(litera_shop[prefix]) + pl.col("Артикул_OZ").str.replace(r"\.0$", "")
         ).alias("Артикул_OZ")
     )
 
