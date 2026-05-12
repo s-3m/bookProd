@@ -367,7 +367,6 @@ async def get_gather_data():
                 ibra_data_to_photo = ibra_shops_df.to_dict("records")
                 ibra_photo_replaced = await replace_photo(ibra_data_to_photo)
 
-
             write_result_files(
                 base_dir=BASE_LINUX_DIR,
                 prefix="mdk",
