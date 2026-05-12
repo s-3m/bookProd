@@ -341,7 +341,7 @@ async def get_gather_data():
     logger.info("Start to write data in file")
     logger.info(f"Total book quantity - {len(result)}")
     result_df = pd.DataFrame(result)
-    all_shops_df = forming_add_files(result_df=result_df, prefix="msk")
+    all_shops_df = forming_add_files(result_df=result_df, prefix="msk", ibra=True)
     write_result_files(
         base_dir=BASE_LINUX_DIR,
         prefix="msk",

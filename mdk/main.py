@@ -337,8 +337,8 @@ async def get_gather_data():
 
         # Replace photos
         all_books_result_df = pd.DataFrame(all_books_result)
-        new_shops_df, old_shops_df = forming_add_files(
-            result_df=all_books_result_df, prefix="mdk"
+        new_shops_df, old_shops_df, ibra_shops_df = forming_add_files(
+            result_df=all_books_result_df, prefix="mdk", ibra=True
         )
 
         combined_df = pd.concat([new_shops_df, old_shops_df]).drop_duplicates()
@@ -361,11 +361,18 @@ async def get_gather_data():
                 old_shops_df.update(new_id_to_add_df[["Фото"]])
                 old_shops_df.reset_index(inplace=True)
 
+            # IBRA shops
+            ibra_photo_replaced = None
+            if not ibra_shops_df.empty:
+                ibra_data_to_photo = ibra_shops_df.to_dict("records")
+                ibra_photo_replaced = await replace_photo(ibra_data_to_photo)
+
+
             write_result_files(
                 base_dir=BASE_LINUX_DIR,
                 prefix="mdk",
                 all_books_result=all_books_result,
-                id_to_add=(new_shops_df, old_shops_df),
+                id_to_add=(new_shops_df, old_shops_df, ibra_photo_replaced),
                 replace_photo=True,
             )
         except Exception as e:

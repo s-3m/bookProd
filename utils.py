@@ -452,7 +452,6 @@ def write_result_files(
         ibra_shop_df = id_to_add[2]
         new_shop_df.drop_duplicates(subset="Название", keep="last", inplace=True)
         old_shop_df.drop_duplicates(subset="Название", keep="last", inplace=True)
-        ibra_shop_df.drop_duplicates(subset="Название", keep="last", inplace=True)
 
         # Check "add books" not in archive books
         if not new_shop_df.empty:
@@ -473,15 +472,20 @@ def write_result_files(
             )
         else:
             logger.warning("Old shop data is empty")
-        if not ibra_shop_df.empty:
-            ibra_shop_add = check_archived_books(df_for_add=ibra_shop_df)
-            ibra_shop_add.to_excel(
-                f"{base_dir}/result/{prefix}_add_ibrahim.xlsx",
-                index=False,
-                engine="openpyxl",
-            )
-        else:
-            logger.warning("IBRA data is empty")
+
+        # IBRA shops
+        if ibra_shop_df:
+            ibra_shop_df.drop_duplicates(subset="Название", keep="last", inplace=True)
+
+            if not ibra_shop_df.empty:
+                ibra_shop_add = check_archived_books(df_for_add=ibra_shop_df)
+                ibra_shop_add.to_excel(
+                    f"{base_dir}/result/{prefix}_add_ibrahim.xlsx",
+                    index=False,
+                    engine="openpyxl",
+                )
+            else:
+                logger.warning("IBRA data is empty")
 
 
 def exclude_else_shops_books(items_on_add: list[dict], exclude_shop: str | None = None):
@@ -515,20 +519,9 @@ def exclude_else_shops_books(items_on_add: list[dict], exclude_shop: str | None 
 
 
 def forming_add_files(
-    result_df: pd.DataFrame, prefix: str
+    result_df: pd.DataFrame, prefix: str, ibra=False
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     polars_df = pl.from_pandas(result_df)
-
-    litera_shop = {
-        "mdk": "a",
-        "msk": "m",
-    }
-    # меняем артикула в ДФ для ибры
-    ibra_result_df = polars_df.with_columns(
-        (
-            pl.lit(litera_shop[prefix]) + pl.col("Артикул_OZ").str.replace(r"\.0$", "")
-        ).alias("Артикул_OZ")
-    )
 
     items_list_new_shop = get_items_list(
         prefix=prefix, visibility="ALL", shop_category="new"
@@ -541,13 +534,6 @@ def forming_add_files(
     )
     archived_items_list_old_shop = get_items_list(
         prefix=prefix, visibility="ARCHIVED", shop_category="old"
-    )
-    # IBRA shops
-    ibra_list = get_items_list(prefix=prefix, visibility="ALL", ibra=True)
-    ibra_archive_list = get_items_list(prefix=prefix, visibility="ARCHIVED", ibra=True)
-    ibra_list.extend(ibra_archive_list)
-    df_ibra_shop = pl.DataFrame(ibra_list)[["Артикул"]].rename(
-        {"Артикул": "Артикул_OZ"}
     )
 
     # archived_items_list_old_shop = ([])  # Поменяно на время, после нужно удалить это и раскоментировать строки выше
@@ -571,9 +557,32 @@ def forming_add_files(
     result_new_shop = polars_df.join(
         df_items_list_new_shop, on="Артикул_OZ", how="anti"
     ).to_pandas()
-    result_ibra_shop = ibra_result_df.join(
-        df_ibra_shop, on="Артикул_OZ", how="anti"
-    ).to_pandas()
+
+    # IBRA create add files
+    result_ibra_shop = None
+    if ibra:
+        litera_shop = {
+            "mdk": "a",
+            "msk": "m",
+        }
+        # меняем артикула в ДФ для ибры
+        ibra_result_df = polars_df.with_columns(
+            (
+                pl.lit(litera_shop[prefix])
+                + pl.col("Артикул_OZ").str.replace(r"\.0$", "")
+            ).alias("Артикул_OZ")
+        )
+        ibra_list = get_items_list(prefix=prefix, visibility="ALL", ibra=True)
+        ibra_archive_list = get_items_list(
+            prefix=prefix, visibility="ARCHIVED", ibra=True
+        )
+        ibra_list.extend(ibra_archive_list)
+        df_ibra_shop = pl.DataFrame(ibra_list)[["Артикул"]].rename(
+            {"Артикул": "Артикул_OZ"}
+        )
+        result_ibra_shop = ibra_result_df.join(
+            df_ibra_shop, on="Артикул_OZ", how="anti"
+        ).to_pandas()
 
     return result_new_shop, result_old_shop, result_ibra_shop
 
