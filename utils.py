@@ -419,7 +419,7 @@ def write_result_files(
     base_dir: str,
     prefix: str,
     all_books_result,
-    id_to_add: list | tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame],
+    id_to_add: list | tuple[pd.DataFrame, ...],
     replace_photo: bool = False,
 ):
     logger.info(f"Total result before writing - {len(all_books_result)}")
@@ -449,7 +449,7 @@ def write_result_files(
     elif isinstance(id_to_add, tuple):
         new_shop_df = id_to_add[0]
         old_shop_df = id_to_add[1]
-        ibra_shop_df = id_to_add[2]
+        ibra_shop_df = id_to_add[2] if len(id_to_add) > 2 else None
         new_shop_df.drop_duplicates(subset="Название", keep="last", inplace=True)
         old_shop_df.drop_duplicates(subset="Название", keep="last", inplace=True)
 
@@ -474,7 +474,7 @@ def write_result_files(
             logger.warning("Old shop data is empty")
 
         # IBRA shops
-        if ibra_shop_df:
+        if ibra_shop_df is not None:
             ibra_shop_df.drop_duplicates(subset="Название", keep="last", inplace=True)
 
             if not ibra_shop_df.empty:
@@ -520,7 +520,7 @@ def exclude_else_shops_books(items_on_add: list[dict], exclude_shop: str | None 
 
 def forming_add_files(
     result_df: pd.DataFrame, prefix: str, ibra=False
-) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+) -> tuple[pd.DataFrame, ...]:
     polars_df = pl.from_pandas(result_df)
 
     items_list_new_shop = get_items_list(
@@ -559,7 +559,6 @@ def forming_add_files(
     ).to_pandas()
 
     # IBRA create add files
-    result_ibra_shop = None
     if ibra:
         litera_shop = {
             "mdk": "a",
@@ -584,7 +583,8 @@ def forming_add_files(
             df_ibra_shop, on="Артикул_OZ", how="anti"
         ).to_pandas()
 
-    return result_new_shop, result_old_shop, result_ibra_shop
+        return result_new_shop, result_old_shop, result_ibra_shop
+    return result_new_shop, result_old_shop
 
 
 def give_me_sample(
