@@ -263,9 +263,7 @@ async def get_category_data(session, category: str):
         else:
             pagination = 1
         page_tasks = [
-            asyncio.create_task(
-                get_page_data(session, f"{BASE_URL}{category}&pid={page}")
-            )
+            asyncio.create_task(get_page_data(session, f"{cat_url}&pid={page}"))
             for page in range(1, pagination + 1)
         ]
         await asyncio.gather(*page_tasks)
