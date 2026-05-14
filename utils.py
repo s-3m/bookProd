@@ -571,9 +571,9 @@ def forming_add_files(
                 + pl.col("Артикул_OZ").str.replace(r"\.0$", "")
             ).alias("Артикул_OZ")
         )
-        ibra_list = get_items_list(prefix=prefix, visibility="ALL", ibra=True)
+        ibra_list = get_items_list(prefix=prefix, visibility="ALL", ibra="ibra")
         ibra_archive_list = get_items_list(
-            prefix=prefix, visibility="ARCHIVED", ibra=True
+            prefix=prefix, visibility="ARCHIVED", ibra="ibra"
         )
         ibra_list.extend(ibra_archive_list)
         df_ibra_shop = pl.DataFrame(ibra_list)[["Артикул"]].rename(
