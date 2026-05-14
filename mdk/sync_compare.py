@@ -147,7 +147,7 @@ async def get_gather_data(sample):
 def main():
     logger.info("Start script")
     # ozon sample
-    books_in_sale = get_items_list("mdk", ibra=True)
+    books_in_sale = get_items_list("mdk", ibra="all")
     sample = give_me_sample(
         base_dir=BASE_LINUX_DIR,
         prefix="mdk",
