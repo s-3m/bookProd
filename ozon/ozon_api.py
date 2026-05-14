@@ -411,6 +411,7 @@ class Ozon:
                     item["offer_id"].endswith(".0")
                     or item["offer_id"].startswith("a")
                     or item["offer_id"].startswith("m")
+                    or item["offer_id"][0].isdigit()
                 ):
                     ready_data.append(
                         {"Артикул": item["offer_id"], "seller_id": self.client_id}
@@ -452,7 +453,8 @@ class Ozon:
             result, for_parse_sample, offer_id_starts_with_archive
         )
         if ready_data[1]:
-            self.update_stock(ready_data[1], update_price=False)
+            logger.warning(f"Найдены нестандартные артикула - {ready_data[1]}")
+            # self.update_stock(ready_data[1], update_price=False)
         print(len(ready_data[0]))
         return ready_data[0]
 

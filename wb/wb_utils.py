@@ -73,7 +73,7 @@ def prepare_to_daily_parse(
             "article": i[0],
             "stock": "",
             "price": "",
-            "seller_id": "",
+            "seller_id": "wb",
             "marketplace": "wb",
             "chrtID": i[1],
             "link": None,
