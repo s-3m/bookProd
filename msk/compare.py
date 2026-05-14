@@ -133,7 +133,7 @@ def to_check_item(item):
 
 async def get_compare():
     # ozon sample
-    books_in_sale = get_items_list("msk", ibra=True)
+    books_in_sale = get_items_list("msk", ibra="all")
     sample = give_me_sample(
         base_dir=PATH_TO_FILES,
         prefix="msk",
