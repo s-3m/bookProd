@@ -160,6 +160,7 @@ def get_book_data_from_ajax(book_url):
         "https": selected_proxy,
     }
     book_slug = book_url.split("/")[-1]
+    time.sleep(0.7)
     response = requests.get(
         f"https://web-agr.chitai-gorod.ru/web/api/v1/products/slug/{book_slug}",
         headers=headers,
@@ -167,7 +168,6 @@ def get_book_data_from_ajax(book_url):
         proxies=proxy,
         timeout=15,
     )
-    time.sleep(1)
     if response.status_code == 200:
         book_data = response.json().get("data")
         if book_data and book_data.get("status") == "canBuy":
@@ -272,7 +272,7 @@ def main():
     try:
         # load_dotenv("../.env")
         # ozon sample
-        books_in_sale = get_items_list("chit_gor", ibra=True)
+        books_in_sale = get_items_list("chit_gor", ibra="all")
         sample = give_me_sample(
             base_dir=BASE_LINUX_DIR, prefix="chit_gor", ozon_in_sale=books_in_sale
         )
