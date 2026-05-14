@@ -15,10 +15,9 @@ from ozon.ozon_api import get_items_list, Ozon
 from utils import (
     check_danger_string,
     write_result_files,
-    exclude_else_shops_books,
     PROXIES,
-    clean_excel_text,
     check_religions_book,
+    forming_add_files,
 )
 from filter import filtering_cover
 
@@ -28,11 +27,6 @@ logger.add("chitai_error.log", format="{time} {level} {message}", level="ERROR")
 DEBUG = True if sys.platform.startswith("win") else False
 BASE_URL = "https://www.chitai-gorod.ru"
 BASE_LINUX_DIR = "/media/source/chitai" if not DEBUG else "source"
-
-sample_raw = get_items_list("chit_gor", visibility="ALL")
-archived_items = get_items_list("chit_gor", visibility="ARCHIVED")
-sample_raw.extend(archived_items)
-sample = {i["Артикул"] for i in sample_raw}
 
 headers = {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -230,8 +224,6 @@ def get_book_data(book_url: str):
                 if not publisher:
                     book_dict["Издательство"] = "АСТ"
 
-                if book_dict.get("Артикул_OZ") not in sample:
-                    id_to_add.append(book_dict)
                 all_books_result.append(book_dict)
 
                 global done_count
@@ -333,27 +325,17 @@ def get_gather_data():
     )
     logger.info("Start write files")
 
-    # УДАЛИТЬ ПОСЛЕ ПАРСА
-    # all_result_df = pd.DataFrame(all_books_result).drop_duplicates(subset="Артикул_OZ")
-    # clear_all_result_df = all_result_df.map(clean_excel_text)
-    # clear_all_result_df.to_excel(
-    #     f"{BASE_LINUX_DIR}/result/chit_all.xlsx", index=False, engine="openpyxl"
-    # )
-    # УДАЛИТЬ ПОСЛЕ ПАРСА
+    result_df = pd.DataFrame(all_books_result)
+    all_shops_add = forming_add_files(result_df=result_df, prefix="chit_gor", ibra=True)
 
-    # Раскоментировать --------------
-
-    pure_add = exclude_else_shops_books(id_to_add, exclude_shop="chit")
     write_result_files(
         base_dir=BASE_LINUX_DIR,
         prefix="chit_gor",
         all_books_result=all_books_result,
-        id_to_add=pure_add,
+        id_to_add=all_shops_add,
     )
     logger.info("Finished write files")
 
-    # Раскоментировать --------------
-    #
     # # Тут исключаем книжки у МДК, т.к. ЧГ заканчивает парситься последним
     # logger.info("Start to exclude MDK books")
     # mdk_old = pd.read_excel("/media/source/mdk/result/mdk_add_old.xlsx").to_dict(
