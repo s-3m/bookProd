@@ -272,7 +272,7 @@ def main():
     try:
         # load_dotenv("../.env")
         # ozon sample
-        books_in_sale = get_items_list("chit_gor")
+        books_in_sale = get_items_list("chit_gor", ibra=True)
         sample = give_me_sample(
             base_dir=BASE_LINUX_DIR, prefix="chit_gor", ozon_in_sale=books_in_sale
         )
