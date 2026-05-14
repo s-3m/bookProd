@@ -602,7 +602,7 @@ def get_items_list(
     for_parse_sample=True,
     get_stocks=False,
     shop_category: Literal["new", "old", "all"] = "all",
-    ibra=False,
+    ibra: Literal["ibra", "non_ibra", "all"] = "non_ibra",
 ):
     shop_list = []
     ready_result = []
@@ -617,9 +617,14 @@ def get_items_list(
         is_new = parts[-2] == "PRX"
         shop_id = parts[-1]
 
-        if ibra != is_ibra:
+        # фильтр IBRA
+        if ibra == "ibra" and not is_ibra:
             continue
 
+        if ibra == "non_ibra" and is_ibra:
+            continue
+
+        # фильтр new/old
         if shop_category == "new" and not is_new:
             continue
 
