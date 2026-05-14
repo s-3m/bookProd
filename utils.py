@@ -540,9 +540,15 @@ def forming_add_files(
     items_list_new_shop.extend(archived_items_list_new_shop)
     items_list_old_shop.extend(archived_items_list_old_shop)
 
-    df_items_list_new_shop = pl.DataFrame(items_list_new_shop)[["Артикул"]].rename(
-        {"Артикул": "Артикул_OZ"}
-    )
+    if items_list_new_shop:
+        df_items_list_new_shop = pl.DataFrame(items_list_new_shop)[["Артикул"]].rename(
+            {"Артикул": "Артикул_OZ"}
+        )
+        result_new_shop = polars_df.join(
+            df_items_list_new_shop, on="Артикул_OZ", how="anti"
+        ).to_pandas()
+    else:
+        result_new_shop = pl.DataFrame(items_list_new_shop).to_pandas()
 
     if items_list_old_shop:
         df_items_list_old_shop = pl.DataFrame(items_list_old_shop)[["Артикул"]].rename(
@@ -554,23 +560,21 @@ def forming_add_files(
     else:
         result_old_shop = pl.DataFrame(items_list_old_shop).to_pandas()
 
-    result_new_shop = polars_df.join(
-        df_items_list_new_shop, on="Артикул_OZ", how="anti"
-    ).to_pandas()
-
     # IBRA create add files
     if ibra:
-        litera_shop = {
-            "mdk": "a",
-            "msk": "m",
-        }
+        litera_shop = {"mdk": "a", "msk": "m"}
         # меняем артикула в ДФ для ибры
-        ibra_result_df = polars_df.with_columns(
-            (
-                pl.lit(litera_shop[prefix])
-                + pl.col("Артикул_OZ").str.replace(r"\.0$", "")
-            ).alias("Артикул_OZ")
-        )
+        if prefix == "chit_gor":
+            ibra_result_df = polars_df.with_columns(
+                (pl.col("Артикул_OZ").str.replace(r"\.0$", "")).alias("Артикул_OZ")
+            )
+        else:
+            ibra_result_df = polars_df.with_columns(
+                (
+                    pl.lit(litera_shop[prefix])
+                    + pl.col("Артикул_OZ").str.replace(r"\.0$", "")
+                ).alias("Артикул_OZ")
+            )
         ibra_list = get_items_list(prefix=prefix, visibility="ALL", ibra="ibra")
         ibra_archive_list = get_items_list(
             prefix=prefix, visibility="ARCHIVED", ibra="ibra"
