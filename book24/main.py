@@ -1,9 +1,13 @@
+import json
 from concurrent.futures import ThreadPoolExecutor
 import requests
+import httpx
 from bs4 import BeautifulSoup
 import re
 from loguru import logger
 import polars as pl
+import chompjs
+import demjson3
 
 BASE_URL = "https://book24.ru"
 headers = {
@@ -27,14 +31,15 @@ count = 0
 errors = []
 
 
-def get_item_data(link):
+def get_item_data(link, session: httpx.Client):
     global count
     global errors
     item_data = {}
     full_url = BASE_URL + link
     item_data["Ссылка"] = full_url
+
     try:
-        response = requests.get(full_url, headers=headers)
+        response = session.get(full_url, headers=headers)
         soup = BeautifulSoup(response.text, "lxml")
         breadcrumbs = soup.find_all(class_="breadcrumbs__item")
         book_chapter = breadcrumbs[2].text.strip()
@@ -56,14 +61,20 @@ def get_item_data(link):
             .strip()
         )
         item_data["Название"] = title
-        # char_area = soup.find("dl", class_="product-characteristic__list")
-        # dt = [i.text.strip() for i in char_area.find_all("dt")]
-        # dd = [i.text.strip() for i in char_area.find_all("dd")]
-        # full_chars = zip(dt, dd)
-        # for i in full_chars:
-        #     if i[0] == "ISBN":
-        #         item_data["ISBN"] = i[1]
-        #         break
+
+        img_area = soup.find(class_="product-poster__main-image")
+        img = "Нет изображения"
+        if img_area:
+            img = img_area.get("src")
+            img = f"http:{img}" if img else "Нет изображения"
+        item_data["Фото"] = img
+
+        char_area = soup.find("dl", class_="product-characteristic__list")
+        dt = [i.text.strip() for i in char_area.find_all("dt")]
+        dd = [i.text.strip() for i in char_area.find_all("dd")]
+        full_chars = zip(dt, dd)
+        for i in full_chars:
+            item_data[i[0]] = i[1]
 
         status_btn = soup.find("div", class_="product-detail-page__sidebar")
         status = status_btn.find("span", class_="b24-btn__content").text.strip()
@@ -79,14 +90,19 @@ def get_item_data(link):
 
         all_scripts = soup.find_all("script")
         quantity = 0
+        price = 0
         for i in all_scripts:
             if i.text.startswith("window.__NUXT__"):
                 my_str = i.text.split("productInfo:")[1]
-                match = re.search(r"quantity:(\d+)", my_str)
-                if match:
-                    quantity = int(match.group(1))
+                quantity_match = re.search(r"quantity:(\d+)", my_str)
+                if quantity_match:
+                    quantity = int(quantity_match.group(1))
+                price_match = re.search(r'priceFormatted:"([^"]+)"', my_str)
+                if price_match:
+                    price = price_match.group(1).replace("\xa0", "").replace("р.", "")
                 break
         item_data["Остаток"] = quantity
+        item_data["Цена магазина"] = price
         all_books.append(item_data)
         count += 1
         print(f"\rDone - {count} | errors - {len(errors)}", end="")
@@ -95,11 +111,16 @@ def get_item_data(link):
         errors.append(link)
 
 
-def get_page_data(page):
-    response = requests.get(
-        f"{BASE_URL}/catalog/page-{page}/?available=2", headers=headers
-    )
-    soup = BeautifulSoup(response.text, "lxml")
+def get_page_data(page, session: httpx.Client):
+    response_text = None
+    for i in range(5):
+        response = session.get(f"{BASE_URL}/catalog/page-{page}/?available=2")
+        if response.status_code == 200:
+            response_text = response.text
+            break
+
+    soup = BeautifulSoup(response_text, "lxml")
+
     all_items = soup.find_all("div", class_="product-list__item")
     items_list = [
         i.find("a").get("href")
@@ -110,15 +131,20 @@ def get_page_data(page):
 
 
 def main():
+    session = httpx.Client(
+        headers=headers, http2=True, timeout=20, follow_redirects=True, verify=False
+    )
     max_pagination = 8833
     for page in range(1, max_pagination + 1):
-        items_list = get_page_data(page)
+        items_list = get_page_data(page, session)
         with ThreadPoolExecutor(max_workers=10) as executor:
-            result = [executor.submit(get_item_data, link) for link in items_list]
+            result = [
+                executor.submit(get_item_data, link, session) for link in items_list
+            ]
 
     if errors:
         with ThreadPoolExecutor(max_workers=10) as executor:
-            result = [executor.submit(get_item_data, link) for link in errors]
+            result = [executor.submit(get_item_data, link, session) for link in errors]
 
     result_df = pl.DataFrame(all_books)
     result_df.write_excel("book24.xlsx", autofit=True)
