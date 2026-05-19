@@ -185,7 +185,7 @@ KEYWORDS = [
 ANTI_KEYWORDS = [
     # IT / программирование
     "программирован",
-    "разработк",
+    "господин" "разработк",
     "разработка",
     "код",
     "кодирован",
@@ -352,6 +352,7 @@ def sync_fetch_request(url, headers, cookies=None, use_proxy=False):
         proxy = None
     for _ in range(10):
         try:
+            time.sleep(0.4)
             response = requests.get(
                 url, headers=headers, cookies=cookies, timeout=30, proxies=proxy
             )
@@ -363,8 +364,8 @@ def sync_fetch_request(url, headers, cookies=None, use_proxy=False):
             else:
                 response_status_code = response.status_code
         except Exception as e:
-            logger.exception(f"ERROR - {e} | proxy - {selected_proxy}")
-            return "proxy error"
+            logger.exception(f"ERROR - {e}")
+            continue
     return response_status_code
 
 
