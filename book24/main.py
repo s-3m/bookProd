@@ -1,5 +1,7 @@
 import gzip
+import os
 import pickle
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -9,6 +11,7 @@ import re
 from loguru import logger
 import polars as pl
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import sync_fetch_request, check_religions_book
 
 BASE_URL = "https://book24.ru"
