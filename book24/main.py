@@ -1,4 +1,5 @@
 import gzip
+import json
 import os
 import pickle
 import sys
@@ -9,6 +10,7 @@ import httpx
 from bs4 import BeautifulSoup
 import re
 from loguru import logger
+import quickjs
 import polars as pl
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -43,6 +45,27 @@ if archive_path.exists():
         article_archive = pickle.load(f)
 
 
+def mapping_nuxt(soup):
+    nuxt_code = None
+    for script in soup.find_all("script"):
+        text = script.text
+        if "window.__NUXT__=" in text:
+            nuxt_code = text
+            break
+    ctx = quickjs.Context()
+    ctx.eval("var window = {};")
+    ctx.eval(nuxt_code)
+    chars = ctx.eval(
+        """
+    JSON.stringify(
+        window.__NUXT__.fetch["ProductDetailPage:0"].productCharacteristics
+    )
+    """
+    )
+    chars = json.loads(chars)
+    return chars
+
+
 def get_item_data(link, session: httpx.Client):
     global count
     global item_errors
@@ -56,15 +79,14 @@ def get_item_data(link, session: httpx.Client):
 
     try:
         response = sync_fetch_request(url=full_url, headers=headers)
+
         if str(response).isdigit():
             item_errors.append(link)
             return
-        # response = session.get(full_url, headers=headers)
         soup = BeautifulSoup(response, "lxml")
         breadcrumbs = soup.find_all(class_="breadcrumbs__item")
         book_chapter = breadcrumbs[2].text.strip()
         unnecessary_chapters = [
-            "Эксклюзивная продукция",
             "Канцтовары",
             "Календари 2025",
             "Сувениры. Аксессуары",
@@ -73,7 +95,7 @@ def get_item_data(link, session: httpx.Client):
             "Подарочные сертификаты",
             "Аудиокниги",
         ]
-        if book_chapter in [unnecessary_chapters]:
+        if book_chapter in unnecessary_chapters:
             return
         title = (
             soup.find("h1", class_="product-detail-page__title")
@@ -111,11 +133,17 @@ def get_item_data(link, session: httpx.Client):
         item_data["Цена магазина"] = price
 
         char_area = soup.find("dl", class_="product-characteristic__list")
-        dt = [i.text.strip() for i in char_area.find_all("dt")]
-        dd = [i.text.strip() for i in char_area.find_all("dd")]
-        full_chars = zip(dt, dd)
-        for i in full_chars:
-            item_data[i[0].replace(":", "")] = i[1]
+        try:
+            dt = [i.text.strip() for i in char_area.find_all("dt")]
+            dd = [i.text.strip() for i in char_area.find_all("dd")]
+            full_chars = zip(dt, dd)
+            for i in full_chars:
+                item_data[i[0].replace(":", "")] = i[1]
+        except AttributeError:
+            chars_list = mapping_nuxt(soup)
+            if chars_list:
+                for char in chars_list:
+                    item_data[char["name"]] = char["value"]
 
         status_btn = soup.find("div", class_="product-detail-page__sidebar")
         status = status_btn.find("span", class_="b24-btn__content").text.strip()
