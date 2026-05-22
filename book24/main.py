@@ -215,6 +215,12 @@ def main():
                 executor.submit(get_item_data, link, session) for link in item_errors
             ]
 
+    # Если какие-то значения окажутся не строки, а списки или словари, преобразовываем их в json для записи в файл
+    for row in all_books:
+        for key, value in row.items():
+            if isinstance(value, (list, dict)):
+                row[key] = json.dumps(value, ensure_ascii=False)
+
     logger.info(f"Writing article archive")
     with gzip.open(archive_path, "wb+") as file:
         pickle.dump(article_archive, file)
