@@ -279,11 +279,11 @@ class Ozon:
         finish_price = round(price_with_main_tax, 0)
 
         if float(raw_price) < 100:
-            finish_price = 1049
+            finish_price = 1049.0
         elif 200 > float(raw_price) >= 100:
-            finish_price = 1299
+            finish_price = 1299.0
         elif 410 > float(raw_price) >= 200:
-            finish_price = 1699
+            finish_price = 1699.0
 
         old_price = finish_price * 2
         min_price = finish_price * self.discount
