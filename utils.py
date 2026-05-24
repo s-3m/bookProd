@@ -420,7 +420,7 @@ def write_result_files(
     base_dir: str,
     prefix: str,
     all_books_result,
-    id_to_add: list | tuple[pd.DataFrame, ...],
+    id_to_add: list | tuple[pd.DataFrame, ...] | None,
     replace_photo: bool = False,
 ):
     logger.info(f"Total result before writing - {len(all_books_result)}")
