@@ -457,8 +457,8 @@ def write_result_files(
         # Check "add books" not in archive books
         if not new_shop_df.empty:
             new_shop_add = check_archived_books(df_for_add=new_shop_df)
-            new_shop_add.replace(
-                r"[\000-\010]|[\013-\014]|[\016-\037]", "", regex=True, inplace=True
+            new_shop_add = new_shop_add.replace(
+                r"[\000-\010]|[\013-\014]|[\016-\037]", "", regex=True
             )
             new_shop_add.to_excel(
                 f"{base_dir}/result/{prefix}_add_new.xlsx",
@@ -469,8 +469,8 @@ def write_result_files(
             logger.warning("New shop data is empty")
         if not old_shop_df.empty:
             old_shop_add = check_archived_books(df_for_add=old_shop_df)
-            old_shop_add.replace(
-                r"[\000-\010]|[\013-\014]|[\016-\037]", "", regex=True, inplace=True
+            old_shop_add = old_shop_add.replace(
+                r"[\000-\010]|[\013-\014]|[\016-\037]", "", regex=True
             )
             old_shop_add.to_excel(
                 f"{base_dir}/result/{prefix}_add_old.xlsx",
@@ -486,8 +486,8 @@ def write_result_files(
 
             if not ibra_shop_df.empty:
                 ibra_shop_add = check_archived_books(df_for_add=ibra_shop_df)
-                ibra_shop_add.replace(
-                    r"[\000-\010]|[\013-\014]|[\016-\037]", "", regex=True, inplace=True
+                ibra_shop_add = ibra_shop_add.replace(
+                    r"[\000-\010]|[\013-\014]|[\016-\037]", "", regex=True
                 )
                 ibra_shop_add.to_excel(
                     f"{base_dir}/result/{prefix}_add_ibrahim.xlsx",
