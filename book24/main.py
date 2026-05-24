@@ -14,8 +14,11 @@ import quickjs
 import polars as pl
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from utils import sync_fetch_request, check_religions_book
+from utils import sync_fetch_request, check_religions_book, write_result_files
 
+
+DEBUG = True if sys.platform.startswith("win") else False
+BASE_LINUX_DIR = "/media/source/book24" if not DEBUG else "source"
 BASE_URL = "https://book24.ru"
 headers = {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -226,8 +229,12 @@ def main():
         pickle.dump(article_archive, file)
 
     logger.info(f"Start writing to file")
-    result_df = pl.DataFrame(all_books)
-    result_df.write_excel("book24.xlsx", autofit=True)
+    write_result_files(
+        base_dir=BASE_LINUX_DIR,
+        prefix="book24",
+        all_books_result=all_books,
+        id_to_add=None,
+    )
 
 
 if __name__ == "__main__":
