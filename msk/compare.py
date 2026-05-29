@@ -1,7 +1,10 @@
 import asyncio
+import gzip
+import pickle
 import sys
 import os
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 import schedule
 from dotenv import load_dotenv
@@ -140,6 +143,12 @@ async def get_compare():
         without_merge=True,
         ozon_in_sale=books_in_sale,
     )
+
+    # Забираем книги, которые есть в других магазинах из файла
+    with gzip.open(f"{Path(__file__).parent.parent}/msk_books.pkl.gz", "rb") as f:
+        msk_books = pickle.load(f)
+    sample.extend(msk_books)
+
     # wb sample
     wb_sample = prepare_to_daily_parse(prefix="msk")
     sample.extend(wb_sample)
@@ -168,16 +177,24 @@ async def get_compare():
     checker = quantity_checker(sample)
     if checker:
         wb_items = []
-        ozon_items = []
+        msk_ozon_items = []
+        chit_msk_ozon_items = []
         for i in sample:
             if i.get("marketplace") == "wb":
                 wb_items.append(i)
+            elif "link" in i.keys():
+                chit_msk_ozon_items.append(i)
             else:
-                ozon_items.append(i)
+                msk_ozon_items.append(i)
+
         # Push to OZON with API
-        separate_records = separate_records_to_client_id(ozon_items)
+        separate_records = separate_records_to_client_id(msk_ozon_items)
+        msk_in_chit_gor_separate_records = separate_records_to_client_id(
+            chit_msk_ozon_items
+        )
         logger.info("Start push to ozon")
         start_push_to_ozon(separate_records, prefix="msk")
+        start_push_to_ozon(msk_in_chit_gor_separate_records, prefix="chit_gor")
         logger.success("Data was pushed to ozon")
 
         # Push to WB with API
