@@ -8,10 +8,8 @@ from pathlib import Path
 
 import httpx
 from bs4 import BeautifulSoup
-import re
 from loguru import logger
 import quickjs
-import polars as pl
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import sync_fetch_request, check_religions_book, write_result_files
@@ -58,18 +56,18 @@ def mapping_nuxt(soup):
     ctx = quickjs.Context()
     ctx.eval("var window = {};")
     ctx.eval(nuxt_code)
-    chars = ctx.eval(
+    data = ctx.eval(
         """
     JSON.stringify(
-        window.__NUXT__.fetch["ProductDetailPage:0"].productCharacteristics
+        window.__NUXT__.fetch["ProductDetailPage:0"]
     )
     """
     )
-    chars = json.loads(chars)
-    return chars
+    data = json.loads(data)
+    return data
 
 
-def get_item_data(link, session: httpx.Client):
+def get_item_data(link):
     global count
     global item_errors
     global article_archive
@@ -119,21 +117,23 @@ def get_item_data(link, session: httpx.Client):
             img = f"http:{img}" if img else "Нет изображения"
         item_data["Фото"] = img
 
-        all_scripts = soup.find_all("script")
-        quantity = 0
-        price = 0
-        for i in all_scripts:
-            if i.text.startswith("window.__NUXT__"):
-                my_str = i.text.split("productInfo:")[1]
-                quantity_match = re.search(r"quantity:(\d+)", my_str)
-                if quantity_match:
-                    quantity = int(quantity_match.group(1))
-                price_match = re.search(r'priceFormatted:"([^"]+)"', my_str)
-                if price_match:
-                    price = price_match.group(1).replace("\xa0", "").replace("р.", "")
-                break
-        item_data["Остаток"] = quantity
-        item_data["Цена магазина"] = price
+        book_script_data = mapping_nuxt(soup)
+        available = book_script_data.get("isAvailable")
+        if not available:
+            return
+        description = book_script_data.get("descriptionWithoutTags")
+        item_data["Описание"] = (
+            description if description else "Автор рекомендует книгу к прочтению"
+        )
+        price = book_script_data.get("prices")
+        if price:
+            price = price.get("price")
+        item_data["Цена магазина"] = price if price else "Цена не указана"
+        stock = 0
+        product_info = book_script_data.get("productInfo")
+        if product_info:
+            stock = product_info.get("quantity")
+        item_data["Остаток"] = stock if stock else "Не указан"
 
         char_area = soup.find("dl", class_="product-characteristic__list")
         try:
@@ -143,7 +143,7 @@ def get_item_data(link, session: httpx.Client):
             for i in full_chars:
                 item_data[i[0].replace(":", "")] = i[1]
         except AttributeError:
-            chars_list = mapping_nuxt(soup)
+            chars_list = book_script_data.get("productCharacteristics")
             if chars_list:
                 for char in chars_list:
                     item_data[char["name"]] = char["value"]
@@ -207,9 +207,7 @@ def main():
         items_list = get_page_data(page, session)
         if items_list:
             with ThreadPoolExecutor(max_workers=10) as executor:
-                result = [
-                    executor.submit(get_item_data, link, session) for link in items_list
-                ]
+                result = [executor.submit(get_item_data, link) for link in items_list]
 
     logger.info(f"Start reparse {len(item_errors)} errors")
     if item_errors:
