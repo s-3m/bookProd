@@ -144,7 +144,7 @@ def get_main_data(sample):
             params=body,
             headers=headers,
             # proxies=proxy,
-            timeout=(15, 60)
+            timeout=(15, 60),
         )
         items_list = page_response.json()["data"]
         print(f"page - {page}")
