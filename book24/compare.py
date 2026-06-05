@@ -1,8 +1,9 @@
 import json
 import os
+import random
 import sys
-from concurrent.futures import ThreadPoolExecutor
-
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from utils import quantity_checker
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -64,6 +65,7 @@ def get_page_data(page, session):
     for _ in range(5):
         try:
             for i in range(5):
+                time.sleep(random.uniform(0.4, 1))
                 response = session.get(f"{BASE_URL}/catalog/page-{page}/?available=2")
                 if response.status_code == 200:
                     response_text = response.text
@@ -76,7 +78,7 @@ def get_page_data(page, session):
                 parse_data[str(book["id"])] = book["quantity"]
 
             page_done += 1
-            print(f"\rDone - {page_done}")
+            print(f"\rDone - {page_done}", end="")
             return parse_data
 
         except Exception as e:
@@ -93,15 +95,20 @@ def get_gather_data(sample):
     pagination_response = session.get("https://book24.ru/catalog/?available=2")
     soup = BeautifulSoup(pagination_response.text, "lxml")
     max_pagination = soup.find_all("li", class_="pagination__button-item")[-2].text
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        for page in range(1, int(max_pagination) + 1):
-            result = executor.submit(get_page_data, page, session)
-            pages_data.update(result.result())
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futures = [
+            executor.submit(get_page_data, page, session)
+            for page in range(1, max_pagination + 1)
+        ]
+    for future in as_completed(futures):
+        pages_data.update(future.result())
 
     for item in sample:
         if item["article"][1:] in pages_data:
             item["stock"] = (
-                pages_data[item["article"]] if pages_data[item["article"]] > 1 else 0
+                pages_data[item["article"][1:]]
+                if pages_data[item["article"][1:]] > 1
+                else 0
             )
         else:
             item["stock"] = 0
@@ -125,8 +132,7 @@ def main():
 
 def super_main():
     load_dotenv("../.env")
-    main()
-    schedule.every().day.at("18:25").do(main)
+    schedule.every().day.at("00:00").do(main)
     while True:
         schedule.run_pending()
 
