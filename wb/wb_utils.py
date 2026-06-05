@@ -34,7 +34,7 @@ def get_all_items_from_wb(wb: Wildberries, item_filter="religions"):
 
 
 def separate_items_to_store(
-    items_list: list[dict], prefix: Literal["mg", "chit_gor", "msk", "mdk"]
+    items_list: list[dict], prefix: Literal["mg", "chit_gor", "msk", "mdk", "b24"]
 ) -> list[tuple[str, str]]:
     result = []
     article_prefix = {
@@ -42,6 +42,7 @@ def separate_items_to_store(
         "chit_gor": "",
         "msk": "m",
         "mdk": "a",
+        "b24": "k",
     }
     start_symbol = article_prefix[prefix]
 
@@ -57,7 +58,7 @@ def separate_items_to_store(
 
 
 def prepare_to_daily_parse(
-    prefix: Literal["mg", "chit_gor", "msk", "mdk"]
+    prefix: Literal["mg", "chit_gor", "msk", "mdk", "b24"]
 ) -> list[dict]:
     if prefix == "chit_gor":
         wb_api = os.getenv("WB_TOKEN")
