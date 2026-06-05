@@ -3,10 +3,9 @@ import os
 import random
 import sys
 import time
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from utils import quantity_checker
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import httpx
 import schedule
 from bs4 import BeautifulSoup
