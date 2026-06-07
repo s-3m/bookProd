@@ -3,6 +3,7 @@ import os
 import random
 import sys
 import time
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from utils import quantity_checker
@@ -97,7 +98,7 @@ def get_gather_data(sample):
     with ThreadPoolExecutor(max_workers=5) as executor:
         futures = [
             executor.submit(get_page_data, page, session)
-            for page in range(1, max_pagination + 1)
+            for page in range(1, int(max_pagination) + 1)
         ]
     for future in as_completed(futures):
         pages_data.update(future.result())
