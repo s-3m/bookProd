@@ -139,24 +139,30 @@ def get_main_data(sample):
     page_count = response.json()["meta"]["pagination"]["total_pages"]
     for page in range(1, page_count + 1):
         time.sleep(0.3)
-        page_response = requests.get(
-            page_api_url,
-            params=body,
-            headers=headers,
-            # proxies=proxy,
-            timeout=(15, 60),
-        )
-        items_list = page_response.json()["data"]
-        print(f"page - {page}")
-        for shop in sample:
-            for item in items_list:
-                if (
-                    item["id"] in sample[shop]
-                    and item["attributes"].get("status") == "canBuy"
-                ):
-                    sample[shop][item["id"]]["stock"] = item["attributes"]["quantity"]
-                    sample[shop][item["id"]]["price"] = item["attributes"]["price"]
-        body["products[page]"] = str(page + 1)
+        try:
+            page_response = requests.get(
+                page_api_url,
+                params=body,
+                headers=headers,
+                # proxies=proxy,
+                timeout=(15, 60),
+            )
+            items_list = page_response.json()["data"]
+            print(f"page - {page}")
+            for shop in sample:
+                for item in items_list:
+                    if (
+                        item["id"] in sample[shop]
+                        and item["attributes"].get("status") == "canBuy"
+                    ):
+                        sample[shop][item["id"]]["stock"] = item["attributes"][
+                            "quantity"
+                        ]
+                        sample[shop][item["id"]]["price"] = item["attributes"]["price"]
+            body["products[page]"] = str(page + 1)
+        except Exception as e:
+            logger.exception(e)
+            continue
 
 
 def get_gather_data(sample):
