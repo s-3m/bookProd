@@ -3,6 +3,7 @@ import os
 import random
 import sys
 import time
+import threading
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -37,6 +38,21 @@ headers = {
 page_done = 0
 
 
+thread_local = threading.local()
+
+
+def get_session():
+    if not hasattr(thread_local, "session"):
+        thread_local.session = httpx.Client(
+            headers=headers,
+            timeout=20,
+            follow_redirects=True,
+            verify=False,
+            http2=False,
+        )
+    return thread_local.session
+
+
 def mapping_nuxt(soup):
     nuxt_code = None
     for script in soup.find_all("script"):
@@ -58,8 +74,9 @@ def mapping_nuxt(soup):
     return data
 
 
-def get_page_data(page, session):
+def get_page_data(page):
     global page_done
+    session = get_session()
     parse_data = {}
     response_text = None
     for _ in range(5):
@@ -97,7 +114,7 @@ def get_gather_data(sample):
     max_pagination = soup.find_all("li", class_="pagination__button-item")[-2].text
     with ThreadPoolExecutor(max_workers=5) as executor:
         futures = [
-            executor.submit(get_page_data, page, session)
+            executor.submit(get_page_data, page)
             for page in range(1, int(max_pagination) + 1)
         ]
     for future in as_completed(futures):
