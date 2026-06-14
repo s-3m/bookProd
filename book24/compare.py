@@ -118,7 +118,10 @@ def get_gather_data(sample):
             for page in range(1, int(max_pagination) + 1)
         ]
     for future in as_completed(futures):
-        pages_data.update(future.result())
+        try:
+            pages_data.update(future.result())
+        except TypeError as e:
+            logger.warning(f"Ошибка расширения итогового словаря ---- {e}")
 
     for item in sample:
         if item["article"][1:] in pages_data:
@@ -132,19 +135,22 @@ def get_gather_data(sample):
 
 
 def main():
-    logger.info("Start script")
-    # wb sample
-    wb_sample = prepare_to_daily_parse(prefix="b24")
+    try:
+        logger.info("Start script")
+        # wb sample
+        wb_sample = prepare_to_daily_parse(prefix="b24")
 
-    get_gather_data(wb_sample)
+        get_gather_data(wb_sample)
 
-    checker = quantity_checker(wb_sample)
-    if not checker:
-        logger.warning("Detected too many ZERO items")
-        return
+        checker = quantity_checker(wb_sample)
+        if not checker:
+            logger.warning("Detected too many ZERO items")
+            return
 
-    # Push to WB with API
-    push_stock_to_wb(wb_sample)
+        # Push to WB with API
+        push_stock_to_wb(wb_sample)
+    except Exception as e:
+        logger.error(f"Неизвестная ошибка - {e}")
 
 
 def super_main():
