@@ -337,13 +337,16 @@ class Ozon:
         item_list: list[dict],
         update_price=True,
         to_change_warehouse=False,
+        warehouse_id=None,
     ):
         if update_price:
             # Сначала обновляем цены, чтобы не вывелись товары со старыми ценами
             self.update_price(item_list)
 
         if not to_change_warehouse:
-            warehouse_id = self._get_warehouse_id()
+            warehouse_id = (
+                self._get_warehouse_id() if not warehouse_id else warehouse_id
+            )
             article_name = "article" if item_list[0].get("article") else "offer_id"
             stocks_list = [
                 {
@@ -452,9 +455,6 @@ class Ozon:
         ready_data = self._prepare_for_sample(
             result, for_parse_sample, offer_id_starts_with_archive
         )
-        if ready_data[1]:
-            logger.warning(f"Найдены нестандартные артикула - {ready_data[1]}")
-            # self.update_stock(ready_data[1], update_price=False)
         print(len(ready_data[0]))
         return ready_data[0]
 
@@ -571,13 +571,19 @@ class Ozon:
 
 
 def start_push_to_ozon(
-    separate_records: dict[str, list[dict]], prefix: str, update_price=True
+    separate_records: dict[str, list[dict]],
+    prefix: str,
+    update_price=True,
+    warehouse_id=None,
 ):
+    ibra_warehouse = None
     with ThreadPoolExecutor(max_workers=20) as executor:
         futures = []
         for item in separate_records:
             if item in ibra_shops:
                 update_price = False
+                ibra_warehouse = warehouse_id
+
             seller_id = item
             for key, value in os.environ.items():
                 prx = False
@@ -587,7 +593,10 @@ def start_push_to_ozon(
 
             ozon = Ozon(client_id=seller_id, api_key=api_key, prefix=prefix, prx=prx)
             future = executor.submit(
-                ozon.update_stock, separate_records[item], update_price
+                ozon.update_stock,
+                separate_records[item],
+                update_price,
+                warehouse_id=ibra_warehouse,
             )
             futures.append(future)
 

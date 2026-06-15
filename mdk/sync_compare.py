@@ -148,6 +148,7 @@ def main():
     logger.info("Start script")
     # ozon sample
     books_in_sale = get_items_list("mdk", ibra="all")
+    books_in_sale = [i for i in books_in_sale if "-" not in i["Артикул"]]
     sample = give_me_sample(
         base_dir=BASE_LINUX_DIR,
         prefix="mdk",
@@ -173,7 +174,9 @@ def main():
         # Push to OZON with API
         separate_records = separate_records_to_client_id(ozon_items)
         logger.info("Start push to ozon")
-        start_push_to_ozon(separate_records, prefix="mdk")
+        start_push_to_ozon(
+            separate_records, prefix="mdk", warehouse_id="1020005000543189"
+        )
         logger.success("Data was pushed to ozon")
 
         # Push to WB with API
