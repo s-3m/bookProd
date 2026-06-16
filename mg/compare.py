@@ -176,7 +176,7 @@ def main():
     books_in_sale = [
         i
         for i in books_in_sale
-        if "-" in i["Артикул"] and not i["Артикул"].startswith("a")
+        if i["Артикул"].endswith(".0") or not i["Артикул"].startswith("a")
     ]
     sample = give_me_sample(
         BASE_LINUX_DIR, prefix="mg", merge_obj="id", ozon_in_sale=books_in_sale

@@ -148,7 +148,11 @@ def main():
     logger.info("Start script")
     # ozon sample
     books_in_sale = get_items_list("mdk", ibra="all")
-    books_in_sale = [i for i in books_in_sale if "-" not in i["Артикул"]]
+    books_in_sale = [
+        i
+        for i in books_in_sale
+        if i["Артикул"].endswith(".0") or i["Артикул"].startswith("a")
+    ]
     sample = give_me_sample(
         base_dir=BASE_LINUX_DIR,
         prefix="mdk",
