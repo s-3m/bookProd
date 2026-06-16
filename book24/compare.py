@@ -149,6 +149,8 @@ def main():
 
         # Push to WB with API
         push_stock_to_wb(wb_sample)
+        global page_done
+        page_done = 0
     except Exception as e:
         logger.error(f"Неизвестная ошибка - {e}")
 
