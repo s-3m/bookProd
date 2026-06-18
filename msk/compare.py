@@ -199,7 +199,7 @@ async def get_compare():
 
         # Push to WB with API
         for i in wb_items:
-            if i["stock"] < 2:
+            if i["stock"] in ("1", "0", 1, 0):
                 i["stock"] = 0
         push_stock_to_wb(wb_items)
     else:
