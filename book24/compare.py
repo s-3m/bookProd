@@ -127,7 +127,7 @@ def get_gather_data(sample):
         if item["article"][1:] in pages_data:
             item["stock"] = (
                 pages_data[item["article"][1:]]
-                if pages_data[item["article"][1:]] > 1
+                if pages_data[item["article"][1:]] >= 1
                 else 0
             )
         else:

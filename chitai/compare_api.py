@@ -236,9 +236,9 @@ def main():
             logger.success("Data was pushed to ozon")
 
             # Push to WB with API
-            for i in wb_items:
-                if i["stock"] < 2:
-                    i["stock"] = 0
+            # for i in wb_items:
+            #     if i["stock"] < 2:
+            #         i["stock"] = 0
             push_stock_to_wb(wb_items)
 
         else:
