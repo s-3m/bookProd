@@ -222,6 +222,7 @@ def main():
 def super_main():
     load_dotenv("../.env")
     # main()
+    schedule.every().day.at("09:00").do(main)
     schedule.every().day.at("18:25").do(main)
     while True:
         schedule.run_pending()

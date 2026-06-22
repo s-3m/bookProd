@@ -87,6 +87,8 @@ def get_page_data(page):
                 if response.status_code == 200:
                     response_text = response.text
                     break
+                if response.status_code == 404:
+                    return {}
 
             soup = BeautifulSoup(response_text, "lxml")
             page_data = mapping_nuxt(soup)
@@ -157,6 +159,7 @@ def main():
 
 def super_main():
     load_dotenv("../.env")
+    schedule.every().day.at("10:00").do(main)
     schedule.every().day.at("00:00").do(main)
     while True:
         schedule.run_pending()
