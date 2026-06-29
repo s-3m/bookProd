@@ -286,8 +286,16 @@ def get_all_catalogs():
 @logger.catch
 async def get_gather_data():
     logger.info("Начинаю сбор данных МДК")
+    timeout = aiohttp.ClientTimeout(
+        total=60,  # весь запрос целиком
+        connect=None,  # ожидание свободного коннекта из пула
+        sock_connect=10,  # TCP handshake
+        sock_read=30,  # ожидание данных от сервера
+    )
     async with aiohttp.ClientSession(
-        headers=headers, connector=aiohttp.TCPConnector(ssl=False, limit=10)
+        headers=headers,
+        connector=aiohttp.TCPConnector(ssl=False, limit=10),
+        timeout=timeout,
     ) as session:
 
         logger.info("Формирование списка категорий")
