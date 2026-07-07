@@ -287,10 +287,10 @@ def get_all_catalogs():
 async def get_gather_data():
     logger.info("Начинаю сбор данных МДК")
     timeout = aiohttp.ClientTimeout(
-        total=60,  # весь запрос целиком
+        total=180,  # весь запрос целиком
         connect=None,  # ожидание свободного коннекта из пула
-        sock_connect=10,  # TCP handshake
-        sock_read=30,  # ожидание данных от сервера
+        sock_connect=30,  # TCP handshake
+        sock_read=90,  # ожидание данных от сервера
     )
     async with aiohttp.ClientSession(
         headers=headers,
