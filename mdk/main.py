@@ -113,14 +113,15 @@ async def get_item_data(session, book: str):
 
         # Цена
         try:
-            price = soup.find("span", {"class": "itempage-price_inet"}).text[:-1]
-            price = ozon._price_calculate(input_price=price)
+            raw_price = soup.find("span", {"class": "itempage-price_inet"}).text[:-1]
+            price = ozon._price_calculate(input_price=raw_price)
             price["price"] = price["price"][:-2]
             price["old_price"] = price["old_price"][:-2]
             if int(price["price"]) >= 60_000:
                 return
         except:
             price = {"price": "Нет цены", "old_price": "Нет цены"}
+            raw_price = "Нет цены"
 
         # Описание
         try:
@@ -154,6 +155,7 @@ async def get_item_data(session, book: str):
             "Артикул_OZ": article,
             "Фото": photo,
             "Автор": author,
+            "Цена магазина": raw_price,
             "Цена": price["price"],
             "Цена до скидки": price["old_price"],
             "Описание": description,
@@ -261,9 +263,7 @@ async def get_category_data(session, category: str):
         else:
             pagination = 1
         page_tasks = [
-            asyncio.create_task(
-                get_page_data(session, f"{BASE_URL}{category}&pid={page}")
-            )
+            asyncio.create_task(get_page_data(session, f"{cat_url}&pid={page}"))
             for page in range(1, pagination + 1)
         ]
         await asyncio.gather(*page_tasks)
@@ -286,8 +286,16 @@ def get_all_catalogs():
 @logger.catch
 async def get_gather_data():
     logger.info("Начинаю сбор данных МДК")
+    timeout = aiohttp.ClientTimeout(
+        total=180,  # весь запрос целиком
+        connect=None,  # ожидание свободного коннекта из пула
+        sock_connect=30,  # TCP handshake
+        sock_read=90,  # ожидание данных от сервера
+    )
     async with aiohttp.ClientSession(
-        headers=headers, connector=aiohttp.TCPConnector(ssl=False, limit=10)
+        headers=headers,
+        connector=aiohttp.TCPConnector(ssl=False, limit=10),
+        timeout=timeout,
     ) as session:
 
         logger.info("Формирование списка категорий")
@@ -335,8 +343,8 @@ async def get_gather_data():
 
         # Replace photos
         all_books_result_df = pd.DataFrame(all_books_result)
-        new_shops_df, old_shops_df = forming_add_files(
-            result_df=all_books_result_df, prefix="mdk"
+        new_shops_df, old_shops_df, ibra_shops_df = forming_add_files(
+            result_df=all_books_result_df, prefix="mdk", ibra=True
         )
 
         combined_df = pd.concat([new_shops_df, old_shops_df]).drop_duplicates()
@@ -359,11 +367,17 @@ async def get_gather_data():
                 old_shops_df.update(new_id_to_add_df[["Фото"]])
                 old_shops_df.reset_index(inplace=True)
 
+            # IBRA shops
+            ibra_photo_replaced = None
+            if not ibra_shops_df.empty:
+                ibra_data_to_photo = ibra_shops_df.to_dict("records")
+                ibra_photo_replaced = await replace_photo(ibra_data_to_photo)
+
             write_result_files(
                 base_dir=BASE_LINUX_DIR,
                 prefix="mdk",
                 all_books_result=all_books_result,
-                id_to_add=(new_shops_df, old_shops_df),
+                id_to_add=(new_shops_df, old_shops_df, ibra_photo_replaced),
                 replace_photo=True,
             )
         except Exception as e:

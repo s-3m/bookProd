@@ -1,6 +1,6 @@
-import gzip
 import os
 import pickle
+import random
 import sys
 from pathlib import Path
 
@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import schedule
 from loguru import logger
 import pandas.io.formats.excel
+from bs4 import BeautifulSoup as bs
 import asyncio
 import pandas as pd
 import time
@@ -17,8 +18,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from wb.wb_utils import prepare_to_daily_parse, push_stock_to_wb
 from tg_sender import tg_send_files, tg_send_msg
 from chit_utils import get_auth_token
-from utils import give_me_sample, quantity_checker
+from utils import give_me_sample, quantity_checker, article_adapter
 from utils import PROXIES
+from concurrent.futures import ThreadPoolExecutor
 from ozon.ozon_api import (
     get_items_list,
     start_push_to_ozon,
@@ -117,52 +119,113 @@ logger.add(
     serialize=True,
     filter=logger_filter,
 )
+count = 1
+error_count = 0
+unique_article: dict[str, tuple] = {}  # article: (stock, price)
 
 
-def get_main_data(sample):
-    body = {
-        "include": "isbns",
-        "forceFilters[categories]": "18030",
-        "forceFilters[onlyNotOnSale]": "1",
-        "product[status]": "canBuy",
-        "customerCityId": "213",
-        "products[page]": "1",
-        "products[per-page]": "1000",
+def get_link_from_ajax(article):
+    selected_proxy = random.choice(PROXIES).strip()
+    proxy = {
+        "http": selected_proxy,
+        "https": selected_proxy,
     }
-    page_api_url = "https://web-agr.chitai-gorod.ru/web/api/v2/products"
-    response = requests.get(
-        page_api_url,
-        params=body,
-        headers=headers,
-        # proxies=proxy,
-    )
-    page_count = response.json()["meta"]["pagination"]["total_pages"]
-    for page in range(1, page_count + 1):
-        time.sleep(0.3)
+    params = {
+        "phrase": article[:-2],
+        "customerCityId": "213",
+    }
+    request_count = 0
+    while request_count < 4:
         try:
-            page_response = requests.get(
-                page_api_url,
-                params=body,
+            resp = requests.get(
+                "https://web-gate.chitai-gorod.ru/api/v2/search/product",
                 headers=headers,
-                # proxies=proxy,
-                timeout=(15, 60),
+                params=params,
+                cookies=cookies,
+                timeout=15,
+                proxies=proxy,
             )
-            items_list = page_response.json()["data"]
-            print(f"page - {page}")
-            for shop in sample:
-                for item in items_list:
-                    if (
-                        item["id"] in sample[shop]
-                        and item["attributes"].get("status") == "canBuy"
-                    ):
-                        sample[shop][item["id"]]["stock"] = item["attributes"][
-                            "quantity"
-                        ]
-                        sample[shop][item["id"]]["price"] = item["attributes"]["price"]
-            body["products[page]"] = str(page + 1)
-        except Exception as e:
-            logger.exception(e)
+            response = resp.json()
+            link = response["included"][0]["attributes"].get("url")
+            return link
+        except KeyError:
             continue
+    return None
+
+
+def get_book_data_from_ajax(book_url):
+    selected_proxy = random.choice(PROXIES).strip()
+    proxy = {
+        "http": selected_proxy,
+        "https": selected_proxy,
+    }
+    book_slug = book_url.split("/")[-1]
+    time.sleep(0.7)
+    response = requests.get(
+        f"https://web-agr.chitai-gorod.ru/web/api/v1/products/slug/{book_slug}",
+        headers=headers,
+        cookies=cookies,
+        proxies=proxy,
+        timeout=15,
+    )
+    if response.status_code == 200:
+        book_data = response.json().get("data")
+        if book_data and book_data.get("status") == "canBuy":
+            stock = book_data.get("availability")
+            price = book_data.get("price")
+            return stock, price
+        return None
+    elif response.status_code == 404:
+        return "404"
+    else:
+        logger.error(
+            f"Error in ajax request - {response.status_code} | {response.text}"
+        )
+        raise Exception
+
+
+def get_main_data(book_item):
+    global unique_article
+    global error_count
+
+    universal_article = article_adapter(book_item["article"])
+
+    if universal_article in unique_article:  # check on parse was
+        book_item["stock"] = unique_article[universal_article][0]
+        book_item["price"] = unique_article[universal_article][1]
+        return
+
+    try:
+        if not book_item["link"]:
+            i_link = get_link_from_ajax(universal_article)
+            if not i_link:
+                book_item["stock"] = "0"
+                book_item["price"] = None
+                return
+            book_item["link"] = f"{BASE_URL}/{i_link}"
+
+        book_data = get_book_data_from_ajax(book_item["link"])
+        if book_data and book_data != "404":
+            stock = book_data[0]
+            price = book_data[1]
+            if stock and price:
+                book_item["stock"] = str(stock)
+                book_item["price"] = str(price)
+        elif book_data and book_data == "404":
+            book_item["stock"] = "0"
+        else:
+            book_item["stock"] = "0"
+
+        unique_article[universal_article] = (book_item["stock"], book_item["price"])
+
+    except Exception as e:
+        book_item["stock"] = "error"
+        logger.exception(f"ERROR - {book_item['link']}")
+        error_count += 1
+    finally:
+        global count
+        print(f"\rDone - {count} | error - {error_count}", end="")
+        count += 1
 
 
 def get_gather_data(sample):
@@ -172,28 +235,37 @@ def get_gather_data(sample):
     acc_token = get_auth_token()
     headers["Authorization"] = acc_token
 
-    dict_sample = {}
+    # Main loop
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        threads = [executor.submit(get_main_data, i) for i in sample]
 
-    for item in sample:
-        article_for_key = (
-            item["article"][:-2] if item["article"].endswith(".0") else item["article"]
-        )
-        dict_sample.setdefault(item["seller_id"], {})[article_for_key] = item
+    logger.info(f"Start reparse {error_count} errors")
+    error_count = 0
 
-    get_main_data(dict_sample)
+    # Reparse item
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        threads_repars = [
+            executor.submit(get_main_data, i) for i in sample if i["stock"] == "error"
+        ]
+    stock_not_digit = []
+    for i in sample:
+        if i["stock"] == "error":
+            i["stock"] = "0"
+        elif i["stock"] == "":
+            stock_not_digit.append(i)
 
-    sample_after_pars = []
-    for item in dict_sample:
-        for book_data in dict_sample[item]:
-            try:
-                dict_sample[item][book_data]["stock"] = int(
-                    dict_sample[item][book_data]["stock"]
-                )
-            except (TypeError, ValueError):
-                dict_sample[item][book_data]["stock"] = 0
-            sample_after_pars.append(dict_sample[item][book_data])
+    if stock_not_digit:
+        path_to_stock = Path(__file__).parent / "stock_not_digit.pkl"
+        with open(path_to_stock, "wb") as f:
+            pickle.dump(stock_not_digit, f)
 
-    return sample_after_pars
+    print()
+    global count
+    global unique_article
+    count = 1
+    error_count = 0
+    unique_article.clear()
+    logger.success(f"Finish collect data with {error_count} errors")
 
 
 def main():
@@ -205,21 +277,14 @@ def main():
             base_dir=BASE_LINUX_DIR, prefix="chit_gor", ozon_in_sale=books_in_sale
         )
 
-        # Создаем архив с книгами МСК для парса в
-        msk_book = [i for i in sample if i["article"].startswith("m")]
-        with gzip.open(
-            f"{Path(__file__).parent.parent / "msk_books.pkl.gz"}", "wb"
-        ) as f:
-            pickle.dump(msk_book, f)
-
         # wb sample
         wb_sample = prepare_to_daily_parse(prefix="chit_gor")
 
         sample.extend(wb_sample)
         print(len(sample))
-        new_daily_data = get_gather_data(sample)
+        get_gather_data(sample)
 
-        checker = quantity_checker(new_daily_data)
+        checker = quantity_checker(sample)
         if checker:
             wb_items = []
             ozon_items = []
@@ -236,9 +301,7 @@ def main():
             logger.success("Data was pushed to ozon")
 
             # Push to WB with API
-            # for i in wb_items:
-            #     if i["stock"] < 2:
-            #         i["stock"] = 0
+            logger.info("Start push to WB")
             push_stock_to_wb(wb_items)
 
         else:
@@ -272,8 +335,7 @@ def main():
 
 def super_main():
     load_dotenv("../.env")
-    schedule.every().day.at("18:00").do(main)
-    schedule.every().day.at("11:00").do(main)
+    schedule.every().day.at("16:00").do(main)
 
     while True:
         schedule.run_pending()

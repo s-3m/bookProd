@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files, tg_send_msg
-from utils import sync_fetch_request, give_me_sample, quantity_checker
+from utils import sync_fetch_request, give_me_sample, quantity_checker, article_adapter
 from ozon.ozon_api import (
     separate_records_to_client_id,
     start_push_to_ozon,
@@ -66,7 +66,11 @@ unique_article: dict[str, tuple] = {}  # article: (stock, price)
 
 async def get_id_from_ajax(item):
     ajax_url = "https://www.dkmg.ru/ajax/ajax_search.php"
-    params = {"term": item["article"][:-2]}
+    params = {
+        "term": (
+            item["article"][:-2] if item["article"].endswith(".0") else item["article"]
+        )
+    }
     # response = requests.get(url=ajax_url, json=params, headers=ajax_headers, timeout=20)
     # ajax_result = response.json()
     # item_id = ajax_result[0].get("value")
@@ -86,9 +90,11 @@ def get_item_data(item):
     global error_items_count
     global unique_article
 
-    if item["article"] in unique_article:  # check on parse was
-        item["stock"] = unique_article[item["article"]][0]
-        item["price"] = unique_article[item["article"]][1]
+    universal_article = article_adapter(item["article"])
+
+    if universal_article in unique_article:  # check on parse was
+        item["stock"] = unique_article[universal_article][0]
+        item["price"] = unique_article[universal_article][1]
         return
 
     try:
@@ -127,7 +133,7 @@ def get_item_data(item):
 
             item["price"] = price
 
-        unique_article[item["article"]] = (item["stock"], item["price"])
+        unique_article[universal_article] = (item["stock"], item["price"])
         print(f"\rDone - {count} | Error - {error_items_count}", end="")
         count += 1
     except Exception as e:
@@ -166,7 +172,12 @@ async def get_gather_data(sample):
 
 def main():
     logger.info("Start MG parsing")
-    books_in_sale = get_items_list("mg")
+    books_in_sale = get_items_list("mg", ibra="all")
+    books_in_sale = [
+        i
+        for i in books_in_sale
+        if i["Артикул"].endswith(".0") or not i["Артикул"].startswith("a")
+    ]
     sample = give_me_sample(
         BASE_LINUX_DIR, prefix="mg", merge_obj="id", ozon_in_sale=books_in_sale
     )
@@ -180,7 +191,9 @@ def main():
         separate_records = separate_records_to_client_id(sample)
         print()
         logger.info("Start push to ozon")
-        start_push_to_ozon(separate_records, prefix="mg")
+        start_push_to_ozon(
+            separate_records, prefix="mg", warehouse_id="1020005020229570"
+        )
         logger.success("Data was pushed to ozon")
     else:
         print()
@@ -211,6 +224,7 @@ def main():
 
 def super_main():
     load_dotenv("../.env")
+    schedule.every().day.at("09:00").do(main)
     schedule.every().day.at("20:00").do(main)
 
     while True:

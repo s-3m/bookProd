@@ -12,6 +12,8 @@ pyvenv.cfg
 *.txt
 *.png
 *.log
+*.pkl.gz
+*.pkl
 chromedriver
 *.json
 .python-version

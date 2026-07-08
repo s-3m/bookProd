@@ -1,7 +1,10 @@
 import asyncio
+import gzip
+import pickle
 import sys
 import os
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 import schedule
 from dotenv import load_dotenv
@@ -16,6 +19,7 @@ import time
 from selenium_data import pw_get_book_data
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from wb.wb_utils import prepare_to_daily_parse, push_stock_to_wb
 from tg_sender import tg_send_files, tg_send_msg
 from utils import (
     give_me_sample,
@@ -131,13 +135,23 @@ def to_check_item(item):
 
 
 async def get_compare():
-    books_in_sale = get_items_list("msk")
+    # ozon sample
+    books_in_sale = get_items_list("msk", ibra="all")
     sample = give_me_sample(
         base_dir=PATH_TO_FILES,
         prefix="msk",
         without_merge=True,
         ozon_in_sale=books_in_sale,
     )
+
+    # Забираем книги, которые есть в других магазинах из файла
+    with gzip.open(f"{Path(__file__).parent.parent}/msk_books.pkl.gz", "rb") as f:
+        msk_books = pickle.load(f)
+    sample.extend(msk_books)
+
+    # wb sample
+    wb_sample = prepare_to_daily_parse(prefix="msk")
+    sample.extend(wb_sample)
 
     with ThreadPoolExecutor(max_workers=10) as executor:
         for item in sample:
@@ -162,11 +176,32 @@ async def get_compare():
 
     checker = quantity_checker(sample)
     if checker:
+        wb_items = []
+        msk_ozon_items = []
+        chit_msk_ozon_items = []
+        for i in sample:
+            if i.get("marketplace") == "wb":
+                wb_items.append(i)
+            elif "link" in i.keys():
+                chit_msk_ozon_items.append(i)
+            else:
+                msk_ozon_items.append(i)
+
         # Push to OZON with API
-        separate_records = separate_records_to_client_id(sample)
+        separate_records = separate_records_to_client_id(msk_ozon_items)
+        msk_in_chit_gor_separate_records = separate_records_to_client_id(
+            chit_msk_ozon_items
+        )
         logger.info("Start push to ozon")
         start_push_to_ozon(separate_records, prefix="msk")
+        start_push_to_ozon(msk_in_chit_gor_separate_records, prefix="chit_gor")
         logger.success("Data was pushed to ozon")
+
+        # Push to WB with API
+        # for i in wb_items:
+        #     if i["stock"] in ("1", "0", 1, 0):
+        #         i["stock"] = 0
+        push_stock_to_wb(wb_items)
     else:
         logger.warning("Detected too many ZERO items")
         await tg_send_msg("'Москва'")
@@ -196,7 +231,8 @@ def main():
 
 
 def super_main():
-    schedule.every().day.at("21:00").do(main)
+    schedule.every().day.at("12:00").do(main)
+    schedule.every().day.at("04:00").do(main)
 
     while True:
         schedule.run_pending()

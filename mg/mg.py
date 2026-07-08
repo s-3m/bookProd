@@ -128,6 +128,7 @@ async def get_item_data(session, link: str):
                 .text.strip()
                 .split(".")[0]
             )
+            item_data["shop price"] = price
             price = ozon._price_calculate(input_price=price)
             price["price"] = price["price"][:-2]
             price["old_price"] = price["old_price"][:-2]

@@ -185,7 +185,7 @@ KEYWORDS = [
 ANTI_KEYWORDS = [
     # IT / программирование
     "программирован",
-    "разработк",
+    "господин" "разработк",
     "разработка",
     "код",
     "кодирован",
@@ -352,6 +352,7 @@ def sync_fetch_request(url, headers, cookies=None, use_proxy=False):
         proxy = None
     for _ in range(10):
         try:
+            time.sleep(0.4)
             response = requests.get(
                 url, headers=headers, cookies=cookies, timeout=30, proxies=proxy
             )
@@ -363,8 +364,8 @@ def sync_fetch_request(url, headers, cookies=None, use_proxy=False):
             else:
                 response_status_code = response.status_code
         except Exception as e:
-            logger.exception(f"ERROR - {e} | proxy - {selected_proxy}")
-            return "proxy error"
+            logger.exception(f"ERROR - {e}")
+            continue
     return response_status_code
 
 
@@ -419,7 +420,7 @@ def write_result_files(
     base_dir: str,
     prefix: str,
     all_books_result,
-    id_to_add: list | tuple[pd.DataFrame, pd.DataFrame],
+    id_to_add: list | tuple[pd.DataFrame, ...] | None,
     replace_photo: bool = False,
 ):
     logger.info(f"Total result before writing - {len(all_books_result)}")
@@ -449,12 +450,16 @@ def write_result_files(
     elif isinstance(id_to_add, tuple):
         new_shop_df = id_to_add[0]
         old_shop_df = id_to_add[1]
+        ibra_shop_df = id_to_add[2] if len(id_to_add) > 2 else None
         new_shop_df.drop_duplicates(subset="Название", keep="last", inplace=True)
         old_shop_df.drop_duplicates(subset="Название", keep="last", inplace=True)
 
         # Check "add books" not in archive books
         if not new_shop_df.empty:
             new_shop_add = check_archived_books(df_for_add=new_shop_df)
+            new_shop_add = new_shop_add.replace(
+                r"[\000-\010]|[\013-\014]|[\016-\037]", "", regex=True
+            )
             new_shop_add.to_excel(
                 f"{base_dir}/result/{prefix}_add_new.xlsx",
                 index=False,
@@ -464,6 +469,9 @@ def write_result_files(
             logger.warning("New shop data is empty")
         if not old_shop_df.empty:
             old_shop_add = check_archived_books(df_for_add=old_shop_df)
+            old_shop_add = old_shop_add.replace(
+                r"[\000-\010]|[\013-\014]|[\016-\037]", "", regex=True
+            )
             old_shop_add.to_excel(
                 f"{base_dir}/result/{prefix}_add_old.xlsx",
                 index=False,
@@ -471,6 +479,23 @@ def write_result_files(
             )
         else:
             logger.warning("Old shop data is empty")
+
+        # IBRA shops
+        if ibra_shop_df is not None:
+            ibra_shop_df.drop_duplicates(subset="Название", keep="last", inplace=True)
+
+            if not ibra_shop_df.empty:
+                ibra_shop_add = check_archived_books(df_for_add=ibra_shop_df)
+                ibra_shop_add = ibra_shop_add.replace(
+                    r"[\000-\010]|[\013-\014]|[\016-\037]", "", regex=True
+                )
+                ibra_shop_add.to_excel(
+                    f"{base_dir}/result/{prefix}_add_ibrahim.xlsx",
+                    index=False,
+                    engine="openpyxl",
+                )
+            else:
+                logger.warning("IBRA data is empty")
 
 
 def exclude_else_shops_books(items_on_add: list[dict], exclude_shop: str | None = None):
@@ -504,9 +529,10 @@ def exclude_else_shops_books(items_on_add: list[dict], exclude_shop: str | None 
 
 
 def forming_add_files(
-    result_df: pd.DataFrame, prefix: str
-) -> tuple[pd.DataFrame, pd.DataFrame]:
+    result_df: pd.DataFrame, prefix: str, ibra=False
+) -> tuple[pd.DataFrame, ...]:
     polars_df = pl.from_pandas(result_df)
+
     items_list_new_shop = get_items_list(
         prefix=prefix, visibility="ALL", shop_category="new"
     )
@@ -524,9 +550,15 @@ def forming_add_files(
     items_list_new_shop.extend(archived_items_list_new_shop)
     items_list_old_shop.extend(archived_items_list_old_shop)
 
-    df_items_list_new_shop = pl.DataFrame(items_list_new_shop)[["Артикул"]].rename(
-        {"Артикул": "Артикул_OZ"}
-    )
+    if items_list_new_shop:
+        df_items_list_new_shop = pl.DataFrame(items_list_new_shop)[["Артикул"]].rename(
+            {"Артикул": "Артикул_OZ"}
+        )
+        result_new_shop = polars_df.join(
+            df_items_list_new_shop, on="Артикул_OZ", how="anti"
+        ).to_pandas()
+    else:
+        result_new_shop = pl.DataFrame(items_list_new_shop).to_pandas()
 
     if items_list_old_shop:
         df_items_list_old_shop = pl.DataFrame(items_list_old_shop)[["Артикул"]].rename(
@@ -538,10 +570,34 @@ def forming_add_files(
     else:
         result_old_shop = pl.DataFrame(items_list_old_shop).to_pandas()
 
-    result_new_shop = polars_df.join(
-        df_items_list_new_shop, on="Артикул_OZ", how="anti"
-    ).to_pandas()
+    # IBRA create add files
+    if ibra:
+        litera_shop = {"mdk": "a", "msk": "m"}
+        # меняем артикула в ДФ для ибры
+        if prefix == "chit_gor":
+            ibra_result_df = polars_df.with_columns(
+                (pl.col("Артикул_OZ").str.replace(r"\.0$", "")).alias("Артикул_OZ")
+            )
+        else:
+            ibra_result_df = polars_df.with_columns(
+                (
+                    pl.lit(litera_shop[prefix])
+                    + pl.col("Артикул_OZ").str.replace(r"\.0$", "")
+                ).alias("Артикул_OZ")
+            )
+        ibra_list = get_items_list(prefix=prefix, visibility="ALL", ibra="ibra")
+        ibra_archive_list = get_items_list(
+            prefix=prefix, visibility="ARCHIVED", ibra="ibra"
+        )
+        ibra_list.extend(ibra_archive_list)
+        df_ibra_shop = pl.DataFrame(ibra_list)[["Артикул"]].rename(
+            {"Артикул": "Артикул_OZ"}
+        )
+        result_ibra_shop = ibra_result_df.join(
+            df_ibra_shop, on="Артикул_OZ", how="anti"
+        ).to_pandas()
 
+        return result_new_shop, result_old_shop, result_ibra_shop
     return result_new_shop, result_old_shop
 
 
@@ -610,7 +666,10 @@ def article_adapter(item_article: str) -> str:
     Приведение артикулов к единому виду для проверки уже отработанных позиций
     """
     if not item_article.endswith(".0"):
-        clear_article = f"{item_article[1:]}.0"
+        if item_article[0].isalpha():
+            clear_article = f"{item_article[1:]}.0"
+        else:
+            clear_article = f"{item_article}.0"
     else:
         clear_article = item_article
 

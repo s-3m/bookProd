@@ -1,10 +1,22 @@
+import gzip
+import json
+import os
+import pickle
+import sys
 from concurrent.futures import ThreadPoolExecutor
-import requests
-from bs4 import BeautifulSoup
-import re
-from loguru import logger
-import polars as pl
+from pathlib import Path
 
+import httpx
+from bs4 import BeautifulSoup
+from loguru import logger
+import quickjs
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from utils import sync_fetch_request, check_religions_book, write_result_files
+
+
+DEBUG = True if sys.platform.startswith("win") else False
+BASE_LINUX_DIR = "/media/source/book24" if not DEBUG else "source"
 BASE_URL = "https://book24.ru"
 headers = {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -24,22 +36,58 @@ headers = {
 }
 all_books = []
 count = 0
-errors = []
+item_errors = []
+pager_errors = []
+
+article_archive = {}
+archive_path = Path(__file__).parent / "b24_article_archive.pkl.gz"
+if archive_path.exists():
+    with gzip.open(archive_path, "rb") as f:
+        article_archive = pickle.load(f)
+
+
+def mapping_nuxt(soup):
+    nuxt_code = None
+    for script in soup.find_all("script"):
+        text = script.text
+        if "window.__NUXT__=" in text:
+            nuxt_code = text
+            break
+    ctx = quickjs.Context()
+    ctx.eval("var window = {};")
+    ctx.eval(nuxt_code)
+    data = ctx.eval(
+        """
+    JSON.stringify(
+        window.__NUXT__.fetch["ProductDetailPage:0"]
+    )
+    """
+    )
+    data = json.loads(data)
+    return data
 
 
 def get_item_data(link):
     global count
-    global errors
+    global item_errors
+    global article_archive
     item_data = {}
     full_url = BASE_URL + link
     item_data["Ссылка"] = full_url
+
+    article = link.split("-")[-1].replace("/", "")
+    item_data["Артикул_OZ"] = article
+
     try:
-        response = requests.get(full_url, headers=headers)
-        soup = BeautifulSoup(response.text, "lxml")
+        response = sync_fetch_request(url=full_url, headers=headers)
+
+        if str(response).isdigit():
+            item_errors.append(link)
+            return
+        soup = BeautifulSoup(response, "lxml")
         breadcrumbs = soup.find_all(class_="breadcrumbs__item")
         book_chapter = breadcrumbs[2].text.strip()
         unnecessary_chapters = [
-            "Эксклюзивная продукция",
             "Канцтовары",
             "Календари 2025",
             "Сувениры. Аксессуары",
@@ -48,22 +96,57 @@ def get_item_data(link):
             "Подарочные сертификаты",
             "Аудиокниги",
         ]
-        if book_chapter in [unnecessary_chapters]:
+        if book_chapter in unnecessary_chapters:
             return
         title = (
             soup.find("h1", class_="product-detail-page__title")
             .text.split(":")[-1]
             .strip()
         )
+        religions_flag = check_religions_book(title)
+        if religions_flag:
+            logger.warning(f"Pass RELIGIONS book: {title} | {link}")
+            return
+
         item_data["Название"] = title
-        # char_area = soup.find("dl", class_="product-characteristic__list")
-        # dt = [i.text.strip() for i in char_area.find_all("dt")]
-        # dd = [i.text.strip() for i in char_area.find_all("dd")]
-        # full_chars = zip(dt, dd)
-        # for i in full_chars:
-        #     if i[0] == "ISBN":
-        #         item_data["ISBN"] = i[1]
-        #         break
+
+        img_area = soup.find(class_="product-poster__main-image")
+        img = "Нет изображения"
+        if img_area:
+            img = img_area.get("src")
+            img = f"http:{img}" if img else "Нет изображения"
+        item_data["Фото"] = img
+
+        book_script_data = mapping_nuxt(soup)
+        available = book_script_data.get("isAvailable")
+        if not available:
+            return
+        description = book_script_data.get("descriptionWithoutTags")
+        item_data["Описание"] = (
+            description if description else "Автор рекомендует книгу к прочтению"
+        )
+        price = book_script_data.get("prices")
+        if price:
+            price = price.get("price")
+        item_data["Цена магазина"] = price if price else "Цена не указана"
+        stock = 0
+        product_info = book_script_data.get("productInfo")
+        if product_info:
+            stock = product_info.get("quantity")
+        item_data["Остаток"] = stock if stock else "Не указан"
+
+        char_area = soup.find("dl", class_="product-characteristic__list")
+        try:
+            dt = [i.text.strip() for i in char_area.find_all("dt")]
+            dd = [i.text.strip() for i in char_area.find_all("dd")]
+            full_chars = zip(dt, dd)
+            for i in full_chars:
+                item_data[i[0].replace(":", "")] = i[1]
+        except AttributeError:
+            chars_list = book_script_data.get("productCharacteristics")
+            if chars_list:
+                for char in chars_list:
+                    item_data[char["name"]] = char["value"]
 
         status_btn = soup.find("div", class_="product-detail-page__sidebar")
         status = status_btn.find("span", class_="b24-btn__content").text.strip()
@@ -71,57 +154,85 @@ def get_item_data(link):
             item_data["Статус"] = "в наличии"
         elif status == "Оформить предзаказ":
             item_data["Статус"] = "предзаказ"
-        try:
-            isbn = soup.find("meta", attrs={"itemprop": "isbn"}).get("content")
-            item_data["ISBN"] = isbn
-        except Exception:
-            item_data["ISBN"] = ""
 
-        all_scripts = soup.find_all("script")
-        quantity = 0
-        for i in all_scripts:
-            if i.text.startswith("window.__NUXT__"):
-                my_str = i.text.split("productInfo:")[1]
-                match = re.search(r"quantity:(\d+)", my_str)
-                if match:
-                    quantity = int(match.group(1))
-                break
-        item_data["Остаток"] = quantity
+        item_data["Издательство"] = (
+            item_data.get("Издательство").split(",")[0]
+            if item_data.get("Издательство")
+            else "АСТ"
+        )
+
         all_books.append(item_data)
         count += 1
-        print(f"\rDone - {count} | errors - {len(errors)}", end="")
+        article_archive[article] = full_url
+        print(f"\rDone - {count} | errors - {len(item_errors)}", end="")
     except Exception as e:
         logger.exception(f"{full_url}")
-        errors.append(link)
+        item_errors.append(link)
 
 
-def get_page_data(page):
-    response = requests.get(
-        f"{BASE_URL}/catalog/page-{page}/?available=2", headers=headers
-    )
-    soup = BeautifulSoup(response.text, "lxml")
-    all_items = soup.find_all("div", class_="product-list__item")
-    items_list = [
-        i.find("a").get("href")
-        for i in all_items
-        if i.find("span", class_="b24-btn__content").text.strip() == "В корзину"
-    ]
-    return items_list
+def get_page_data(page, session: httpx.Client):
+    global pager_errors
+    response_text = None
+    for _ in range(5):
+        try:
+            for i in range(5):
+                response = session.get(f"{BASE_URL}/catalog/page-{page}/?available=2")
+                if response.status_code == 200:
+                    response_text = response.text
+                    break
+
+            soup = BeautifulSoup(response_text, "lxml")
+
+            all_items = soup.find_all("div", class_="product-list__item")
+            items_list = [
+                i.find("a").get("href")
+                for i in all_items
+                if i.find("span", class_="b24-btn__content").text.strip() == "В корзину"
+            ]
+            return items_list
+        except Exception as e:
+            logger.exception(f"Page error - {e} ")
+            continue
+    return None
 
 
 def main():
-    max_pagination = 8833
-    for page in range(1, max_pagination + 1):
-        items_list = get_page_data(page)
-        with ThreadPoolExecutor(max_workers=10) as executor:
-            result = [executor.submit(get_item_data, link) for link in items_list]
+    session = httpx.Client(
+        headers=headers, http2=True, timeout=20, follow_redirects=True, verify=False
+    )
+    pagination_response = session.get("https://book24.ru/catalog/?available=2")
+    soup = BeautifulSoup(pagination_response.text, "lxml")
+    max_pagination = soup.find_all("li", class_="pagination__button-item")[-2].text
+    for page in range(1, int(max_pagination) + 1):
+        items_list = get_page_data(page, session)
+        if items_list:
+            with ThreadPoolExecutor(max_workers=10) as executor:
+                result = [executor.submit(get_item_data, link) for link in items_list]
 
-    if errors:
+    logger.info(f"Start reparse {len(item_errors)} errors")
+    if item_errors:
         with ThreadPoolExecutor(max_workers=10) as executor:
-            result = [executor.submit(get_item_data, link) for link in errors]
+            result = [
+                executor.submit(get_item_data, link, session) for link in item_errors
+            ]
 
-    result_df = pl.DataFrame(all_books)
-    result_df.write_excel("book24.xlsx", autofit=True)
+    # Если какие-то значения окажутся не строки, а списки или словари, преобразовываем их в json для записи в файл
+    for row in all_books:
+        for key, value in row.items():
+            if isinstance(value, (list, dict)):
+                row[key] = json.dumps(value, ensure_ascii=False)
+
+    logger.info(f"Writing article archive")
+    with gzip.open(archive_path, "wb+") as file:
+        pickle.dump(article_archive, file)
+
+    logger.info(f"Start writing to file")
+    write_result_files(
+        base_dir=BASE_LINUX_DIR,
+        prefix="book24",
+        all_books_result=all_books,
+        id_to_add=None,
+    )
 
 
 if __name__ == "__main__":
