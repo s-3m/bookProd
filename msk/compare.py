@@ -82,7 +82,7 @@ def to_check_item(item):
         age_control = soup.find("input", id="age_verification_form_mode")
         script_index = 1
         if age_control:
-            closed_page = asyncio.run(pw_get_book_data(link))
+            closed_page = asyncio.run(pw_get_book_data(link, proxy=True))
             if not closed_page:
                 return
             soup = bs(closed_page, "lxml")

@@ -1,5 +1,8 @@
+import random
 import time
 import subprocess
+from urllib.parse import urlparse
+
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
 import undetected_chromedriver as uc
@@ -8,6 +11,7 @@ from selenium.webdriver.chrome.service import Service
 from playwright.async_api import async_playwright
 
 from webdriver_manager.chrome import ChromeDriverManager
+from utils import PROXIES
 
 
 def kill_chrome_processes():
@@ -19,14 +23,23 @@ def kill_chrome_processes():
         pass
 
 
-async def pw_get_book_data(link):
+async def pw_get_book_data(link, proxy=False):
     async with async_playwright() as pw:
         browser_type = pw.chromium
-
+        proxy_config = None
+        if proxy:
+            proxy_data = random.choice(PROXIES)
+            parsed_proxy = urlparse(proxy_data)
+            proxy_config = {
+                "server": f"{parsed_proxy.scheme}://{parsed_proxy.hostname}:{parsed_proxy.port}",
+                "username": parsed_proxy.username,
+                "password": parsed_proxy.password,
+            }
         context = await browser_type.launch_persistent_context(
             user_data_dir="./browser_data",
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
             headless=True,
+            proxy=proxy_config,
         )
         # Добавляем stealth скрипты
         await context.add_init_script(
