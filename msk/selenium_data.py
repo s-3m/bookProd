@@ -1,8 +1,11 @@
+import os
 import random
+import sys
 import time
 import subprocess
 from urllib.parse import urlparse
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
 import undetected_chromedriver as uc
