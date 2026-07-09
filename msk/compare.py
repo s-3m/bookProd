@@ -77,7 +77,7 @@ def to_check_item(item):
 
     link = f"{BASE_URL}/book/{universal_article[:-2]}"
     try:
-        response = sync_fetch_request(url=link, headers=headers)
+        response = sync_fetch_request(url=link, headers=headers, use_proxy=True)
         soup = bs(response, "lxml")
         age_control = soup.find("input", id="age_verification_form_mode")
         script_index = 1
