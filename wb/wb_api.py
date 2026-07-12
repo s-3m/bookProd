@@ -32,7 +32,7 @@ class Wildberries:
                 json=body,
             )
             raw_list = response.json()
-            time.sleep(0.4)
+            time.sleep(0.8)
             for i in raw_list["cards"]:
                 result.append(i)
             if raw_list["cursor"]["total"] < 100:
