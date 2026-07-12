@@ -166,7 +166,9 @@ async def get_compare():
                 executor.submit(to_check_item, item)
     global count
     global unique_article
+    global error_count
     count = 1
+    error_count = 0
     unique_article.clear()
 
     for item in sample:
