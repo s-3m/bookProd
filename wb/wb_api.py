@@ -12,6 +12,29 @@ class Wildberries:
             "Content-Type": "application/json",
         }
 
+    def _request_with_retry(self, body, max_retries=5):
+        for attempt in range(max_retries):
+            response = requests.post(
+                "https://content-api.wildberries.ru/content/v2/get/cards/list",
+                headers=self.headers,
+                json=body,
+            )
+            data = response.json()
+
+            if response.status_code == 200 and not data.get("error"):
+                return data
+
+            wait = min(2**attempt, 30)
+            print(
+                f"WB API error (попытка {attempt + 1}): "
+                f"status={response.status_code}, body={data}. Ретрай через {wait}с"
+            )
+            time.sleep(wait)
+
+        raise RuntimeError(
+            f"Не удалось получить список карточек после {max_retries} попыток"
+        )
+
     def get_items_list(self) -> list[dict[str, Any]]:
         result = []
         body = {
@@ -26,19 +49,16 @@ class Wildberries:
         }
 
         while True:
-            response = requests.post(
-                "https://content-api.wildberries.ru/content/v2/get/cards/list",
-                headers=self.headers,
-                json=body,
-            )
-            raw_list = response.json()
-            time.sleep(0.8)
-            for i in raw_list["cards"]:
-                result.append(i)
+            raw_list = self._request_with_retry(body)
+
+            result.extend(raw_list["cards"])
+
             if raw_list["cursor"]["total"] < 100:
                 break
+
             body["settings"]["cursor"]["updatedAt"] = raw_list["cursor"]["updatedAt"]
             body["settings"]["cursor"]["nmID"] = raw_list["cursor"]["nmID"]
+            time.sleep(0.8)
 
         return result
 
