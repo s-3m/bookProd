@@ -23,13 +23,17 @@ def logger_filter(record):
 def all_stocks_to_zero(prefix):
     logger.info("Start to search a stocks")
     items = get_items_list(
-        prefix=prefix, visibility="VISIBLE", for_parse_sample=False, get_stocks=True
+        prefix=prefix,
+        visibility="VISIBLE",
+        for_parse_sample=False,
+        get_stocks=True,
+        ibra="all",
     )
     ready_items_list = [
         {"seller_id": i["seller_id"], "article": i["offer_id"], "stock": "0"}
         for i in items
         if i["stocks"] and i["stocks"][0]["present"] != 0
-    ]
+    ]  # Закомментировать условие если не у всех книг сбрасывается остаток
 
     ready_items_list = separate_records_to_client_id(ready_items_list)
     start_push_to_ozon(ready_items_list, prefix, update_price=False)
