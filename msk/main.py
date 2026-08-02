@@ -56,7 +56,7 @@ ozon = Ozon("None", "None", "msk")
 
 async def check_empty_element(session, item_dict, item, check_price=False):
     link = f"{BASE_URL}/book/{item[:-2]}"
-    resp = await fetch_request(session, link, headers)
+    resp = await fetch_request(session, link, headers, use_proxy=True)
     soup = bs(resp, "lxml")
 
     if not check_price:
@@ -86,7 +86,7 @@ async def get_item_data(session, item: str):
         article = "Нет артикула"
 
     try:
-        resp = await fetch_request(session, link, headers)
+        resp = await fetch_request(session, link, headers, use_proxy=True)
         if resp == "404":
             return
         soup = bs(resp, "lxml")
@@ -283,7 +283,7 @@ async def get_item_data(session, item: str):
 async def get_page_data(session, page_link):
     async with semaphore:
         try:
-            page_html = await fetch_request(session, page_link, headers)
+            page_html = await fetch_request(session, page_link, headers, use_proxy=True)
             # page_html = await page_response.text()
             soup = bs(page_html, "lxml")
             all_books_on_page = soup.find_all("div", class_="catalog__item")

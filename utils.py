@@ -369,11 +369,15 @@ def sync_fetch_request(url, headers, cookies=None, use_proxy=False):
     return response_status_code
 
 
-async def fetch_request(session, url, headers: dict, sleep=4, proxy=None):
+async def fetch_request(session, url, headers: dict, sleep=2, use_proxy=False):
     for count in range(20):
+        if use_proxy:
+            selected_proxy = random.choice(PROXIES).strip()
+        else:
+            selected_proxy = None
         try:
-            async with session.get(url, headers=headers, proxy=proxy) as resp:
-                await asyncio.sleep(sleep) if sleep else None
+            await asyncio.sleep(sleep) if sleep else None
+            async with session.get(url, headers=headers, proxy=selected_proxy) as resp:
                 if resp.status == 200:
                     return await resp.text()
                 elif resp.status == 404:
@@ -384,10 +388,10 @@ async def fetch_request(session, url, headers: dict, sleep=4, proxy=None):
             logger.warning(f"TimeoutError - {url} | loop - {count}")
             continue
         except aiohttp.client_exceptions.ClientConnectorError as e:
-            logger.exception(e)
+            logger.warning(f"ClientConnectorError - {url} | loop - {count}")
             continue
         except aiohttp.client_exceptions.ServerDisconnectedError as e:
-            logger.exception(e)
+            logger.warning(f"ServerDisconnectedError - {url} | loop - {count}")
             continue
         except Exception as e:
             logger.exception(e)
