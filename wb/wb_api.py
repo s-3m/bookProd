@@ -13,23 +13,45 @@ class Wildberries:
         }
 
     def _request_with_retry(self, body, max_retries=5):
+        last_exception = None
+
         for attempt in range(max_retries):
-            response = requests.post(
-                "https://content-api.wildberries.ru/content/v2/get/cards/list",
-                headers=self.headers,
-                json=body,
-            )
-            data = response.json()
+            try:
+                response = requests.post(
+                    "https://content-api.wildberries.ru/content/v2/get/cards/list",
+                    headers=self.headers,
+                    json=body,
+                    timeout=(10, 30),  # (connect_timeout, read_timeout)
+                )
 
-            if response.status_code == 200 and not data.get("error"):
-                return data
+                try:
+                    data = response.json()
+                except ValueError:
+                    data = {"error": True, "raw_text": response.text[:500]}
 
-            wait = min(2**attempt, 30)
-            print(
-                f"WB API error (попытка {attempt + 1}): "
-                f"status={response.status_code}, body={data}. Ретрай через {wait}с"
-            )
+                if response.status_code == 200 and not data.get("error"):
+                    return data
+
+                wait = min(2**attempt, 30)
+                print(
+                    f"WB API error (попытка {attempt + 1}/{max_retries}): "
+                    f"status={response.status_code}, body={data}. Ретрай через {wait}с"
+                )
+
+            except requests.exceptions.RequestException as e:
+                last_exception = e
+                wait = min(2**attempt, 30)
+                print(
+                    f"WB API connection error (попытка {attempt + 1}/{max_retries}): "
+                    f"{type(e).__name__}: {e}. Ретрай через {wait}с"
+                )
+
             time.sleep(wait)
+
+        if last_exception:
+            raise RuntimeError(
+                f"Не удалось получить список карточек после {max_retries} попыток"
+            ) from last_exception
 
         raise RuntimeError(
             f"Не удалось получить список карточек после {max_retries} попыток"
