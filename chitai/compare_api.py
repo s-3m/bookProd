@@ -205,12 +205,13 @@ def main():
             base_dir=BASE_LINUX_DIR, prefix="chit_gor", ozon_in_sale=books_in_sale
         )
 
-        # Создаем архив с книгами МСК для парса в
-        msk_book = [i for i in sample if i["article"].startswith("m")]
-        with gzip.open(
-            f"{Path(__file__).parent.parent / "msk_books.pkl.gz"}", "wb"
-        ) as f:
-            pickle.dump(msk_book, f)
+        # Создаем архив с книгами МСК для парса в (раскомментировать если будут двойные магазины)
+
+        # msk_book = [i for i in sample if i["article"].startswith("m")]
+        # with gzip.open(
+        #     f"{Path(__file__).parent.parent / "msk_books.pkl.gz"}", "wb"
+        # ) as f:
+        #     pickle.dump(msk_book, f)
 
         # wb sample
         wb_sample = prepare_to_daily_parse(prefix="chit_gor")
