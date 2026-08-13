@@ -11,9 +11,8 @@ from ozon.ozon_api import (
     start_push_to_ozon,
     Ozon,
 )
+from utils import check_religions_book
 from loguru import logger
-
-from utils import anti_pattern, pattern
 
 
 def logger_filter(record):
@@ -255,9 +254,9 @@ def transfer_to_archive() -> tuple[list[Any], list[Any]]:
     book_list = pd.read_excel("123.xlsx").to_dict(orient="records")
     for i in book_list:
         text = i["Название товара"].lower()
-        if bool(anti_pattern.search(text)):
+        if not check_religions_book(text):
             continue
-        if bool(pattern.search(text)):
+        if check_religions_book(text):
             ozon_id.append(i["Ozon Product ID"])
             seller_articles.append({"article": i["Артикул"][1:], "stock": "0"})
     print(len(ozon_id))

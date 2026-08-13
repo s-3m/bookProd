@@ -27,6 +27,7 @@ from utils import (
     quantity_checker,
     article_adapter,
     sync_fetch_request,
+    check_religions_book,
 )
 from ozon.ozon_api import (
     separate_records_to_client_id,
@@ -94,6 +95,12 @@ def to_check_item(item):
             return
 
         else:
+            book_title = soup.find("h1").text.strip()
+            if check_religions_book(book_title):
+                item["stock"] = "0"
+                item["price"] = None
+                return
+
             need_element = soup.find_all("script")
             for index, i in enumerate(need_element):
                 if "window.MbPageInfo =" in i.text:

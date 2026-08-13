@@ -14,7 +14,13 @@ from dotenv import load_dotenv
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files, tg_send_msg
-from utils import sync_fetch_request, give_me_sample, quantity_checker, article_adapter
+from utils import (
+    sync_fetch_request,
+    give_me_sample,
+    quantity_checker,
+    article_adapter,
+    check_religions_book,
+)
 from ozon.ozon_api import (
     separate_records_to_client_id,
     start_push_to_ozon,
@@ -117,6 +123,13 @@ def get_item_data(item):
             item["price"] = None
             return
         soup = bs(response, "lxml")
+
+        book_title = soup.find("h1").text.strip()
+        if check_religions_book(book_title):
+            item["stock"] = "0"
+            item["price"] = None
+            return
+
         buy_btn = soup.find("a", class_="btn_red wish_list_btn add_to_cart")
         if not buy_btn:
             item["stock"] = "0"

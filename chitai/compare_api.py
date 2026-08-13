@@ -17,7 +17,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from wb.wb_utils import prepare_to_daily_parse, push_stock_to_wb
 from tg_sender import tg_send_files, tg_send_msg
 from chit_utils import get_auth_token
-from utils import give_me_sample, quantity_checker
+from utils import give_me_sample, quantity_checker, check_religions_book
 from utils import PROXIES
 from ozon.ozon_api import (
     get_items_list,
@@ -151,14 +151,20 @@ def get_main_data(sample):
             print(f"page - {page}")
             for shop in sample:
                 for item in items_list:
+                    book_title = item["attributes"]["title"]
+
                     if (
                         item["id"] in sample[shop]
                         and item["attributes"].get("status") == "canBuy"
                     ):
-                        sample[shop][item["id"]]["stock"] = item["attributes"][
-                            "quantity"
-                        ]
-                        sample[shop][item["id"]]["price"] = item["attributes"]["price"]
+                        if check_religions_book(book_title):
+                            sample[shop][item["id"]]["stock"] = "0"
+                            sample[shop][item["id"]]["price"] = item["attributes"]["price"]
+                        else:
+                            sample[shop][item["id"]]["stock"] = item["attributes"][
+                                "quantity"
+                            ]
+                            sample[shop][item["id"]]["price"] = item["attributes"]["price"]
             body["products[page]"] = str(page + 1)
         except Exception as e:
             logger.exception(e)

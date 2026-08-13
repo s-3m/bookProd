@@ -7,7 +7,7 @@ import threading
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from utils import quantity_checker
+from utils import quantity_checker, check_religions_book
 import httpx
 import schedule
 from bs4 import BeautifulSoup
@@ -94,7 +94,11 @@ def get_page_data(page):
             page_data = mapping_nuxt(soup)
 
             for book in page_data:
-                parse_data[str(book["id"])] = book["quantity"]
+                book_title = book["name"]
+                if check_religions_book(book_title):
+                    parse_data[str(book["id"])] = "0"
+                else:
+                    parse_data[str(book["id"])] = book["quantity"]
 
             page_done += 1
             print(f"\rDone - {page_done}", end="")

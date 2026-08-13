@@ -13,7 +13,13 @@ import pandas as pd
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from wb.wb_utils import prepare_to_daily_parse, push_stock_to_wb
 from tg_sender import tg_send_files, tg_send_msg
-from utils import give_me_sample, sync_fetch_request, quantity_checker, article_adapter
+from utils import (
+    give_me_sample,
+    sync_fetch_request,
+    quantity_checker,
+    article_adapter,
+    check_religions_book,
+)
 from ozon.ozon_api import (
     get_items_list,
     start_push_to_ozon,
@@ -89,6 +95,11 @@ def get_main_data(book):
             soup = bs(response, "lxml")
             quantity_area = soup.find("div", {"class": "tg-quantityholder"})
             if not quantity_area:
+                book["stock"] = "0"
+                book["price"] = None
+                return
+            book_title = soup.find("h1").text.strip()
+            if check_religions_book(book_title):
                 book["stock"] = "0"
                 book["price"] = None
                 return
