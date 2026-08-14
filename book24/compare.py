@@ -95,7 +95,7 @@ def get_page_data(page):
 
             for book in page_data:
                 book_title = book["name"]
-                if check_religions_book(book_title):
+                if check_religions_book(book_title) or "Эзотерика. Парапсихология" in book["categoryListName"]:
                     parse_data[str(book["id"])] = "0"
                 else:
                     parse_data[str(book["id"])] = book["quantity"]
