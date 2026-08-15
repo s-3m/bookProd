@@ -157,7 +157,12 @@ def get_main_data(sample):
                         item["id"] in sample[shop]
                         and item["attributes"].get("status") == "canBuy"
                     ):
-                        if check_religions_book(book_title):
+                        if "Эзотерика" in item["attributes"]["categoryChain"]:
+                            sample[shop][item["id"]]["stock"] = "0"
+                            sample[shop][item["id"]]["price"] = item["attributes"][
+                                "price"
+                            ]
+                        elif check_religions_book(book_title):
                             sample[shop][item["id"]]["stock"] = "0"
                             sample[shop][item["id"]]["price"] = item["attributes"]["price"]
                         else:
