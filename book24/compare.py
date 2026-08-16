@@ -96,7 +96,7 @@ def get_page_data(page):
             for book in page_data:
                 book_title = book["name"]
                 if check_religions_book(book_title) or "Эзотерика. Парапсихология" in book["categoryListName"]:
-                    parse_data[str(book["id"])] = "0"
+                    parse_data[str(book["id"])] = 0
                 else:
                     parse_data[str(book["id"])] = book["quantity"]
 
@@ -158,7 +158,7 @@ def main():
         global page_done
         page_done = 0
     except Exception as e:
-        logger.error(f"Неизвестная ошибка - {e}")
+        logger.exception(f"Неизвестная ошибка - {e}")
 
 
 def super_main():
