@@ -347,6 +347,10 @@ class Ozon:
             warehouse_id = (
                 self._get_warehouse_id() if not warehouse_id else warehouse_id
             )
+            if not warehouse_id:
+                logger.error(f"Склад не найден. Проверьте активные склады у {self.client_id}")
+                returna
+
             article_name = "article" if item_list[0].get("article") else "offer_id"
             stocks_list = [
                 {
