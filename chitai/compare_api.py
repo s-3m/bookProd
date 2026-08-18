@@ -157,19 +157,26 @@ def get_main_data(sample):
                         item["id"] in sample[shop]
                         and item["attributes"].get("status") == "canBuy"
                     ):
-                        if "Эзотерика" in item["attributes"]["categoryChain"]:
+                        if (
+                            "Эзотерика" in item["attributes"]["categoryChain"]
+                            or "Религия" in item["attributes"]["categoryChain"]
+                        ):
                             sample[shop][item["id"]]["stock"] = "0"
                             sample[shop][item["id"]]["price"] = item["attributes"][
                                 "price"
                             ]
                         elif check_religions_book(book_title):
                             sample[shop][item["id"]]["stock"] = "0"
-                            sample[shop][item["id"]]["price"] = item["attributes"]["price"]
+                            sample[shop][item["id"]]["price"] = item["attributes"][
+                                "price"
+                            ]
                         else:
                             sample[shop][item["id"]]["stock"] = item["attributes"][
                                 "quantity"
                             ]
-                            sample[shop][item["id"]]["price"] = item["attributes"]["price"]
+                            sample[shop][item["id"]]["price"] = item["attributes"][
+                                "price"
+                            ]
             body["products[page]"] = str(page + 1)
         except Exception as e:
             logger.exception(e)
