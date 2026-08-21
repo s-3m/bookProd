@@ -84,13 +84,14 @@ class Wildberries:
 
         return result
 
+
     def update_stocks(self, array_of_items: list[dict[str, str]] = None):
         body_data = [
             {"chrtId": int(i["chrtID"]), "amount": int(i["stock"] or 0)}
             for i in array_of_items
         ]
 
-        warehouse_id = 1658946
+        warehouse_id = self.get_warehouses()[0]["id"]
         session = requests.Session()
 
         for i in range(0, len(body_data), 1000):
