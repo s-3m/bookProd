@@ -221,7 +221,6 @@ def check_religions_book(title: str) -> bool:
     return False
 
 
-
 def check_wrong_chars(base_string):
     cleaned_chars = []
     for char in base_string:
@@ -384,7 +383,7 @@ def write_result_files(
             logger.warning("Old shop data is empty")
 
         # IBRA shops
-        if ibra_shop_df is not None:
+        if ibra_shop_df is not None and not ibra_shop_df.empty:
             ibra_shop_df.drop_duplicates(subset="Название", keep="last", inplace=True)
 
             if not ibra_shop_df.empty:
@@ -399,6 +398,8 @@ def write_result_files(
                 )
             else:
                 logger.warning("IBRA data is empty")
+        else:
+            logger.warning("IBRA data is empty")
 
 
 def exclude_else_shops_books(items_on_add: list[dict], exclude_shop: str | None = None):
@@ -493,12 +494,15 @@ def forming_add_files(
             prefix=prefix, visibility="ARCHIVED", ibra="ibra"
         )
         ibra_list.extend(ibra_archive_list)
-        df_ibra_shop = pl.DataFrame(ibra_list)[["Артикул"]].rename(
-            {"Артикул": "Артикул_OZ"}
-        )
-        result_ibra_shop = ibra_result_df.join(
-            df_ibra_shop, on="Артикул_OZ", how="anti"
-        ).to_pandas()
+        if ibra_list:
+            df_ibra_shop = pl.DataFrame(ibra_list)[["Артикул"]].rename(
+                {"Артикул": "Артикул_OZ"}
+            )
+            result_ibra_shop = ibra_result_df.join(
+                df_ibra_shop, on="Артикул_OZ", how="anti"
+            ).to_pandas()
+        else:
+            result_ibra_shop = pl.DataFrame(ibra_list).to_pandas()
 
         return result_new_shop, result_old_shop, result_ibra_shop
     return result_new_shop, result_old_shop
