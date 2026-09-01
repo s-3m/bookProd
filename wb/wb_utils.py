@@ -121,8 +121,8 @@ def push_stock_to_wb(items_list: list[dict]):
 
             # Выставляем остаток 5 шт если книг в магазине больше чем 5
             for book in data:
-                if int(book["stock"] > 5):
-                    book["stock"] = 5
+                if int(book["stock"] > 3):
+                    book["stock"] = 3
 
             wb_api = os.getenv(f"WB_TOKEN_{shop_name.upper()}")
             if not wb_api:
