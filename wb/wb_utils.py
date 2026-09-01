@@ -118,6 +118,12 @@ def push_stock_to_wb(items_list: list[dict]):
     with ThreadPoolExecutor(max_workers=5) as executor:
         futures = {}
         for shop_name, data in separated_data.items():
+
+            # Выставляем остаток 5 шт если книг в магазине больше чем 5
+            for book in data:
+                if int(book["stock"] > 5):
+                    book["stock"] = 5
+
             wb_api = os.getenv(f"WB_TOKEN_{shop_name.upper()}")
             if not wb_api:
                 logger.error(f"WB_TOKEN not found for shop {shop_name}")

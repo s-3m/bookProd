@@ -588,6 +588,11 @@ def start_push_to_ozon(
                 update_price = False
                 ibra_warehouse = warehouse_id
 
+            # Выставляем остаток 5 шт если книг в магазине больше чем 5
+            for book in separate_records[item]:
+                if int(book["stock"]) > 5:
+                    book["stock"] = 5
+
             seller_id = item
             for key, value in os.environ.items():
                 prx = False
