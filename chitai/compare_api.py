@@ -211,6 +211,10 @@ def get_gather_data(sample):
                 dict_sample[item][book_data]["stock"] = 0
             sample_after_pars.append(dict_sample[item][book_data])
 
+    for book in sample_after_pars:
+        if book["stock"] == "":
+            book["stock"] = 0
+
     return sample_after_pars
 
 
