@@ -119,10 +119,13 @@ def push_stock_to_wb(items_list: list[dict]):
         futures = {}
         for shop_name, data in separated_data.items():
 
-            # Выставляем остаток 5 шт если книг в магазине больше чем 5
+            # Выставляем остаток 3 шт если книг в магазине больше чем 3
             for book in data:
-                if int(book["stock"]) > 3:
-                    book["stock"] = 3
+                try:
+                    if int(book["stock"]) > 3:
+                        book["stock"] = 3
+                except ValueError:
+                    book["stock"] = 0
 
             wb_api = os.getenv(f"WB_TOKEN_{shop_name.upper()}")
             if not wb_api:
