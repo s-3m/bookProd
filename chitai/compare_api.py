@@ -127,7 +127,7 @@ def get_main_data(sample):
         "product[status]": "canBuy",
         "customerCityId": "213",
         "products[page]": "1",
-        "products[per-page]": "1000",
+        "products[per-page]": "999",
     }
     page_api_url = "https://web-agr.chitai-gorod.ru/web/api/v2/products"
     response = requests.get(
