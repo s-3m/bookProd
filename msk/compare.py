@@ -179,7 +179,7 @@ async def get_compare():
     unique_article.clear()
 
     for item in sample:
-        if item["stock"] == "error":
+        if item["stock"] == "error" or item["stock"] == "":
             item["stock"] = "0"
             item["price"] = None
 

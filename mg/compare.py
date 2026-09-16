@@ -179,7 +179,7 @@ async def get_gather_data(sample):
     logger.info(f"Success parse - {count} | Not reparse - {error_items_count} errors")
 
     for i in sample:
-        if item["stock"] == "error":
+        if i["stock"] == "error":
             i["stock"] = "0"
 
 
