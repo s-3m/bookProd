@@ -70,7 +70,9 @@ def prepare_to_daily_parse(
         if prefix == "chit_gor":
             # Запускаем ВСЕ задачи параллельно, не дожидаясь результата в цикле
             futures = {
-                shop: executor.submit(get_all_items_from_wb, Wildberries(token), item_filter="religions")
+                shop: executor.submit(
+                    get_all_items_from_wb, Wildberries(token), item_filter="religions"
+                )
                 for shop, token in shop_list
             }
             # Теперь собираем результаты — задачи уже выполняются одновременно
@@ -82,8 +84,7 @@ def prepare_to_daily_parse(
         else:
             # load_local_db тоже можно выполнять параллельно
             futures = {
-                shop: executor.submit(load_local_db, shop=shop)
-                for shop, _ in shop_list
+                shop: executor.submit(load_local_db, shop=shop) for shop, _ in shop_list
             }
             shop_items_map = {shop: future.result() for shop, future in futures.items()}
 
@@ -107,11 +108,13 @@ def prepare_to_daily_parse(
 
     return ready_data
 
+
 def separate_to_wb_cabinet(books_data) -> dict[str, list[dict]]:
     separated_data = {}
     for book in books_data:
         separated_data.setdefault(book["shop"], []).append(book)
     return separated_data
+
 
 def push_stock_to_wb(items_list: list[dict]):
     separated_data = separate_to_wb_cabinet(items_list)
@@ -174,7 +177,7 @@ def reset_stocks_to_zero(
                 "marketplace": "wb",
                 "chrtID": item[1],
                 "link": None,
-                "shop": shop
+                "shop": shop,
             }
             for item in shop_items
         ]
@@ -199,5 +202,40 @@ def reset_stocks_to_zero(
     return None
 
 
+def add_characteristics(env_name, characteristics_list: list[dict]):
+    """
+    :param env_name: имя переменной окружения
+    :param characteristics_list: список словарей характеристик формата [{id: int, value: [str]}]
+    :return:
+    """
+    api_key = os.getenv(env_name)
+    wb = Wildberries(api_key)
+    items = get_all_items_from_wb(wb, item_filter="none")
+    print(len(items))
+    need_items = []
+    for item in items:
+        try:
+            if not item.get("characteristics"):
+                item["characteristics"] = []
+                item["characteristics"].extend(characteristics_list)
+                need_items.append(item)
+            else:
+                chars_id = []
+                for i in item["characteristics"]:
+                    chars_id.append(i["id"])
+                for i in characteristics_list:
+                    if i["id"] not in chars_id:
+                        item["characteristics"].append(i)
+                        need_items.append(item)
+
+        except Exception as e:
+            logger.warning(f"{e} ---- {item}")
+    print(len(need_items))
+    wb.update_cards(need_items)
+
+
 if __name__ == "__main__":
-    reset_stocks_to_zero(prefix="chit_gor")
+    add_characteristics(
+        env_name="WB_TOKEN_IBRA2",
+        characteristics_list=[{"id": 15000001, "value": ["4901990000"]}],
+    )
