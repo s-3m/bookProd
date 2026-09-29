@@ -236,6 +236,7 @@ def add_characteristics(env_name, characteristics_list: list[dict]):
 
 
 if __name__ == "__main__":
+    # Если остановлен ЧГ, тогда запускаем это в отдельном потоке для обновления БД по магазинам
     def main():
         prepare_to_daily_parse(prefix="chit_gor")
 
