@@ -6,6 +6,7 @@ from typing import Literal
 import pickle
 import gzip
 
+import schedule
 from loguru import logger
 
 from utils import check_religions_book
@@ -235,7 +236,14 @@ def add_characteristics(env_name, characteristics_list: list[dict]):
 
 
 if __name__ == "__main__":
-    add_characteristics(
-        env_name="WB_TOKEN_IBRA2",
-        characteristics_list=[{"id": 15000001, "value": ["4901990000"]}],
-    )
+    def main():
+        prepare_to_daily_parse(prefix="chit_gor")
+
+    schedule.every().day.at("20:00").do(main)
+    while True:
+        schedule.run_pending()
+
+    # add_characteristics(
+    #     env_name="WB_TOKEN_IBRA2",
+    #     characteristics_list=[{"id": 15000001, "value": ["4901990000"]}],
+    # )
