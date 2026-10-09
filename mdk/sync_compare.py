@@ -81,7 +81,7 @@ def get_main_data(book):
     book_url = f"{BASE_URL}/book/{universal_article[:-2]}"
     try:
         # async with semaphore:
-        response = sync_fetch_request(book_url, headers)
+        response = sync_fetch_request(book_url, headers, use_proxy=True)
         if response == "404":
             book["stock"] = "0"
             book["price"] = None
@@ -129,7 +129,7 @@ def get_main_data(book):
 async def get_gather_data(sample):
     logger.info("Start collect data")
 
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=7) as executor:
         for book in sample:
             executor.submit(get_main_data, book)
 
@@ -138,7 +138,7 @@ async def get_gather_data(sample):
     logger.warning(f"Errors detected: {len(error_book)}")
     error_book.clear()
 
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=7) as executor:
         for i in sample:
             if i["stock"] == "error":
                 executor.submit(get_main_data, i)
