@@ -71,7 +71,7 @@ async def get_item_data(session, book: str):
         return
 
     try:
-        response = await fetch_request(session, link, headers)
+        response = await fetch_request(session, link, headers, use_proxy=True)
         if response == "503":
             return
         soup = bs(response, "lxml")
@@ -227,7 +227,7 @@ async def get_item_data(session, book: str):
 
 async def get_page_data(session, page_url):
     try:
-        response = await fetch_request(session, page_url, headers)
+        response = await fetch_request(session, page_url, headers, use_proxy=True)
         if response == "503":
             return
         soup = bs(response, "lxml")
@@ -250,7 +250,7 @@ async def get_page_data(session, page_url):
 async def get_category_data(session, category: str):
     cat_url = category if category.startswith("http") else f"{BASE_URL}{category}"
     try:
-        response = await fetch_request(session, cat_url, headers)
+        response = await fetch_request(session, cat_url, headers, use_proxy=True)
         soup = bs(response, "lxml")
         is_data = soup.find("div", class_="tg-productgrid").find(
             "div", class_="tg-postbook"
@@ -294,7 +294,7 @@ async def get_gather_data():
     )
     async with aiohttp.ClientSession(
         headers=headers,
-        connector=aiohttp.TCPConnector(ssl=False, limit=10),
+        connector=aiohttp.TCPConnector(ssl=False, limit=3),
         timeout=timeout,
     ) as session:
 
