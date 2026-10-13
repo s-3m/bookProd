@@ -10,6 +10,7 @@ from ozon.ozon_api import (
     separate_records_to_client_id,
     start_push_to_ozon,
     Ozon,
+    get_shop_list,
 )
 from utils import check_religions_book
 from loguru import logger
@@ -263,8 +264,24 @@ def transfer_to_archive() -> tuple[list[Any], list[Any]]:
     return seller_articles, ozon_id
 
 
+def unarchive_products(ozon: Ozon):
+    archive_list = ozon.get_items_list(visibility="AUTO_ARCHIVED", raw_data=True)
+    product_id = [item["product_id"] for item in archive_list][:100]
+    unarchive_result = ozon.return_from_archive(product_id)
+
+    # archive_list = get_items_list(
+    #     prefix="mdk", visibility="AUTO_ARCHIVED", ibra="ibra", raw_data=True
+    # )
+    # product_id = [item["product_id"] for item in archive_list][:100]
+    # shop_list = []
+
+
 # if __name__ == "__main__":
-#     start_monthly_fees_calculate("chit_gor", "01-09-2025", "30-09-2025")
-#     start_monthly_fees_calculate("mdk", "01-09-2025", "30-09-2025")
-#     start_monthly_fees_calculate("msk", "01-09-2025", "30-09-2025")
-#     start_monthly_fees_calculate("mg", "01-09-2025", "30-09-2025")
+    #     start_monthly_fees_calculate("chit_gor", "01-09-2025", "30-09-2025")
+    #     start_monthly_fees_calculate("mdk", "01-09-2025", "30-09-2025")
+    #     start_monthly_fees_calculate("msk", "01-09-2025", "30-09-2025")
+    #     start_monthly_fees_calculate("mg", "01-09-2025", "30-09-2025")
+
+    # shop_list = get_shop_list(prefix="mdk", ibra="ibra")
+    # ozon = Ozon(client_id=shop_list[0][0], api_key=shop_list[0][1], prefix="mdk")
+    # unarchive_products(ozon)

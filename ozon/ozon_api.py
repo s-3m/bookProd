@@ -348,7 +348,9 @@ class Ozon:
                 self._get_warehouse_id() if not warehouse_id else warehouse_id
             )
             if not warehouse_id:
-                logger.error(f"Склад не найден. Проверьте активные склады у {self.client_id}")
+                logger.error(
+                    f"Склад не найден. Проверьте активные склады у {self.client_id}"
+                )
                 return
 
             article_name = "article" if item_list[0].get("article") else "offer_id"
@@ -434,7 +436,11 @@ class Ozon:
         return ready_data, wrong_article
 
     def get_items_list(
-        self, visibility, for_parse_sample=True, offer_id_starts_with_archive=False
+        self,
+        visibility,
+        for_parse_sample=True,
+        offer_id_starts_with_archive=False,
+        raw_data=False,
     ):
         result = []
         body = {
@@ -456,6 +462,8 @@ class Ozon:
             if not items_list:
                 break
             result.extend(items_list)
+        if raw_data:
+            return result
         ready_data = self._prepare_for_sample(
             result, for_parse_sample, offer_id_starts_with_archive
         )
@@ -573,6 +581,34 @@ class Ozon:
             except Exception as e:
                 logger.exception(f"Ошибка при добавлении товаров в архив - {e}")
 
+    def return_from_archive(self, product_ids: list[str]) -> list[str]:
+        BATCH_SIZE = 100
+        REQUEST_TIMEOUT = 30  # секунд
+        """Возвращает товары из архива. Возвращает список id, которые не удалось вернуть."""
+        failed: list[str] = []
+
+        for offset in range(0, len(product_ids), BATCH_SIZE):
+            batch = product_ids[offset : offset + BATCH_SIZE]
+            try:
+                response = requests.post(  # self.session = requests.Session()
+                    f"{self.host}/v1/product/unarchive",
+                    headers=self.headers,
+                    json={"product_id": batch},
+                    timeout=REQUEST_TIMEOUT,
+                )
+                response.raise_for_status()
+            except requests.RequestException as e:
+                body = e.response.text if e.response is not None else ""
+                logger.error(
+                    f"Failed to unarchive batch at offset {offset}: {e} {body}"
+                )
+                failed.extend(batch)
+                continue
+
+            logger.success(f"{len(batch)} items returned from archive")
+
+        return failed
+
 
 def start_push_to_ozon(
     separate_records: dict[str, list[dict]],
@@ -616,16 +652,12 @@ def start_push_to_ozon(
                 logger.critical(f"Ошибка в задаче: {e}")
 
 
-def get_items_list(
+def get_shop_list(
     prefix: str,
-    visibility: str = "VISIBLE",
-    for_parse_sample=True,
-    get_stocks=False,
     shop_category: Literal["new", "old", "all"] = "all",
     ibra: Literal["ibra", "non_ibra", "all"] = "non_ibra",
 ):
     shop_list = []
-    ready_result = []
 
     for key, value in os.environ.items():
         if not key.startswith(prefix.upper()):
@@ -652,6 +684,21 @@ def get_items_list(
             continue
 
         shop_list.append((shop_id, value, is_new))
+    return shop_list
+
+
+def get_items_list(
+    prefix: str,
+    visibility: str = "VISIBLE",
+    for_parse_sample=True,
+    get_stocks=False,
+    raw_data=False,
+    shop_category: Literal["new", "old", "all"] = "all",
+    ibra: Literal["ibra", "non_ibra", "all"] = "non_ibra",
+):
+    ready_result = []
+
+    shop_list = get_shop_list(prefix=prefix, shop_category=shop_category, ibra=ibra)
 
     with ThreadPoolExecutor(max_workers=20) as executor:
         futures = []
@@ -659,8 +706,9 @@ def get_items_list(
             ozon = Ozon(client_id=item[0], api_key=item[1], prefix=prefix, prx=item[2])
             task = executor.submit(
                 (ozon.get_items_list if not get_stocks else ozon.get_stocks),
-                visibility,
-                for_parse_sample,
+                visibility=visibility,
+                for_parse_sample=for_parse_sample,
+                raw_data=raw_data,
             )
             futures.append(task)
         for i in futures:
