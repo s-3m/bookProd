@@ -27,7 +27,7 @@ from ozon.ozon_api import (
     get_items_list,
     archive_items_stock_to_zero,
 )
-from ozon.utils import logger_filter
+from ozon.ozon_utils import logger_filter
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 

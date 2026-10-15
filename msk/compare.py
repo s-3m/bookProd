@@ -35,7 +35,7 @@ from ozon.ozon_api import (
     get_items_list,
     archive_items_stock_to_zero,
 )
-from ozon.utils import logger_filter
+from ozon.ozon_utils import logger_filter
 
 
 DEBUG = True if sys.platform.startswith("win") else False
