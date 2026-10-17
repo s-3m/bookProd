@@ -439,8 +439,9 @@ class Ozon:
         self,
         visibility,
         for_parse_sample=True,
-        offer_id_starts_with_archive=False,
         raw_data=False,
+        offer_id_starts_with_archive=False,
+
     ):
         result = []
         body = {
@@ -706,9 +707,9 @@ def get_items_list(
             ozon = Ozon(client_id=item[0], api_key=item[1], prefix=prefix, prx=item[2])
             task = executor.submit(
                 (ozon.get_items_list if not get_stocks else ozon.get_stocks),
-                visibility=visibility,
-                for_parse_sample=for_parse_sample,
-                raw_data=raw_data,
+                visibility,
+                for_parse_sample,
+                raw_data,
             )
             futures.append(task)
         for i in futures:
