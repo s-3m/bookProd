@@ -147,6 +147,13 @@ def get_main_data(sample):
                 # proxies=proxy,
                 timeout=(15, 60),
             )
+            if page_response.status_code != 200:
+                logger.error(
+                    f"page_response.status_code - {page_response.status_code} | url={page_response.url} |"
+                    f"payload={body} | body={page_response.text[:1000]}"
+                )
+                continue
+
             items_list = page_response.json()["data"]
             print(f"page - {page}")
             for shop in sample:
