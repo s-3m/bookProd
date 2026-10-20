@@ -120,78 +120,90 @@ logger.add(
 
 
 def get_main_data(sample):
-    body = {
-        "include": "isbns",
-        "forceFilters[categories]": "18030",
-        "forceFilters[onlyNotOnSale]": "1",
-        "product[status]": "canBuy",
-        "customerCityId": "213",
-        "products[page]": "1",
-        "products[per-page]": "999",
-    }
-    page_api_url = "https://web-agr.chitai-gorod.ru/web/api/v2/products"
-    response = requests.get(
-        page_api_url,
-        params=body,
-        headers=headers,
-        # proxies=proxy,
+    categories = requests.get(
+        "https://web-agr.chitai-gorod.ru/web/api/v2/categories", headers=headers
     )
-    page_count = response.json()["meta"]["pagination"]["total_pages"]
-    for page in range(1, page_count + 1):
-        time.sleep(0.3)
-        try:
-            page_response = requests.get(
-                page_api_url,
-                params=body,
-                headers=headers,
-                # proxies=proxy,
-                timeout=(15, 60),
-            )
-            if page_response.status_code != 200:
-                logger.error(
-                    f"page_response.status_code - {page_response.status_code} | url={page_response.url} |"
-                    f"payload={body} | body={page_response.text[:1000]}"
+    cat_response = categories.json()
+    all_categories = cat_response["data"]
+    needs_categories = [
+        cat["id"]
+        for cat in all_categories
+        if cat["attributes"].get("ancestorID") == 18030
+    ]
+    for cat in needs_categories:
+        body = {
+            "include": "isbns",
+            "forceFilters[categories]": cat,
+            "forceFilters[onlyNotOnSale]": "1",
+            "product[status]": "canBuy",
+            "customerCityId": "213",
+            "products[page]": "1",
+            "products[per-page]": "999",
+        }
+        page_api_url = "https://web-agr.chitai-gorod.ru/web/api/v2/products"
+        response = requests.get(
+            page_api_url,
+            params=body,
+            headers=headers,
+            # proxies=proxy,
+        )
+        page_count = response.json()["meta"]["pagination"]["total_pages"]
+        for page in range(1, page_count + 1):
+            time.sleep(0.3)
+            try:
+                page_response = requests.get(
+                    page_api_url,
+                    params=body,
+                    headers=headers,
+                    # proxies=proxy,
+                    timeout=(15, 60),
                 )
-                continue
+                if page_response.status_code != 200:
+                    logger.error(
+                        f"page_response.status_code - {page_response.status_code} | url={page_response.url} |"
+                        f"payload={body} | body={page_response.text[:1000]}"
+                    )
+                    body["products[page]"] = str(page + 1)
+                    continue
 
-            items_list = page_response.json()["data"]
-            print(f"page - {page}")
-            for shop in sample:
-                for item in items_list:
-                    book_title = item["attributes"]["title"]
+                items_list = page_response.json()["data"]
+                print(f"page - {page}")
+                for shop in sample:
+                    for item in items_list:
+                        book_title = item["attributes"]["title"]
 
-                    if (
-                        item["id"] in sample[shop]
-                        and item["attributes"].get("status") == "canBuy"
-                    ):
                         if (
-                            "Эзотерика" in item["attributes"]["categoryChain"]
-                            or "Религия" in item["attributes"]["categoryChain"]
+                            item["id"] in sample[shop]
+                            and item["attributes"].get("status") == "canBuy"
                         ):
-                            sample[shop][item["id"]]["stock"] = "0"
-                            sample[shop][item["id"]]["price"] = item["attributes"][
-                                "price"
-                            ]
-                        elif check_religions_book(book_title):
-                            sample[shop][item["id"]]["stock"] = "0"
-                            sample[shop][item["id"]]["price"] = item["attributes"][
-                                "price"
-                            ]
-                        else:
-                            sample[shop][item["id"]]["stock"] = item["attributes"][
-                                "quantity"
-                            ]
-                            sample[shop][item["id"]]["price"] = item["attributes"][
-                                "price"
-                            ]
-            body["products[page]"] = str(page + 1)
-        except Exception as e:
-            logger.exception(e)
-            continue
+                            if (
+                                "Эзотерика" in item["attributes"]["categoryChain"]
+                                or "Религия" in item["attributes"]["categoryChain"]
+                            ):
+                                sample[shop][item["id"]]["stock"] = "0"
+                                sample[shop][item["id"]]["price"] = item["attributes"][
+                                    "price"
+                                ]
+                            elif check_religions_book(book_title):
+                                sample[shop][item["id"]]["stock"] = "0"
+                                sample[shop][item["id"]]["price"] = item["attributes"][
+                                    "price"
+                                ]
+                            else:
+                                sample[shop][item["id"]]["stock"] = item["attributes"][
+                                    "quantity"
+                                ]
+                                sample[shop][item["id"]]["price"] = item["attributes"][
+                                    "price"
+                                ]
+                body["products[page]"] = str(page + 1)
+            except Exception as e:
+                logger.exception(e)
+                body["products[page]"] = str(page + 1)
+                continue
 
 
 def get_gather_data(sample):
-    global error_count
     logger.info("Start collect data")
     print()
     acc_token = get_auth_token()
