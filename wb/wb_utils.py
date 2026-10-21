@@ -32,6 +32,7 @@ def get_all_items_from_wb(wb: Wildberries, item_filter="religions"):
         all_items = [
             item for item in all_items if not check_religions_book(item["title"])
         ]
+    all_items = [item for item in all_items if item["subjectName"] == "Книги"]
     return all_items
 
 

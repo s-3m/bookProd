@@ -121,7 +121,11 @@ class Wildberries:
             for i in array_of_items
         ]
 
-        warehouse_id = self.get_warehouses()[0]["id"]
+        warehouses = self.get_warehouses()
+        if len(warehouses) > 1:
+            warehouse_id = [wrh for wrh in warehouses if wrh["name"] == "КНИГИ"][0]["id"]
+        else:
+            warehouse_id = warehouses[0]["id"]
         session = requests.Session()
 
         for i in range(0, len(body_data), 1000):
