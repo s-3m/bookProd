@@ -202,7 +202,7 @@ async def get_compare():
         #     chit_msk_ozon_items
         # )
         logger.info("Start push to ozon")
-        start_push_to_ozon(separate_records, prefix="msk")
+        #start_push_to_ozon(separate_records, prefix="msk")
         # start_push_to_ozon(msk_in_chit_gor_separate_records, prefix="chit_gor")
         logger.success("Data was pushed to ozon")
 
