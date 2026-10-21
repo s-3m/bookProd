@@ -83,20 +83,37 @@ class Wildberries:
 
         return result
 
-
     def update_cards(self, items_list: list[dict[str, Any]]) -> None:
         for i in range(0, len(items_list), 500):
             body = items_list[i : i + 500]
             try:
                 time.sleep(10)
-                response = requests.post("https://content-api.wildberries.ru/content/v2/cards/update", headers=self.headers, json=body)
+                response = requests.post(
+                    "https://content-api.wildberries.ru/content/v2/cards/update",
+                    headers=self.headers,
+                    json=body,
+                )
                 if response.status_code != 200:
                     logger.warning(response.json())
             except Exception as e:
                 logger.exception(e)
                 continue
 
-
+    def update_price(self, items_list: list[dict[str, Any]]) -> None:
+        for i in range(0, len(items_list), 1000):
+            body = {"data": items_list[i : i + 1000]}
+            try:
+                response = requests.post(
+                    "https://discounts-prices-api.wildberries.ru/api/v2/upload/task",
+                    headers=self.headers,
+                    json=body,
+                    timeout=30,
+                )
+                if response.status_code != 200:
+                    logger.warning(response.text)
+                    continue
+            finally:
+                time.sleep(1)
 
     def update_stocks(self, array_of_items: list[dict[str, str]] = None):
         body_data = [
