@@ -38,7 +38,7 @@ def get_all_items_from_wb(wb: Wildberries, item_filter="religions"):
 
 def separate_items_to_store(
     items_list: list[dict], prefix: Literal["mg", "chit_gor", "msk", "mdk", "b24"]
-) -> list[tuple[str, str]]:
+) -> list[tuple[str, str, str]]:
     result = []
     article_prefix = {
         "mg": "",
@@ -52,10 +52,14 @@ def separate_items_to_store(
     for item in items_list:
         if prefix == "chit_gor":
             if item["vendorCode"][0].isdigit():
-                result.append((item["vendorCode"], item["sizes"][0]["chrtID"]))
+                result.append(
+                    (item["vendorCode"], item["sizes"][0]["chrtID"], item["nmID"])
+                )
         else:
             if item["vendorCode"].startswith(start_symbol):
-                result.append((item["vendorCode"], item["sizes"][0]["chrtID"]))
+                result.append(
+                    (item["vendorCode"], item["sizes"][0]["chrtID"], item["nmID"])
+                )
 
     return result
 
@@ -101,10 +105,11 @@ def prepare_to_daily_parse(
                 "seller_id": f"wb_{shop}",
                 "marketplace": "wb",
                 "chrtID": chrt_id,
+                "nmID": nm_id,
                 "link": None,
                 "shop": shop,
             }
-            for article, chrt_id in separated_items
+            for article, chrt_id, nm_id in separated_items
         ]
         ready_data.extend(shop_data)
 
@@ -149,6 +154,42 @@ def push_stock_to_wb(items_list: list[dict]):
                 )
 
 
+def calculate_price(price):
+    if price < 100:
+        return 1099
+    elif price < 250:
+        return 1299
+    elif price < 350:
+        return 1599
+    else:
+        return max(1599, price * 4)
+
+
+def push_price_to_wb(items_list: list[dict]):
+    separated_data = separate_to_wb_cabinet(items_list)
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futures = {}
+        for shop_name, data in separated_data.items():
+            body_for_api = [
+                {"nmID": i["nmID"], "price": calculate_price(i["price"])} for i in data
+            ]
+            wb_api = os.getenv(f"WB_TOKEN_{shop_name.upper()}")
+            if not wb_api:
+                logger.error(f"WB_TOKEN not found for shop {shop_name}")
+                continue
+            wb = Wildberries(wb_api)
+            logger.info(f"Start set prices to WB --- {shop_name.upper()} ---")
+            futures[shop_name] = executor.submit(wb.update_price, body_for_api)
+
+        for shop_name, future in futures.items():
+            try:
+                future.result()
+            except Exception:
+                logger.exception(
+                    f"Failed to set prices to WB --- {shop_name.upper()} ---"
+                )
+
+
 def reset_stocks_to_zero(
     prefix: Literal["mg", "chit_gor", "msk", "mdk", "b24"],
     all_books=True,
@@ -178,6 +219,7 @@ def reset_stocks_to_zero(
                 "seller_id": "",
                 "marketplace": "wb",
                 "chrtID": item[1],
+                "nmID": item[2],
                 "link": None,
                 "shop": shop,
             }

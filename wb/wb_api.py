@@ -100,6 +100,10 @@ class Wildberries:
                 continue
 
     def update_price(self, items_list: list[dict[str, Any]]) -> None:
+        """
+        :param items_list: [{"nmID": 1234567, "price": 123},]
+        :return:
+        """
         for i in range(0, len(items_list), 1000):
             body = {"data": items_list[i : i + 1000]}
             try:
@@ -123,7 +127,9 @@ class Wildberries:
 
         warehouses = self.get_warehouses()
         if len(warehouses) > 1:
-            warehouse_id = [wrh for wrh in warehouses if wrh["name"] == "КНИГИ"][0]["id"]
+            warehouse_id = [wrh for wrh in warehouses if wrh["name"] == "КНИГИ"][0][
+                "id"
+            ]
         else:
             warehouse_id = warehouses[0]["id"]
         session = requests.Session()
@@ -167,3 +173,22 @@ class Wildberries:
         )
         result = response.json()
         return result
+
+    def delete_items(self, items_list: list[str | int]) -> None:
+        """
+        :param items_list: Список из артикулов WB
+        :return:
+        """
+        for i in range(0, len(items_list), 1000):
+            body = {"nmIDs": items_list[i : i + 1000]}
+            response = requests.post(
+                "https://content-api.wildberries.ru/content/v2/cards/delete/trash",
+                headers=self.headers,
+                json=body,
+                timeout=30,
+            )
+            time.sleep(1)
+            if response.status_code != 200:
+                logger.warning(response.text)
+            else:
+                logger.success(response.text)
