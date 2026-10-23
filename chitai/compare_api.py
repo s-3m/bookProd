@@ -281,6 +281,7 @@ def main():
             # for i in wb_items:
             #     if i["stock"] < 2:
             #         i["stock"] = 0
+
             push_stock_to_wb(wb_items)
 
         else:

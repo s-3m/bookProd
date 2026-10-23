@@ -166,7 +166,9 @@ def calculate_price(price):
 
 
 def push_price_to_wb(items_list: list[dict]):
-    separated_data = separate_to_wb_cabinet(items_list)
+    item_with_stock = [i for i in items_list if i["stock"] != 0]
+    separated_data = separate_to_wb_cabinet(item_with_stock)
+
     with ThreadPoolExecutor(max_workers=5) as executor:
         futures = {}
         for shop_name, data in separated_data.items():
