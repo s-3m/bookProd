@@ -19,7 +19,7 @@ import time
 from selenium_data import pw_get_book_data
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from wb.wb_utils import prepare_to_daily_parse, push_stock_to_wb
+from wb.wb_utils import prepare_to_daily_parse, push_stock_to_wb, push_price_to_wb
 from tg_sender import tg_send_files, tg_send_msg
 from utils import (
     give_me_sample,
@@ -202,7 +202,7 @@ async def get_compare():
         #     chit_msk_ozon_items
         # )
         logger.info("Start push to ozon")
-        #start_push_to_ozon(separate_records, prefix="msk")
+        # start_push_to_ozon(separate_records, prefix="msk")
         # start_push_to_ozon(msk_in_chit_gor_separate_records, prefix="chit_gor")
         logger.success("Data was pushed to ozon")
 
@@ -210,24 +210,26 @@ async def get_compare():
         # for i in wb_items:
         #     if i["stock"] in ("1", "0", 1, 0):
         #         i["stock"] = 0
-        push_stock_to_wb(wb_items)
+
+        df_result = pd.DataFrame(sample)
+        df_without_del = df_result.loc[df_result["stock"] != "0"]
+        without_del_path = f"{PATH_TO_FILES}/msk_new_stock.xlsx"
+        df_without_del.to_excel(without_del_path, index=False)
+
+        df_del = df_result.loc[df_result["stock"] == "0"][["article"]]
+        del_path = f"{PATH_TO_FILES}/msk_del.xlsx"
+        df_del.to_excel(del_path, index=False)
+        push_price_to_wb(wb_items)
+        # push_stock_to_wb(wb_items)
     else:
         logger.warning("Detected too many ZERO items")
         await tg_send_msg("'Москва'")
 
     # TG send
-    logger.info("Preparing files for sending")
-    df_result = pd.DataFrame(sample)
-    df_without_del = df_result.loc[df_result["stock"] != "0"]
-    without_del_path = f"{PATH_TO_FILES}/msk_new_stock.xlsx"
-    df_without_del.to_excel(without_del_path, index=False)
-
-    df_del = df_result.loc[df_result["stock"] == "0"][["article"]]
-    del_path = f"{PATH_TO_FILES}/msk_del.xlsx"
-    df_del.to_excel(del_path, index=False)
-
-    logger.info("Start sending files")
-    await tg_send_files([without_del_path, del_path], subject="Москва")
+    # logger.info("Preparing files for sending")
+    #
+    # logger.info("Start sending files")
+    # await tg_send_files([without_del_path, del_path], subject="Москва")
 
     # archive_items_stock_to_zero(prefix="msk")
     print(f"\n{"----------" * 5}\n")
@@ -240,11 +242,12 @@ def main():
 
 
 def super_main():
-    schedule.every().day.at("12:00").do(main)
-    schedule.every().day.at("04:00").do(main)
-
-    while True:
-        schedule.run_pending()
+    main()
+    # schedule.every().day.at("12:00").do(main)
+    # schedule.every().day.at("04:00").do(main)
+    #
+    # while True:
+    #     schedule.run_pending()
 
 
 if __name__ == "__main__":

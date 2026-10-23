@@ -11,7 +11,7 @@ import asyncio
 import pandas as pd
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from wb.wb_utils import prepare_to_daily_parse, push_stock_to_wb
+from wb.wb_utils import prepare_to_daily_parse, push_stock_to_wb, push_price_to_wb
 from tg_sender import tg_send_files, tg_send_msg
 from utils import (
     give_me_sample,
@@ -187,38 +187,40 @@ def main():
             else:
                 ozon_items.append(i)
         # Push to OZON with API
-        separate_records = separate_records_to_client_id(ozon_items)
-        logger.info("Start push to ozon")
-        start_push_to_ozon(
-            separate_records, prefix="mdk", warehouse_id="1020005000543189"
-        )
-        logger.success("Data was pushed to ozon")
+        # separate_records = separate_records_to_client_id(ozon_items)
+        # logger.info("Start push to ozon")
+        # start_push_to_ozon(
+        #     separate_records, prefix="mdk", warehouse_id="1020005000543189"
+        # )
+        # logger.success("Data was pushed to ozon")
 
         # Push to WB with API
         # for i in wb_items:
         #     if i["stock"] in ("1", "0", 1, 0):
         #         i["stock"] = 0
-        push_stock_to_wb(wb_items)
+
+        logger.info("Start write files")
+
+        df = pd.DataFrame(sample)
+        df.drop_duplicates(inplace=True, subset="article", keep="last")
+
+        df_del = df.loc[df["stock"] == "0"][["article"]]
+        del_path = f"{BASE_LINUX_DIR}/mdk_del.xlsx"
+        df_del.to_excel(del_path, index=False)
+
+        df_without_del = df.loc[df["stock"] != "0"]
+        new_stock_path = f"{BASE_LINUX_DIR}/mdk_new_stock.xlsx"
+        df_without_del.to_excel(new_stock_path, index=False)
+
+        logger.success("Finish write to excel")
+
+        push_price_to_wb(wb_items)
+        # push_stock_to_wb(wb_items)
     else:
         logger.warning("Detected too many ZERO items")
         asyncio.run(tg_send_msg("'МДК'"))
 
-    logger.info("Start write files")
-
-    df = pd.DataFrame(sample)
-    df.drop_duplicates(inplace=True, subset="article", keep="last")
-
-    df_del = df.loc[df["stock"] == "0"][["article"]]
-    del_path = f"{BASE_LINUX_DIR}/mdk_del.xlsx"
-    df_del.to_excel(del_path, index=False)
-
-    df_without_del = df.loc[df["stock"] != "0"]
-    new_stock_path = f"{BASE_LINUX_DIR}/mdk_new_stock.xlsx"
-    df_without_del.to_excel(new_stock_path, index=False)
-
-    logger.success("Finish write to excel")
-
-    asyncio.run(tg_send_files([new_stock_path, del_path], "mdk"))
+    # asyncio.run(tg_send_files([new_stock_path, del_path], "mdk"))
 
     logger.success("Script was finished successfully")
     global count
@@ -232,11 +234,11 @@ def main():
 
 def super_main():
     load_dotenv("../.env")
-    # main()
-    schedule.every().day.at("09:00").do(main)
-    schedule.every().day.at("18:25").do(main)
-    while True:
-        schedule.run_pending()
+    main()
+    # schedule.every().day.at("09:00").do(main)
+    # schedule.every().day.at("18:25").do(main)
+    # while True:
+    #     schedule.run_pending()
 
 
 if __name__ == "__main__":

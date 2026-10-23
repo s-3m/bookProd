@@ -14,7 +14,7 @@ import pandas as pd
 import time
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from wb.wb_utils import prepare_to_daily_parse, push_stock_to_wb
+from wb.wb_utils import prepare_to_daily_parse, push_stock_to_wb, push_price_to_wb
 from tg_sender import tg_send_files, tg_send_msg
 from chit_utils import get_auth_token
 from utils import give_me_sample, quantity_checker, check_religions_book
@@ -282,27 +282,26 @@ def main():
             #     if i["stock"] < 2:
             #         i["stock"] = 0
 
-            push_stock_to_wb(wb_items)
+            logger.info("Start write to excel")
+            df_result = pd.DataFrame(sample)
+            df_del = df_result.loc[df_result["stock"] == "0"][["article"]]
+            del_path = f"{BASE_LINUX_DIR}/chit_gor_del.xlsx"
+            df_del.to_excel(del_path, index=False, engine="openpyxl")
+
+            df_without_del = df_result.loc[df_result["stock"] != "0"]
+            new_stock_path = f"{BASE_LINUX_DIR}/chit_gor_new_price.xlsx"
+            df_without_del.to_excel(new_stock_path, index=False, engine="openpyxl")
+
+            logger.success("Finish write to excel")
+            push_price_to_wb(wb_items)
+            # push_stock_to_wb(wb_items)
 
         else:
             logger.warning("Detected too many ZERO items")
             asyncio.run(tg_send_msg("'Читай-Город'"))
 
-        logger.info("Start write to excel")
-        df_result = pd.DataFrame(sample)
-
         # TG send
-        df_del = df_result.loc[df_result["stock"] == "0"][["article"]]
-        del_path = f"{BASE_LINUX_DIR}/chit_gor_del.xlsx"
-        df_del.to_excel(del_path, index=False, engine="openpyxl")
-
-        df_without_del = df_result.loc[df_result["stock"] != "0"]
-        new_stock_path = f"{BASE_LINUX_DIR}/chit_gor_new_stock.xlsx"
-        df_without_del.to_excel(new_stock_path, index=False, engine="openpyxl")
-
-        logger.success("Finish write to excel")
-
-        asyncio.run(tg_send_files([new_stock_path, del_path], "Chit_gor"))
+        # asyncio.run(tg_send_files([new_stock_path, del_path], "Chit_gor"))
 
         logger.success("Script was finished successfully")
         # archive_items_stock_to_zero(prefix="chit_gor")
@@ -315,11 +314,12 @@ def main():
 
 def super_main():
     load_dotenv("../.env")
-    schedule.every().day.at("18:00").do(main)
-    schedule.every().day.at("11:00").do(main)
-
-    while True:
-        schedule.run_pending()
+    main()
+    # schedule.every().day.at("18:00").do(main)
+    # schedule.every().day.at("11:00").do(main)
+    #
+    # while True:
+    #     schedule.run_pending()
 
 
 if __name__ == "__main__":
