@@ -155,6 +155,7 @@ def push_stock_to_wb(items_list: list[dict]):
 
 
 def calculate_price(price):
+    price = int(price)
     if price < 100:
         return 1099
     elif price < 250:
