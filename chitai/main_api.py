@@ -18,6 +18,7 @@ from utils import (
     PROXIES,
     check_religions_book,
     forming_add_files,
+    clean_excel_text,
 )
 from filter import filtering_cover
 
@@ -278,26 +279,38 @@ def get_gather_data():
     jwt = get_auth_token()
     headers["Authorization"] = jwt
 
-    body = {
-        "include": "isbns",
-        "forceFilters[categories]": "18030",
-        "forceFilters[onlyNotOnSale]": "1",
-        "product[status]": "canBuy",
-        "customerCityId": "213",
-        "products[page]": "1",
-        "products[per-page]": "999",
-    }
-    page_api_url = "https://web-agr.chitai-gorod.ru/web/api/v2/products"
-    response = requests.get(
-        page_api_url,
-        params=body,
-        headers=headers,
-        # proxies=proxy,
+    categories = requests.get(
+        "https://web-agr.chitai-gorod.ru/web/api/v2/categories", headers=headers
     )
-    page_count = response.json()["meta"]["pagination"]["total_pages"]
-    for page in range(1, page_count + 1):
-        get_page_data(page_api_url, body)
-        body["products[page]"] = str(page + 1)
+    cat_response = categories.json()
+    all_categories = cat_response["data"]
+    needs_categories = [
+        cat["id"]
+        for cat in all_categories
+        if cat["attributes"].get("ancestorID") == 18030
+    ]
+
+    for cat in needs_categories:
+        body = {
+            "include": "isbns",
+            "forceFilters[categories]": cat,
+            "forceFilters[onlyNotOnSale]": "1",
+            "product[status]": "canBuy",
+            "customerCityId": "213",
+            "products[page]": "1",
+            "products[per-page]": "999",
+        }
+        page_api_url = "https://web-agr.chitai-gorod.ru/web/api/v2/products"
+        response = requests.get(
+            page_api_url,
+            params=body,
+            headers=headers,
+            # proxies=proxy,
+        )
+        page_count = response.json()["meta"]["pagination"]["total_pages"]
+        for page in range(1, page_count + 1):
+            get_page_data(page_api_url, body)
+            body["products[page]"] = str(page + 1)
 
     print()
     logger.success("Main data was collected")
@@ -326,15 +339,26 @@ def get_gather_data():
     logger.info("Start write files")
 
     result_df = pd.DataFrame(all_books_result)
-    all_shops_add = forming_add_files(result_df=result_df, prefix="chit_gor", ibra=True)
+    try:
+        all_shops_add = forming_add_files(result_df=result_df, prefix="chit_gor", ibra=True)
 
-    write_result_files(
-        base_dir=BASE_LINUX_DIR,
-        prefix="chit_gor",
-        all_books_result=all_books_result,
-        id_to_add=all_shops_add,
-    )
-    logger.info("Finished write files")
+        write_result_files(
+            base_dir=BASE_LINUX_DIR,
+            prefix="chit_gor",
+            all_books_result=all_books_result,
+            id_to_add=all_shops_add,
+        )
+        logger.info("Finished write files")
+    except Exception as e:
+        logger.exception(f"Page error with {e}")
+        # Если ошибка, то записываем только файл полного парса
+        all_result_df = pd.DataFrame(all_books_result).drop_duplicates(
+            subset="Артикул_OZ"
+        )
+        clear_all_result_df = all_result_df.map(clean_excel_text)
+        clear_all_result_df.to_excel(
+            f"{BASE_LINUX_DIR}/result/chit_gor_all.xlsx", index=False, engine="openpyxl"
+        )
 
     # # Тут исключаем книжки у МДК, т.к. ЧГ заканчивает парситься последним
     # logger.info("Start to exclude MDK books")
