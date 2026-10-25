@@ -76,9 +76,13 @@ def to_check_item(item):
         item["price"] = unique_article[universal_article][1]
         return
 
-    link = f"{BASE_URL}/book/{universal_article[:-2]}"
+    link = f"{BASE_URL}book/{universal_article[:-2]}"
     try:
         response = sync_fetch_request(url=link, headers=headers, use_proxy=True)
+        if not isinstance(response, str):
+            item["stock"] = "error"
+            error_count += 1
+            return
         soup = bs(response, "lxml")
         age_control = soup.find("input", id="age_verification_form_mode")
         script_index = 1
@@ -160,7 +164,7 @@ async def get_compare():
     wb_sample = prepare_to_daily_parse(prefix="msk")
     sample.extend(wb_sample)
 
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=5) as executor:
         for item in sample:
             executor.submit(to_check_item, item)
 

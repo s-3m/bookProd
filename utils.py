@@ -3,6 +3,7 @@ import json
 import os
 import re
 import random
+import threading
 import time
 from pathlib import Path
 
@@ -12,6 +13,7 @@ from typing import Literal
 import aiohttp
 import pymorphy3
 import requests
+from requests.exceptions import TooManyRedirects
 from loguru import logger
 from ozon.ozon_api import get_items_list
 
@@ -240,31 +242,50 @@ with open(Path(__file__).parent / "proxy.txt") as f:
     PROXIES = f.readlines()
 
 
-def sync_fetch_request(url, headers, cookies=None, use_proxy=False):
-    response_status_code = None
-    selected_proxy = None
+_local = threading.local()
+
+
+def _new_session(use_proxy: bool) -> requests.Session:
+    session = requests.Session()
+    session.max_redirects = 5          # не ждать 30 редиректов
     if use_proxy:
-        selected_proxy = random.choice(PROXIES).strip()
-        proxy = {"http": f"{selected_proxy}", "https": f"{selected_proxy}"}
-    else:
-        proxy = None
-    for _ in range(10):
+        proxy = random.choice(PROXIES).strip()
+        session.proxies.update({"http": proxy, "https": proxy})
+    return session
+
+
+def _get_session(use_proxy: bool) -> requests.Session:
+    session = getattr(_local, "session", None)
+    if session is None:
+        session = _local.session = _new_session(use_proxy)
+    return session
+
+
+def _reset_session(use_proxy: bool) -> None:
+    old = getattr(_local, "session", None)
+    if old:
+        old.close()
+    _local.session = _new_session(use_proxy)   # новый прокси + чистые куки
+
+
+def sync_fetch_request(url, headers, cookies=None, use_proxy=False):
+    last_status = None
+    for attempt in range(10):
+        session = _get_session(use_proxy)
         try:
             time.sleep(0.4)
-            response = requests.get(
-                url, headers=headers, cookies=cookies, timeout=30, proxies=proxy
-            )
-            time.sleep(1)
+            response = session.get(url, headers=headers, cookies=cookies, timeout=30)
             if response.status_code == 200:
                 return response.text
-            elif response.status_code == 404:
+            if response.status_code == 404:
                 return "404"
-            else:
-                response_status_code = response.status_code
+            last_status = response.status_code
+        except TooManyRedirects:
+            logger.warning(f"TooManyRedirects - {url} | attempt {attempt}")
         except Exception as e:
-            logger.exception(f"ERROR - {e}")
-            continue
-    return response_status_code
+            logger.warning(f"{type(e).__name__} - {url} | attempt {attempt}")
+        _reset_session(use_proxy)      # любой сбой: меняем прокси
+    return last_status
 
 
 async def fetch_request(session, url, headers: dict, sleep=2, use_proxy=False):
