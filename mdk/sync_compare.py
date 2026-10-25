@@ -158,19 +158,19 @@ async def get_gather_data(sample):
 def main():
     logger.info("Start script")
     # ozon sample
-    books_in_sale = get_items_list("mdk", ibra="all")
-    books_in_sale = [
-        i
-        for i in books_in_sale
-        if i["Артикул"].endswith(".0") or i["Артикул"].startswith("a")
-    ]
-    sample = give_me_sample(
-        base_dir=BASE_LINUX_DIR,
-        prefix="mdk",
-        without_merge=True,
-        ozon_in_sale=books_in_sale,
-    )
-
+    # books_in_sale = get_items_list("mdk", ibra="all")
+    # books_in_sale = [
+    #     i
+    #     for i in books_in_sale
+    #     if i["Артикул"].endswith(".0") or i["Артикул"].startswith("a")
+    # ]
+    # sample = give_me_sample(
+    #     base_dir=BASE_LINUX_DIR,
+    #     prefix="mdk",
+    #     without_merge=True,
+    #     ozon_in_sale=books_in_sale,
+    # )
+    sample = []
     # wb sample
     wb_sample = prepare_to_daily_parse(prefix="mdk")
     sample.extend(wb_sample)

@@ -143,14 +143,14 @@ def to_check_item(item):
 
 async def get_compare():
     # ozon sample
-    books_in_sale = get_items_list("msk", ibra="all")
-    sample = give_me_sample(
-        base_dir=PATH_TO_FILES,
-        prefix="msk",
-        without_merge=True,
-        ozon_in_sale=books_in_sale,
-    )
-
+    # books_in_sale = get_items_list("msk", ibra="all")
+    # sample = give_me_sample(
+    #     base_dir=PATH_TO_FILES,
+    #     prefix="msk",
+    #     without_merge=True,
+    #     ozon_in_sale=books_in_sale,
+    # )
+    sample = []
     # Забираем книги, которые есть в других магазинах из файла (раскомментировать, если когда-то будут)
     # with gzip.open(f"{Path(__file__).parent.parent}/msk_books.pkl.gz", "rb") as f:
     #     msk_books = pickle.load(f)
