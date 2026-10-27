@@ -41,7 +41,7 @@ def separate_items_to_store(
 ) -> list[tuple[str, str, str]]:
     result = []
     article_prefix = {
-        "mg": "",
+        "mg": "g",
         "chit_gor": "",
         "msk": "m",
         "mdk": "a",
@@ -100,7 +100,7 @@ def prepare_to_daily_parse(
         shop_data = [
             {
                 "article": article,
-                "stock": "",
+                "stock": "0",
                 "price": "",
                 "seller_id": f"wb_{shop}",
                 "marketplace": "wb",
@@ -176,6 +176,7 @@ def push_price_to_wb(items_list: list[dict]):
                 logger.warning(i)
         except Exception as e:
             logger.error(f"{i} --- {e}")
+    logger.info(f"TOTAL ITEMS FOR PRICE UPDATE - {len(item_with_stock)}")
     separated_data = separate_to_wb_cabinet(item_with_stock)
 
     with ThreadPoolExecutor(max_workers=5) as executor:
