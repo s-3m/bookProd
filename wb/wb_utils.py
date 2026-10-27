@@ -156,6 +156,7 @@ def push_stock_to_wb(items_list: list[dict]):
 
 
 def calculate_price(price):
+    price = int(price)
     if price < 100:
         return 1099
     elif price < 250:
@@ -167,7 +168,16 @@ def calculate_price(price):
 
 
 def push_price_to_wb(items_list: list[dict]):
-    item_with_stock = [i for i in items_list if i["stock"] != 0]
+    item_with_stock = []
+    for i in items_list:
+        try:
+            if str(i["stock"]) != "0" and i["price"] not in ("", " ", None):
+                item_with_stock.append(i)
+            else:
+                logger.warning(i)
+        except Exception as e:
+            logger.error(f"{i} --- {e}")
+    logger.info(f"TOTAL ITEMS FOR PRICE UPDATE - {len(item_with_stock)}")
     separated_data = separate_to_wb_cabinet(item_with_stock)
 
     with ThreadPoolExecutor(max_workers=5) as executor:
