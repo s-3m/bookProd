@@ -28,6 +28,7 @@ def load_local_db(shop: Literal["IBRA", "SRG"]):
 
 def get_all_items_from_wb(wb: Wildberries, item_filter="religions"):
     all_items = wb.get_items_list()
+    all_items = list({item["nmID"]: item for item in all_items}.values())
     if item_filter == "religions":
         all_items = [
             item for item in all_items if not check_religions_book(item["title"])
@@ -170,7 +171,7 @@ def push_price_to_wb(items_list: list[dict]):
     item_with_stock = []
     for i in items_list:
         try:
-            if i["stock"] != 0 and not i["price"] in ("", " ", None):
+            if str(i["stock"]) != "0" and i["price"] not in ("", " ", None):
                 item_with_stock.append(i)
             else:
                 logger.warning(i)
