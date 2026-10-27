@@ -28,6 +28,7 @@ def load_local_db(shop: Literal["IBRA", "SRG"]):
 
 def get_all_items_from_wb(wb: Wildberries, item_filter="religions"):
     all_items = wb.get_items_list()
+    all_items = list({item["nmID"]: item for item in all_items}.values())
     if item_filter == "religions":
         all_items = [
             item for item in all_items if not check_religions_book(item["title"])
