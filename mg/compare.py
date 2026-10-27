@@ -12,8 +12,6 @@ import pandas as pd
 from loguru import logger
 from dotenv import load_dotenv
 
-from wb.wb_utils import prepare_to_daily_parse, push_price_to_wb
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files, tg_send_msg
 from utils import (
@@ -23,6 +21,7 @@ from utils import (
     article_adapter,
     check_religions_book,
 )
+from wb.wb_utils import prepare_to_daily_parse, push_price_to_wb
 from ozon.ozon_api import (
     separate_records_to_client_id,
     start_push_to_ozon,
