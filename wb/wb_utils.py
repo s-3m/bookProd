@@ -41,7 +41,7 @@ def separate_items_to_store(
 ) -> list[tuple[str, str, str]]:
     result = []
     article_prefix = {
-        "mg": "",
+        "mg": "g",
         "chit_gor": "",
         "msk": "m",
         "mdk": "a",
@@ -100,7 +100,7 @@ def prepare_to_daily_parse(
         shop_data = [
             {
                 "article": article,
-                "stock": "",
+                "stock": "0",
                 "price": "",
                 "seller_id": f"wb_{shop}",
                 "marketplace": "wb",

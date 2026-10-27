@@ -11,7 +11,6 @@ import asyncio
 import pandas as pd
 from loguru import logger
 from dotenv import load_dotenv
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files, tg_send_msg
 from utils import (
@@ -21,6 +20,7 @@ from utils import (
     article_adapter,
     check_religions_book,
 )
+from wb.wb_utils import prepare_to_daily_parse, push_stock_to_wb
 from ozon.ozon_api import (
     separate_records_to_client_id,
     start_push_to_ozon,
@@ -104,6 +104,8 @@ def get_item_data(item):
         return
 
     try:
+        if "-" not in item["article"]:
+            item["id"] = item["article"][1:]
         if not item["id"]:
             asyncio.run(get_id_from_ajax(item))
 
@@ -185,29 +187,46 @@ async def get_gather_data(sample):
 
 def main():
     logger.info("Start MG parsing")
-    books_in_sale = get_items_list("mg", ibra="all")
-    books_in_sale = [
-        i
-        for i in books_in_sale
-        if i["Артикул"].endswith(".0") or not i["Артикул"].startswith("a")
-    ]
-    sample = give_me_sample(
-        BASE_LINUX_DIR, prefix="mg", merge_obj="id", ozon_in_sale=books_in_sale
-    )
+    # Ozon данные
+    # books_in_sale = get_items_list("mg", ibra="all")
+    # books_in_sale = [
+    #     i
+    #     for i in books_in_sale
+    #     if i["Артикул"].endswith(".0") or not i["Артикул"].startswith("a")
+    # ]
+    # sample = give_me_sample(
+    #     BASE_LINUX_DIR, prefix="mg", merge_obj="id", ozon_in_sale=books_in_sale
+    # )
+
+    # WB данные
+    sample = prepare_to_daily_parse("mg")
 
     asyncio.run(get_gather_data(sample))
 
     checker = quantity_checker(sample)
 
     if checker:
+        wb_items = []
+        ozon_items = []
+        for i in sample:
+            if i.get("marketplace") == "wb":
+                wb_items.append(i)
+            else:
+                ozon_items.append(i)
+
         # Push to OZON with API
-        separate_records = separate_records_to_client_id(sample)
-        print()
-        logger.info("Start push to ozon")
-        start_push_to_ozon(
-            separate_records, prefix="mg", warehouse_id="1020005020229570"
-        )
-        logger.success("Data was pushed to ozon")
+        # separate_records = separate_records_to_client_id(sample)
+        # print()
+        # logger.info("Start push to ozon")
+        # start_push_to_ozon(
+        #     separate_records, prefix="mg", warehouse_id="1020005020229570"
+        # )
+        # logger.success("Data was pushed to ozon")
+
+        # Push to WB
+        logger.info("Start push stocks to WB")
+        push_stock_to_wb(wb_items)
+        logger.success("Pushing stocks success")
     else:
         print()
         logger.warning("Detected too many ZERO items")
