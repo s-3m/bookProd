@@ -224,9 +224,7 @@ def main():
         # logger.success("Data was pushed to ozon")
 
         # Push to WB
-        logger.info("Start push stocks to WB")
         push_stock_to_wb(wb_items)
-        logger.success("Pushing stocks success")
     else:
         print()
         logger.warning("Detected too many ZERO items")
