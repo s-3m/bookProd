@@ -105,6 +105,8 @@ def get_item_data(item):
         return
 
     try:
+        if "-" not in item["article"]:
+            item["id"] = item["article"][1:]
         if not item["id"]:
             asyncio.run(get_id_from_ajax(item))
 
