@@ -273,7 +273,7 @@ def sync_fetch_request(url, headers, cookies=None, use_proxy=False):
     for attempt in range(10):
         session = _get_session(use_proxy)
         try:
-            time.sleep(0.4)
+            time.sleep(random.randint(1, 5))
             response = session.get(url, headers=headers, cookies=cookies, timeout=30)
             if response.status_code == 200:
                 return response.text
@@ -281,7 +281,9 @@ def sync_fetch_request(url, headers, cookies=None, use_proxy=False):
                 return "404"
             last_status = response.status_code
         except TooManyRedirects:
-            logger.warning(f"TooManyRedirects - {url} | attempt {attempt}")
+            logger.warning(f"TooManyRedirects - {url} | attempt {attempt} | proxy - {session.proxies}")
+            time.sleep(600)
+            logger.warning("Try after long sleep")
         except Exception as e:
             logger.warning(f"{type(e).__name__} - {url} | attempt {attempt}")
         _reset_session(use_proxy)      # любой сбой: меняем прокси

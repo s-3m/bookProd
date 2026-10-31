@@ -78,7 +78,7 @@ def to_check_item(item):
 
     link = f"{BASE_URL}book/{universal_article[:-2]}"
     try:
-        response = sync_fetch_request(url=link, headers=headers, use_proxy=True)
+        response = sync_fetch_request(url=link, headers=headers, use_proxy=False)
         if not isinstance(response, str):
             item["stock"] = "error"
             error_count += 1
@@ -164,14 +164,14 @@ async def get_compare():
     wb_sample = prepare_to_daily_parse(prefix="msk")
     sample.extend(wb_sample)
 
-    with ThreadPoolExecutor(max_workers=5) as executor:
+    with ThreadPoolExecutor(max_workers=1) as executor:
         for item in sample:
             executor.submit(to_check_item, item)
 
     print()  # empty print for clear info visualization
     logger.warning("Start reparse error")
 
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=1) as executor:
         for item in sample:
             if item["stock"] == "error":
                 executor.submit(to_check_item, item)
