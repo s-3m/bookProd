@@ -36,6 +36,7 @@ from ozon.ozon_api import (
     archive_items_stock_to_zero,
 )
 from ozon.ozon_utils import logger_filter
+from proxy_fetcher import fetch_html
 
 
 DEBUG = True if sys.platform.startswith("win") else False
@@ -74,11 +75,17 @@ def to_check_item(item):
     if universal_article in unique_article:  # check on parse was
         item["stock"] = unique_article[universal_article][0]
         item["price"] = unique_article[universal_article][1]
+        count += 1
         return
 
     link = f"{BASE_URL}book/{universal_article[:-2]}"
     try:
-        response = sync_fetch_request(url=link, headers=headers, use_proxy=False)
+        response = fetch_html(url=link, headers=headers)
+        if response == "404":
+            item["stock"] = "0"
+            item["price"] = None
+            count += 1
+            return
         if not isinstance(response, str):
             item["stock"] = "error"
             error_count += 1
@@ -96,6 +103,7 @@ def to_check_item(item):
         if not soup.find("div", class_="book__buy"):
             item["stock"] = "0"
             item["price"] = None
+            count += 1
             return
 
         else:
@@ -103,6 +111,7 @@ def to_check_item(item):
             if check_religions_book(book_title):
                 item["stock"] = "0"
                 item["price"] = None
+                count += 1
                 return
 
             need_element = soup.find_all("script")
@@ -163,15 +172,16 @@ async def get_compare():
     # wb sample
     wb_sample = prepare_to_daily_parse(prefix="msk")
     sample.extend(wb_sample)
+    print(len(sample))
 
-    with ThreadPoolExecutor(max_workers=1) as executor:
+    with ThreadPoolExecutor(max_workers=20) as executor:
         for item in sample:
             executor.submit(to_check_item, item)
 
     print()  # empty print for clear info visualization
     logger.warning("Start reparse error")
 
-    with ThreadPoolExecutor(max_workers=1) as executor:
+    with ThreadPoolExecutor(max_workers=20) as executor:
         for item in sample:
             if item["stock"] == "error":
                 executor.submit(to_check_item, item)
