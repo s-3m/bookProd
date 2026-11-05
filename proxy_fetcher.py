@@ -8,16 +8,21 @@
   * при блоке (цикл редиректов / 403 / 429) прокси замораживается на 30 мин;
   * URL, поймавший блок на двух разных прокси, пропускается (возвращается None);
   * вызывающий код блокируется, пока не освободится прокси, поэтому
-    ThreadPoolExecutor должен иметь max_workers >= числа прокси.
+    ThreadPoolExecutor должен иметь max_workers >= числа прокси;
+  * если сайт отдаёт форму проверки возраста, она проходится автоматически
+    (POST на /submit/userage/ с антифорджери-токеном), cookie остаётся в сессии прокси.
 
 Две гипотезы отпечатка, которые можно включать/выключать:
   * USE_CURL_CFFI: TLS-отпечаток настоящего Chrome вместо requests (pip install curl_cffi);
   * ROTATE_UA: у каждой сессии свой User-Agent (в режиме requests; в режиме curl_cffi
     User-Agent задаёт сама имитация браузера, а версии Chrome чередуются по прокси).
 
+Зависимости: pip install curl_cffi requests loguru beautifulsoup4
+
 Использование:
     from proxy_fetcher import fetch_html
     html = fetch_html(url, headers)      # str | "404" | None
+    # cookies НЕ передавайте: сессия сама ведёт токен и cookie возраста
 """
 import random
 import re
@@ -28,6 +33,7 @@ from pathlib import Path
 from urllib.parse import urljoin
 
 import requests
+from bs4 import BeautifulSoup
 from loguru import logger
 from requests.exceptions import ConnectionError as ReqConnError
 from requests.exceptions import Timeout
@@ -43,6 +49,12 @@ except Exception:  # curl_cffi не установлен
 # ---------- переключатели гипотез ----------
 USE_CURL_CFFI = True             # TLS-отпечаток Chrome (нужен curl_cffi)
 ROTATE_UA = True                 # свой User-Agent у каждой сессии (режим requests)
+
+# ---------- проверка возраста (moscowbooks.ru) ----------
+AGE_MARK = "age_verification_form"                         # id формы в HTML
+AGE_URL = "https://www.moscowbooks.ru/submit/userage/"     # куда уходит POST
+AGE_ORIGIN = "https://www.moscowbooks.ru"
+AGE_DATE = {"Day": "1", "Month": "1", "Year": "1990"}      # имена полей как в Payload
 
 # ---------- параметры (подстраиваются по логам) ----------
 PAUSE = (1.0, 2.0)               # пауза перед каждым запросом одного прокси, с
@@ -203,6 +215,44 @@ class ProxyFetcher:
             h["user-agent"] = slot.ua
         return h
 
+    # ---------- проверка возраста ----------
+    def _pass_age_gate(self, slot, html, page_url, hdrs, cookies, timeout) -> bool:
+        """Отправляет форму проверки возраста. Cookie сохраняется в сессии прокси."""
+        form = BeautifulSoup(html, "html.parser").find("form", id=AGE_MARK)
+        if form is None:
+            return False
+
+        # скрытые поля формы: __RequestVerificationToken, url
+        data = {}
+        for inp in form.find_all("input"):
+            name = inp.get("name")
+            if name and inp.get("type") not in ("button", "submit"):
+                data[name] = inp.get("value", "")
+
+        # запасной вариант, если токена нет внутри формы
+        if "__RequestVerificationToken" not in data:
+            m = re.search(r'name="__RequestVerificationToken"[^>]*value="([^"]+)"', html)
+            if m:
+                data["__RequestVerificationToken"] = m.group(1)
+
+        data.update(AGE_DATE)
+        data.setdefault("url", "")
+
+        h = dict(hdrs)
+        h["referer"] = page_url
+        h["origin"] = AGE_ORIGIN
+        h["x-requested-with"] = "XMLHttpRequest"
+        h["accept"] = "*/*"
+
+        r = slot.session.post(
+            AGE_URL, data=data, headers=h, cookies=cookies,
+            timeout=timeout, allow_redirects=False,
+        )
+        logger.debug(
+            f"userage -> {r.status_code} {r.text[:100]} | {_mask(slot.proxy)} | keys: {list(data)}"
+        )
+        return r.status_code == 200
+
     # ---------- один запрос через выбранный прокси ----------
     def _request(self, slot: _Slot, url, headers, cookies):
         """Возвращает (outcome, payload, rest). outcome: ok | 404 | block | net | other."""
@@ -213,10 +263,16 @@ class ProxyFetcher:
         hdrs = self._headers_for(slot, headers)
         timeout = 30 if _USE_CFFI else (10, 30)
         cur, hops = url, []
+        age_done = False
         try:
             while True:
                 r = slot.session.get(cur, headers=hdrs, cookies=cookies, timeout=timeout, allow_redirects=False)
                 if r.status_code not in REDIRECT_CODES:
+                    # страница с формой возраста: отправляем форму и повторяем GET уже с cookie
+                    if r.status_code == 200 and not age_done and AGE_MARK in r.text:
+                        age_done = True
+                        self._pass_age_gate(slot, r.text, cur, hdrs, cookies, timeout)
+                        continue
                     break
                 loc = r.headers.get("Location")
                 if not loc:
@@ -243,6 +299,9 @@ class ProxyFetcher:
         slot.net_errors = 0
         slot.used += 1
         if r.status_code == 200:
+            if AGE_MARK in r.text:
+                logger.warning(f"Возрастная форма не пройдена | {_mask(slot.proxy)} | {url}")
+                return "other", None, 0.0
             return "ok", r.text, 0.0
         if r.status_code == 404:
             return "404", "404", 0.0
