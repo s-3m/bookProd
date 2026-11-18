@@ -11,6 +11,7 @@ import asyncio
 import pandas as pd
 from loguru import logger
 from dotenv import load_dotenv
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from tg_sender import tg_send_files, tg_send_msg
 from utils import (
@@ -188,15 +189,15 @@ async def get_gather_data(sample):
 def main():
     logger.info("Start MG parsing")
     # Ozon данные
-    # books_in_sale = get_items_list("mg", ibra="all")
-    # books_in_sale = [
-    #     i
-    #     for i in books_in_sale
-    #     if i["Артикул"].endswith(".0") or not i["Артикул"].startswith("a")
-    # ]
-    # sample = give_me_sample(
-    #     BASE_LINUX_DIR, prefix="mg", merge_obj="id", ozon_in_sale=books_in_sale
-    # )
+    books_in_sale = get_items_list("mg", ibra="all")
+    books_in_sale = [
+        i
+        for i in books_in_sale
+        if i["Артикул"].endswith(".0") or not i["Артикул"].startswith("a")
+    ]
+    sample = give_me_sample(
+        BASE_LINUX_DIR, prefix="mg", merge_obj="id", ozon_in_sale=books_in_sale
+    )
 
     # WB данные
     sample = prepare_to_daily_parse("mg")
@@ -215,13 +216,13 @@ def main():
                 ozon_items.append(i)
 
         # Push to OZON with API
-        # separate_records = separate_records_to_client_id(sample)
-        # print()
-        # logger.info("Start push to ozon")
-        # start_push_to_ozon(
-        #     separate_records, prefix="mg", warehouse_id="1020005020229570"
-        # )
-        # logger.success("Data was pushed to ozon")
+        separate_records = separate_records_to_client_id(sample)
+        print()
+        logger.info("Start push to ozon")
+        start_push_to_ozon(
+            separate_records, prefix="mg", warehouse_id="1020005020229570"
+        )
+        logger.success("Data was pushed to ozon")
 
         # Push to WB
         push_stock_to_wb(wb_items)

@@ -147,13 +147,13 @@ def to_check_item(item):
 async def get_compare():
     # ozon sample
 
-    # books_in_sale = get_items_list("msk", ibra="all")
-    # sample = give_me_sample(
-    #     base_dir=PATH_TO_FILES,
-    #     prefix="msk",
-    #     without_merge=True,
-    #     ozon_in_sale=books_in_sale,
-    # )
+    books_in_sale = get_items_list("msk", ibra="all")
+    sample = give_me_sample(
+        base_dir=PATH_TO_FILES,
+        prefix="msk",
+        without_merge=True,
+        ozon_in_sale=books_in_sale,
+    )
 
     # Забираем книги, которые есть в других магазинах из файла (раскомментировать, если когда-то будут)
     # with gzip.open(f"{Path(__file__).parent.parent}/msk_books.pkl.gz", "rb") as f:
@@ -162,7 +162,6 @@ async def get_compare():
 
     # wb sample
     wb_sample = prepare_to_daily_parse(prefix="msk")
-    sample = []
     sample.extend(wb_sample)
 
     with ThreadPoolExecutor(max_workers=20) as executor:
@@ -207,7 +206,7 @@ async def get_compare():
         #     chit_msk_ozon_items
         # )
         logger.info("Start push to ozon")
-        # start_push_to_ozon(separate_records, prefix="msk")
+        start_push_to_ozon(separate_records, prefix="msk")
         # start_push_to_ozon(msk_in_chit_gor_separate_records, prefix="chit_gor")
         logger.success("Data was pushed to ozon")
 
