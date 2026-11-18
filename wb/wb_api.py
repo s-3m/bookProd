@@ -119,10 +119,10 @@ class Wildberries:
                 response = self._request_with_retry(
                     endpoint=endpoint, body=body, method="GET"
                 )
+                time.sleep(0.8)
                 if response["data"]["listGoods"] == []:
                     break
                 result.extend(response["data"]["listGoods"])
-                break
                 body["offset"] += 1000
                 logger.info(f"Получено карточек - {len(result)}")
         else:
@@ -158,6 +158,7 @@ class Wildberries:
         :param items_list: [{"nmID": 1234567, "price": 123},]
         :return:
         """
+        success_count = 0
         for i in range(0, len(items_list), 1000):
             body = {"data": items_list[i : i + 1000]}
             try:
@@ -170,6 +171,8 @@ class Wildberries:
                 if response.status_code != 200:
                     logger.warning(response.text)
                     continue
+                success_count += 1000
+                logger.info(f"Обновлено {success_count}")
             finally:
                 time.sleep(1)
 

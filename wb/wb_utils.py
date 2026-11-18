@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Literal
 import pickle
 import gzip
-
+from dotenv import load_dotenv
 import schedule
 from loguru import logger
 
@@ -155,17 +155,29 @@ def push_stock_to_wb(items_list: list[dict]):
                 )
 
 
-def calculate_price(price):
-    price = int(price)
-    if price < 100:
-        return 1099
-    elif price < 250:
-        return 1299
-    elif price < 350:
-        return 1599
-    else:
-        return max(1599, price * 4)
+# def calculate_price(price):
+#     price = int(price)
+#     if price < 100:
+#         return 1099
+#     elif price < 250:
+#         return 1299
+#     elif price < 350:
+#         return 1599
+#     else:
+#         return max(1599, price * 4)
 
+def calculate_prices(items_list: list[dict]):
+    """
+    Обновляем цены по какой-либо логике. Логику прописываем прям тут
+    :param items_list: список из словарей, полученных методом wb api - get_items_list_with_prices()
+    :return: список из словарей [{"nmID": "123456789", "price": "123456"}]
+    """
+    result = []
+    for item in items_list:
+        result.append(
+            {"nmID": item["nmID"], "price": round(item["sizes"][0]["price"], 1)}
+        )
+    return result
 
 def push_price_to_wb(items_list: list[dict]):
     item_with_stock = []
@@ -184,7 +196,7 @@ def push_price_to_wb(items_list: list[dict]):
         futures = {}
         for shop_name, data in separated_data.items():
             body_for_api = [
-                {"nmID": i["nmID"], "price": calculate_price(i["price"])} for i in data
+                {"nmID": i["nmID"], "price": round(i["price"] * 1.10, 1)} for i in data
             ]
             wb_api = os.getenv(f"WB_TOKEN_{shop_name.upper()}")
             if not wb_api:
@@ -203,18 +215,7 @@ def push_price_to_wb(items_list: list[dict]):
                 )
 
 
-def calculate_prices(items_list: list[dict]):
-    """
-    Обновляем цены по какой-либо логике. Логику прописываем прям тут
-    :param items_list: список из словарей, полученных методом wb api - get_items_list_with_prices()
-    :return: список из словарей [{"nmID": "123456789", "price": "123456"}]
-    """
-    result = []
-    for item in items_list:
-        result.append(
-            {"nmID": item["nmID"], "price": round(item["sizes"][0]["price"], 1)}
-        )
-    return result
+
 
 
 def reset_stocks_to_zero(
@@ -306,13 +307,18 @@ def add_characteristics(env_name, characteristics_list: list[dict]):
 
 
 if __name__ == "__main__":
-    # Если остановлен ЧГ, тогда запускаем это в отдельном потоке для обновления БД по магазинам
-    def main():
-        prepare_to_daily_parse(prefix="chit_gor")
+    load_dotenv("../.env")
+    wb = Wildberries(os.getenv("WB_TOKEN_IBRA"))
+    data = wb.get_items_list_with_prices()
+    wb.update_price([{"nmID": i["nmID"], "price": round(i["sizes"][0]["price"] * 1.1, 0)} for i in data])
 
-    schedule.every().day.at("20:00").do(main)
-    while True:
-        schedule.run_pending()
+    # Если остановлен ЧГ, тогда запускаем это в отдельном потоке для обновления БД по магазинам
+    # def main():
+    #     prepare_to_daily_parse(prefix="chit_gor")
+    #
+    # schedule.every().day.at("20:00").do(main)
+    # while True:
+    #     schedule.run_pending()
 
     # add_characteristics(
     #     env_name="WB_TOKEN_IBRA2",
