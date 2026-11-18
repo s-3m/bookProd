@@ -12,17 +12,25 @@ class Wildberries:
             "Content-Type": "application/json",
         }
 
-    def _request_with_retry(self, body, max_retries=5):
+    def _request_with_retry(self, endpoint, body, max_retries=5, method="post"):
         last_exception = None
 
         for attempt in range(max_retries):
             try:
-                response = requests.post(
-                    "https://content-api.wildberries.ru/content/v2/get/cards/list",
-                    headers=self.headers,
-                    json=body,
-                    timeout=(10, 30),  # (connect_timeout, read_timeout)
-                )
+                if method == "POST":
+                    response = requests.post(
+                        endpoint,
+                        headers=self.headers,
+                        json=body,
+                        timeout=(10, 30),  # (connect_timeout, read_timeout)
+                    )
+                elif method == "GET":
+                    response = requests.get(
+                        endpoint,
+                        headers=self.headers,
+                        params=body,
+                        timeout=(10, 30),
+                    )
 
                 try:
                     data = response.json()
@@ -58,6 +66,7 @@ class Wildberries:
         )
 
     def get_items_list(self) -> list[dict[str, Any]]:
+        endpoint = "https://content-api.wildberries.ru/content/v2/get/cards/list"
         result = []
         body = {
             "settings": {
@@ -71,7 +80,7 @@ class Wildberries:
         }
 
         while True:
-            raw_list = self._request_with_retry(body)
+            raw_list = self._request_with_retry(endpoint, body)
             result.extend(raw_list["cards"])
 
             if raw_list["cursor"]["total"] < 100:
@@ -81,6 +90,51 @@ class Wildberries:
             body["settings"]["cursor"]["nmID"] = raw_list["cursor"]["nmID"]
             time.sleep(0.8)
 
+        return result
+
+    def get_items_list_with_prices(
+        self, article: str | None = None
+    ) -> list[dict[str, Any]]:
+        """
+        Метод возвращает информацию о товарах: цены, валюту, общие скидки.
+        Чтобы получить информацию обо всех товарах продавца, не указывая артикулы, установите limit=1000,
+        в параметре offset установите смещение по количеству записей.
+        Количество нужно рассчитать по формуле: offset плюс limit из предыдущего запроса.
+        Повторяйте запрос, пока вы не получите ответ с пустым массивом.
+        :param article: Артикул товара ВБ, если он не указан, тогда возвращаются все товары
+        :return: список из словарей с товарами
+        """
+        endpoint = (
+            "https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter"
+        )
+        result = []
+        if article is None:
+
+            body = {
+                "limit": 1000,
+                "offset": 0,
+            }
+
+            while True:
+                response = self._request_with_retry(
+                    endpoint=endpoint, body=body, method="GET"
+                )
+                if response["data"]["listGoods"] == []:
+                    break
+                result.extend(response["data"]["listGoods"])
+                break
+                body["offset"] += 1000
+                logger.info(f"Получено карточек - {len(result)}")
+        else:
+            body = {
+                "limit": 1,
+                "offset": 0,
+                "filterNmID": article,
+            }
+            response = self._request_with_retry(endpoint=endpoint, body=body)
+            result.extend(response["data"]["listGoods"])
+
+        logger.info(f"----> Всего карточек собрано - {len(result)}")
         return result
 
     def update_cards(self, items_list: list[dict[str, Any]]) -> None:

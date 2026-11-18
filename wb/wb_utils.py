@@ -171,7 +171,7 @@ def push_price_to_wb(items_list: list[dict]):
     item_with_stock = []
     for i in items_list:
         try:
-            if str(i["stock"]) != "0" and i["price"] not in ("", " ", None):
+            if i["price"] not in ("", " ", None):
                 item_with_stock.append(i)
             else:
                 logger.warning(i)
@@ -201,6 +201,20 @@ def push_price_to_wb(items_list: list[dict]):
                 logger.exception(
                     f"Failed to set prices to WB --- {shop_name.upper()} ---"
                 )
+
+
+def calculate_prices(items_list: list[dict]):
+    """
+    Обновляем цены по какой-либо логике. Логику прописываем прям тут
+    :param items_list: список из словарей, полученных методом wb api - get_items_list_with_prices()
+    :return: список из словарей [{"nmID": "123456789", "price": "123456"}]
+    """
+    result = []
+    for item in items_list:
+        result.append(
+            {"nmID": item["nmID"], "price": round(item["sizes"][0]["price"], 1)}
+        )
+    return result
 
 
 def reset_stocks_to_zero(
