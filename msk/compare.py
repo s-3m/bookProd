@@ -129,7 +129,6 @@ def to_check_item(item):
 
         unique_article[universal_article] = (item["stock"], item["price"])
 
-
     except Exception as e:
         item["stock"] = "error"
         error_count += 1
