@@ -102,6 +102,7 @@ def get_item_data(item):
     if universal_article in unique_article:  # check on parse was
         item["stock"] = unique_article[universal_article][0]
         item["price"] = unique_article[universal_article][1]
+        count += 1
         return
 
     try:
@@ -113,6 +114,7 @@ def get_item_data(item):
         if not item["id"]:
             item["stock"] = "0"
             item["price"] = None
+            count += 1
             return
 
         full_url = f"{BASE_URL}/tovar/{item["id"]}"
@@ -120,10 +122,12 @@ def get_item_data(item):
         if response == "404":
             item["stock"] = "0"
             item["price"] = None
+            count += 1
             return
         elif not response:
             item["stock"] = "error"
             item["price"] = None
+            count += 1
             return
         soup = bs(response, "lxml")
 
@@ -131,6 +135,7 @@ def get_item_data(item):
         if check_religions_book(book_title):
             item["stock"] = "0"
             item["price"] = None
+            count += 1
             return
 
         buy_btn = soup.find("a", class_="btn_red wish_list_btn add_to_cart")
@@ -200,8 +205,9 @@ def main():
     )
 
     # WB данные
-    sample = prepare_to_daily_parse("mg")
+    wb_sample = prepare_to_daily_parse("mg")
 
+    sample.extend(wb_sample)
     asyncio.run(get_gather_data(sample))
 
     checker = quantity_checker(sample)
