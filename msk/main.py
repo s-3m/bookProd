@@ -1,5 +1,6 @@
 import os
 import sys
+from concurrent.futures import ThreadPoolExecutor
 
 import pandas as pd
 from fake_useragent import UserAgent
@@ -8,7 +9,7 @@ import aiohttp
 import asyncio
 
 from filter import filtering_cover
-from selenium_data import pw_get_book_data
+from proxy_fetcher import fetch_html
 from loguru import logger
 import pandas.io.formats.excel
 
@@ -20,6 +21,7 @@ from utils import (
     write_result_files,
     forming_add_files,
     check_religions_book,
+    sync_fetch_request,
 )
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
@@ -75,7 +77,7 @@ async def check_empty_element(session, item_dict, item, check_price=False):
             item_dict["price"] = price
 
 
-async def get_item_data(session, item: str):
+def get_item_data(item: str):
     global count
     link = item if item.startswith("https") else BASE_URL + item
 
@@ -86,22 +88,15 @@ async def get_item_data(session, item: str):
         article = "Нет артикула"
 
     try:
-        resp = await fetch_request(session, link, headers, use_proxy=True)
+        resp = fetch_html(url=link, headers=headers)
         if resp == "404":
             return
         soup = bs(resp, "lxml")
-        age_control = soup.find("input", id="age_verification_form_mode")
-        script_index = 1
-        if age_control:
-            logger.warning("Age Control found")
-            closed_page = await pw_get_book_data(link)
-            soup = bs(closed_page, "lxml")
-            script_index = 5
 
         # Book title
         try:
             title = soup.find("h1").text.strip()
-            title = await check_danger_string(title, "title")
+            title = asyncio.run(check_danger_string(title, "title"))
             if not title:
                 return
             religions_flag = check_religions_book(title)
@@ -145,7 +140,7 @@ async def get_item_data(session, item: str):
                 if i.next_element.text != ""
             ]
             description = "\n".join(description_list)
-            description = await check_danger_string(description, "description")
+            description = asyncio.run(check_danger_string(description, "description"))
         except:
             description = "Нет описания"
 
@@ -173,6 +168,11 @@ async def get_item_data(session, item: str):
         # Stock
         try:
             need_element = soup.find_all("script")
+            script_index = 1
+            for index, i in enumerate(need_element):
+                if "window.MbPageInfo =" in i.text:
+                    script_index = index
+                    break
             a = (
                 need_element[script_index]
                 .text.split("MbPageInfo = ")[1]
@@ -280,62 +280,51 @@ async def get_item_data(session, item: str):
         logger.exception(f"Exception in book - {link}")
 
 
-async def get_page_data(session, page_link):
-    async with semaphore:
-        try:
-            page_html = await fetch_request(session, page_link, headers, use_proxy=True)
-            # page_html = await page_response.text()
-            soup = bs(page_html, "lxml")
-            all_books_on_page = soup.find_all("div", class_="catalog__item")
-            all_items = [book.find("a")["href"] for book in all_books_on_page]
-            page_tasks = [
-                asyncio.create_task(get_item_data(session, item)) for item in all_items
-            ]
-            await asyncio.gather(*page_tasks)
-        except Exception as e:
-            page_error.append(page_link)
-            logger.exception(f"Exception on page {page_link} - {e}")
+def get_page_data(page_link):
+    try:
+        page_html = sync_fetch_request(page_link, headers)
+        # page_html = await page_response.text()
+        soup = bs(page_html, "lxml")
+        all_books_on_page = soup.find_all("div", class_="catalog__item")
+        all_items = [book.find("a")["href"] for book in all_books_on_page]
+        with ThreadPoolExecutor(max_workers=20) as executor:
+            for item in all_items:
+                executor.submit(get_item_data, item)
+
+    except Exception as e:
+        page_error.append(page_link)
+        logger.exception(f"Exception on page {page_link} - {e}")
 
 
 async def get_gather_data():
     logger.info("Start to collect data")
-    async with aiohttp.ClientSession(
-        connector=aiohttp.TCPConnector(ssl=False, limit_per_host=10), trust_env=True
-    ) as session:
-        # response = await session.get(f"{BASE_URL}/books/", headers=headers)
-        all_categories = [
-            "https://www.moscowbooks.ru/books/",
-            "https://www.moscowbooks.ru/books/exclusive-and-collective-editions/",
-        ]
-        for cat in all_categories:
-            response = await fetch_request(session, cat, headers)
-            soup = bs(response, "lxml")
-            max_pagination = (
-                soup.find("ul", class_="pager__list").find_all("li")[-2].text
-            )
-            tasks = []
-            logger.info(f"Page find - {max_pagination}")
-            for page in range(1, int(max_pagination) + 1):
-                page_link = f"{cat}?page={page}"
-                task = asyncio.create_task(get_page_data(session, page_link))
-                tasks.append(task)
-            await asyncio.gather(*tasks)
 
-        # Reparse page errors
-        if page_error:
-            logger.warning("Reparse page errors")
-            page_error_tasks = [
-                asyncio.create_task(get_page_data(session, i)) for i in page_error
-            ]
-            await asyncio.gather(*page_error_tasks)
+    all_categories = [
+        "https://www.moscowbooks.ru/books/",
+        "https://www.moscowbooks.ru/books/exclusive-and-collective-editions/",
+    ]
 
-        # Reparse item errors
-        if item_error:
-            logger.warning("Reparse item errors")
-            items_error_tasks = [
-                asyncio.create_task(get_item_data(session, i)) for i in item_error
-            ]
-            await asyncio.gather(*items_error_tasks)
+    for cat in all_categories:
+        response = sync_fetch_request(cat, headers)
+        soup = bs(response, "lxml")
+        max_pagination = soup.find("ul", class_="pager__list").find_all("li")[-2].text
+        logger.info(f"Page find - {max_pagination}")
+        for page in range(1, int(max_pagination) + 1):
+            page_link = f"{cat}?page={page}"
+            get_page_data(page_link)
+
+    # Reparse page errors
+    if page_error:
+        logger.warning("Reparse page errors")
+        for link in page_error:
+            asyncio.run(get_page_data(link))
+
+    # Reparse item errors
+    if item_error:
+        logger.warning("Reparse item errors")
+        with ThreadPoolExecutor(max_workers=20) as executor:
+            for item in item_error:
+                executor.submit(get_item_data, item)
 
     print()
     logger.info("Start to write data in file")

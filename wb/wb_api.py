@@ -12,17 +12,25 @@ class Wildberries:
             "Content-Type": "application/json",
         }
 
-    def _request_with_retry(self, body, max_retries=5):
+    def _request_with_retry(self, endpoint, body, max_retries=5, method="post"):
         last_exception = None
 
         for attempt in range(max_retries):
             try:
-                response = requests.post(
-                    "https://content-api.wildberries.ru/content/v2/get/cards/list",
-                    headers=self.headers,
-                    json=body,
-                    timeout=(10, 30),  # (connect_timeout, read_timeout)
-                )
+                if method == "POST":
+                    response = requests.post(
+                        endpoint,
+                        headers=self.headers,
+                        json=body,
+                        timeout=(10, 30),  # (connect_timeout, read_timeout)
+                    )
+                elif method == "GET":
+                    response = requests.get(
+                        endpoint,
+                        headers=self.headers,
+                        params=body,
+                        timeout=(10, 30),
+                    )
 
                 try:
                     data = response.json()
@@ -58,6 +66,7 @@ class Wildberries:
         )
 
     def get_items_list(self) -> list[dict[str, Any]]:
+        endpoint = "https://content-api.wildberries.ru/content/v2/get/cards/list"
         result = []
         body = {
             "settings": {
@@ -71,8 +80,7 @@ class Wildberries:
         }
 
         while True:
-            raw_list = self._request_with_retry(body)
-
+            raw_list = self._request_with_retry(endpoint, body)
             result.extend(raw_list["cards"])
 
             if raw_list["cursor"]["total"] < 100:
@@ -84,13 +92,103 @@ class Wildberries:
 
         return result
 
+    def get_items_list_with_prices(
+        self, article: str | None = None
+    ) -> list[dict[str, Any]]:
+        """
+        Метод возвращает информацию о товарах: цены, валюту, общие скидки.
+        Чтобы получить информацию обо всех товарах продавца, не указывая артикулы, установите limit=1000,
+        в параметре offset установите смещение по количеству записей.
+        Количество нужно рассчитать по формуле: offset плюс limit из предыдущего запроса.
+        Повторяйте запрос, пока вы не получите ответ с пустым массивом.
+        :param article: Артикул товара ВБ, если он не указан, тогда возвращаются все товары
+        :return: список из словарей с товарами
+        """
+        endpoint = (
+            "https://discounts-prices-api.wildberries.ru/api/v2/list/goods/filter"
+        )
+        result = []
+        if article is None:
+
+            body = {
+                "limit": 1000,
+                "offset": 0,
+            }
+
+            while True:
+                response = self._request_with_retry(
+                    endpoint=endpoint, body=body, method="GET"
+                )
+                time.sleep(0.8)
+                if response["data"]["listGoods"] == []:
+                    break
+                result.extend(response["data"]["listGoods"])
+                body["offset"] += 1000
+                logger.info(f"Получено карточек - {len(result)}")
+        else:
+            body = {
+                "limit": 1,
+                "offset": 0,
+                "filterNmID": article,
+            }
+            response = self._request_with_retry(endpoint=endpoint, body=body)
+            result.extend(response["data"]["listGoods"])
+
+        logger.info(f"----> Всего карточек собрано - {len(result)}")
+        return result
+
+    def update_cards(self, items_list: list[dict[str, Any]]) -> None:
+        for i in range(0, len(items_list), 500):
+            body = items_list[i : i + 500]
+            try:
+                time.sleep(10)
+                response = requests.post(
+                    "https://content-api.wildberries.ru/content/v2/cards/update",
+                    headers=self.headers,
+                    json=body,
+                )
+                if response.status_code != 200:
+                    logger.warning(response.json())
+            except Exception as e:
+                logger.exception(e)
+                continue
+
+    def update_price(self, items_list: list[dict[str, Any]]) -> None:
+        """
+        :param items_list: [{"nmID": 1234567, "price": 123},]
+        :return:
+        """
+        success_count = 0
+        for i in range(0, len(items_list), 1000):
+            body = {"data": items_list[i : i + 1000]}
+            try:
+                response = requests.post(
+                    "https://discounts-prices-api.wildberries.ru/api/v2/upload/task",
+                    headers=self.headers,
+                    json=body,
+                    timeout=30,
+                )
+                if response.status_code != 200:
+                    logger.warning(response.text)
+                    continue
+                success_count += 1000
+                logger.info(f"Обновлено {success_count}")
+            finally:
+                time.sleep(1)
+
     def update_stocks(self, array_of_items: list[dict[str, str]] = None):
         body_data = [
             {"chrtId": int(i["chrtID"]), "amount": int(i["stock"] or 0)}
             for i in array_of_items
         ]
 
-        warehouse_id = 1658946
+        warehouses = self.get_warehouses()
+        if len(warehouses) > 1:
+            warehouse_id = [wrh for wrh in warehouses if wrh["name"] == "КНИГИ"][0][
+                "id"
+            ]
+        else:
+            warehouse_id = warehouses[0]["id"]
         session = requests.Session()
 
         for i in range(0, len(body_data), 1000):
@@ -132,3 +230,22 @@ class Wildberries:
         )
         result = response.json()
         return result
+
+    def delete_items(self, items_list: list[str | int]) -> None:
+        """
+        :param items_list: Список из артикулов WB
+        :return:
+        """
+        for i in range(0, len(items_list), 1000):
+            body = {"nmIDs": items_list[i : i + 1000]}
+            response = requests.post(
+                "https://content-api.wildberries.ru/content/v2/cards/delete/trash",
+                headers=self.headers,
+                json=body,
+                timeout=30,
+            )
+            time.sleep(1)
+            if response.status_code != 200:
+                logger.warning(response.text)
+            else:
+                logger.success(response.text)

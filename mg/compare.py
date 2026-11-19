@@ -21,13 +21,14 @@ from utils import (
     article_adapter,
     check_religions_book,
 )
+from wb.wb_utils import prepare_to_daily_parse, push_stock_to_wb
 from ozon.ozon_api import (
     separate_records_to_client_id,
     start_push_to_ozon,
     get_items_list,
     archive_items_stock_to_zero,
 )
-from ozon.utils import logger_filter
+from ozon.ozon_utils import logger_filter
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 
@@ -101,15 +102,19 @@ def get_item_data(item):
     if universal_article in unique_article:  # check on parse was
         item["stock"] = unique_article[universal_article][0]
         item["price"] = unique_article[universal_article][1]
+        count += 1
         return
 
     try:
+        if "-" not in item["article"]:
+            item["id"] = item["article"][1:]
         if not item["id"]:
             asyncio.run(get_id_from_ajax(item))
 
         if not item["id"]:
             item["stock"] = "0"
             item["price"] = None
+            count += 1
             return
 
         full_url = f"{BASE_URL}/tovar/{item["id"]}"
@@ -117,10 +122,12 @@ def get_item_data(item):
         if response == "404":
             item["stock"] = "0"
             item["price"] = None
+            count += 1
             return
         elif not response:
             item["stock"] = "error"
             item["price"] = None
+            count += 1
             return
         soup = bs(response, "lxml")
 
@@ -128,6 +135,7 @@ def get_item_data(item):
         if check_religions_book(book_title):
             item["stock"] = "0"
             item["price"] = None
+            count += 1
             return
 
         buy_btn = soup.find("a", class_="btn_red wish_list_btn add_to_cart")
@@ -179,12 +187,13 @@ async def get_gather_data(sample):
     logger.info(f"Success parse - {count} | Not reparse - {error_items_count} errors")
 
     for i in sample:
-        if item["stock"] == "error":
+        if i["stock"] == "error":
             i["stock"] = "0"
 
 
 def main():
     logger.info("Start MG parsing")
+    # Ozon данные
     books_in_sale = get_items_list("mg", ibra="all")
     books_in_sale = [
         i
@@ -195,11 +204,23 @@ def main():
         BASE_LINUX_DIR, prefix="mg", merge_obj="id", ozon_in_sale=books_in_sale
     )
 
+    # WB данные
+    wb_sample = prepare_to_daily_parse("mg")
+
+    sample.extend(wb_sample)
     asyncio.run(get_gather_data(sample))
 
     checker = quantity_checker(sample)
 
     if checker:
+        wb_items = []
+        ozon_items = []
+        for i in sample:
+            if i.get("marketplace") == "wb":
+                wb_items.append(i)
+            else:
+                ozon_items.append(i)
+
         # Push to OZON with API
         separate_records = separate_records_to_client_id(sample)
         print()
@@ -208,6 +229,9 @@ def main():
             separate_records, prefix="mg", warehouse_id="1020005020229570"
         )
         logger.success("Data was pushed to ozon")
+
+        # Push to WB
+        push_stock_to_wb(wb_items)
     else:
         print()
         logger.warning("Detected too many ZERO items")

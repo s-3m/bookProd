@@ -126,21 +126,53 @@ morph = pymorphy3.MorphAnalyzer()
 # pymorphy сам приведёт "богом", "верой", "заветом" и т.д. к нормальной форме,
 # поэтому не нужно вручную перечислять все словоформы
 EXACT_LEMMAS = {
-    "бог", "вера", "завет",
+    "бог",
+    "вера",
+    "завет",
 }
 
 # Корни для поиска "начало слова" (устойчивые термины, где лемматизация
 # не нужна или не помогает — иностранные слова, составные термины)
 PREFIX_KEYWORDS = [
     # Религия
-    "религ", "вероисповед", "верующ", "господ", "свят",
-    "священ", "молитв", "молебен", "грехов", "исповед", "покаян",
-    "проповед", "псалм", "христиан", "православ", "католич",
-    "протестант", "мусульман", "коран", "хадис", "иудаизм", "еврейск",
-    "тора", "талмуд", "буддизм", "буддист", "будда", "индуизм", "веды",
-    "ведическ", "кришн", "шива",
+    "религ",
+    "вероисповед",
+    "верующ",
+    "господ",
+    "свят",
+    "священ",
+    "молитв",
+    "молебен",
+    "грехов",
+    "исповед",
+    "покаян",
+    "проповед",
+    "псалм",
+    "христиан",
+    "православ",
+    "католич",
+    "протестант",
+    "мусульман",
+    "коран",
+    "хадис",
+    "иудаизм",
+    "еврейск",
+    "тора",
+    "талмуд",
+    "буддизм",
+    "буддист",
+    "будда",
+    "индуизм",
+    "веды",
+    "ведическ",
+    "кришн",
+    "шива",
     # Эзотерика / Гадания
-    "таро", "гадани", "гадалк", "ясновид", "хироман",
+    "таро",
+    "гадани",
+    "гадалк",
+    "ясновид",
+    "хироман",
 ]
 
 # Слова, которые совпадают с "опасными" корнями, но чаще всего
@@ -163,7 +195,9 @@ prefix_pattern = re.compile(
 # считается надёжным маркером религиозной тематики
 _CONFIDENT_ROOTS = [r for r in PREFIX_KEYWORDS if r not in SAFE_WORDS_BY_ROOT]
 confident_pattern = (
-    re.compile(r"\b(" + "|".join(map(re.escape, _CONFIDENT_ROOTS)) + r")\w*", re.IGNORECASE)
+    re.compile(
+        r"\b(" + "|".join(map(re.escape, _CONFIDENT_ROOTS)) + r")\w*", re.IGNORECASE
+    )
     if _CONFIDENT_ROOTS
     else None
 )
@@ -219,7 +253,6 @@ def check_religions_book(title: str) -> bool:
         return True
 
     return False
-
 
 
 def check_wrong_chars(base_string):
@@ -384,7 +417,7 @@ def write_result_files(
             logger.warning("Old shop data is empty")
 
         # IBRA shops
-        if ibra_shop_df is not None:
+        if ibra_shop_df is not None and not ibra_shop_df.empty:
             ibra_shop_df.drop_duplicates(subset="Название", keep="last", inplace=True)
 
             if not ibra_shop_df.empty:
@@ -399,6 +432,8 @@ def write_result_files(
                 )
             else:
                 logger.warning("IBRA data is empty")
+        else:
+            logger.warning("IBRA data is empty")
 
 
 def exclude_else_shops_books(items_on_add: list[dict], exclude_shop: str | None = None):
@@ -493,12 +528,15 @@ def forming_add_files(
             prefix=prefix, visibility="ARCHIVED", ibra="ibra"
         )
         ibra_list.extend(ibra_archive_list)
-        df_ibra_shop = pl.DataFrame(ibra_list)[["Артикул"]].rename(
-            {"Артикул": "Артикул_OZ"}
-        )
-        result_ibra_shop = ibra_result_df.join(
-            df_ibra_shop, on="Артикул_OZ", how="anti"
-        ).to_pandas()
+        if ibra_list:
+            df_ibra_shop = pl.DataFrame(ibra_list)[["Артикул"]].rename(
+                {"Артикул": "Артикул_OZ"}
+            )
+            result_ibra_shop = ibra_result_df.join(
+                df_ibra_shop, on="Артикул_OZ", how="anti"
+            ).to_pandas()
+        else:
+            result_ibra_shop = pl.DataFrame(ibra_list).to_pandas()
 
         return result_new_shop, result_old_shop, result_ibra_shop
     return result_new_shop, result_old_shop
@@ -558,7 +596,7 @@ def quantity_checker(sample: list[dict]) -> bool:
         if i["stock"] in (0, "0"):
             zero_count += 1
 
-    percent = (len(sample) * 80) / 100
+    percent = (len(sample) * 70) / 100
     if zero_count > percent:
         return False
     else:

@@ -25,7 +25,7 @@ from ozon.ozon_api import (
     separate_records_to_client_id,
     archive_items_stock_to_zero,
 )
-from ozon.utils import logger_filter
+from ozon.ozon_utils import logger_filter
 
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 
@@ -120,71 +120,90 @@ logger.add(
 
 
 def get_main_data(sample):
-    body = {
-        "include": "isbns",
-        "forceFilters[categories]": "18030",
-        "forceFilters[onlyNotOnSale]": "1",
-        "product[status]": "canBuy",
-        "customerCityId": "213",
-        "products[page]": "1",
-        "products[per-page]": "1000",
-    }
-    page_api_url = "https://web-agr.chitai-gorod.ru/web/api/v2/products"
-    response = requests.get(
-        page_api_url,
-        params=body,
-        headers=headers,
-        # proxies=proxy,
+    categories = requests.get(
+        "https://web-agr.chitai-gorod.ru/web/api/v2/categories", headers=headers
     )
-    page_count = response.json()["meta"]["pagination"]["total_pages"]
-    for page in range(1, page_count + 1):
-        time.sleep(0.3)
-        try:
-            page_response = requests.get(
-                page_api_url,
-                params=body,
-                headers=headers,
-                # proxies=proxy,
-                timeout=(15, 60),
-            )
-            items_list = page_response.json()["data"]
-            print(f"page - {page}")
-            for shop in sample:
-                for item in items_list:
-                    book_title = item["attributes"]["title"]
+    cat_response = categories.json()
+    all_categories = cat_response["data"]
+    needs_categories = [
+        cat["id"]
+        for cat in all_categories
+        if cat["attributes"].get("ancestorID") == 18030
+    ]
+    for cat in needs_categories:
+        body = {
+            "include": "isbns",
+            "forceFilters[categories]": cat,
+            "forceFilters[onlyNotOnSale]": "1",
+            "product[status]": "canBuy",
+            "customerCityId": "213",
+            "products[page]": "1",
+            "products[per-page]": "999",
+        }
+        page_api_url = "https://web-agr.chitai-gorod.ru/web/api/v2/products"
+        response = requests.get(
+            page_api_url,
+            params=body,
+            headers=headers,
+            # proxies=proxy,
+        )
+        page_count = response.json()["meta"]["pagination"]["total_pages"]
+        for page in range(1, page_count + 1):
+            time.sleep(0.3)
+            try:
+                page_response = requests.get(
+                    page_api_url,
+                    params=body,
+                    headers=headers,
+                    # proxies=proxy,
+                    timeout=(15, 60),
+                )
+                if page_response.status_code != 200:
+                    logger.error(
+                        f"page_response.status_code - {page_response.status_code} | url={page_response.url} |"
+                        f"payload={body} | body={page_response.text[:1000]}"
+                    )
+                    body["products[page]"] = str(page + 1)
+                    continue
 
-                    if (
-                        item["id"] in sample[shop]
-                        and item["attributes"].get("status") == "canBuy"
-                    ):
+                items_list = page_response.json()["data"]
+                print(f"page - {page}")
+                for shop in sample:
+                    for item in items_list:
+                        book_title = item["attributes"]["title"]
+
                         if (
-                            "Эзотерика" in item["attributes"]["categoryChain"]
-                            or "Религия" in item["attributes"]["categoryChain"]
+                            item["id"] in sample[shop]
+                            and item["attributes"].get("status") == "canBuy"
                         ):
-                            sample[shop][item["id"]]["stock"] = "0"
-                            sample[shop][item["id"]]["price"] = item["attributes"][
-                                "price"
-                            ]
-                        elif check_religions_book(book_title):
-                            sample[shop][item["id"]]["stock"] = "0"
-                            sample[shop][item["id"]]["price"] = item["attributes"][
-                                "price"
-                            ]
-                        else:
-                            sample[shop][item["id"]]["stock"] = item["attributes"][
-                                "quantity"
-                            ]
-                            sample[shop][item["id"]]["price"] = item["attributes"][
-                                "price"
-                            ]
-            body["products[page]"] = str(page + 1)
-        except Exception as e:
-            logger.exception(e)
-            continue
+                            if (
+                                "Эзотерика" in item["attributes"]["categoryChain"]
+                                or "Религия" in item["attributes"]["categoryChain"]
+                            ):
+                                sample[shop][item["id"]]["stock"] = "0"
+                                sample[shop][item["id"]]["price"] = item["attributes"][
+                                    "price"
+                                ]
+                            elif check_religions_book(book_title):
+                                sample[shop][item["id"]]["stock"] = "0"
+                                sample[shop][item["id"]]["price"] = item["attributes"][
+                                    "price"
+                                ]
+                            else:
+                                sample[shop][item["id"]]["stock"] = item["attributes"][
+                                    "quantity"
+                                ]
+                                sample[shop][item["id"]]["price"] = item["attributes"][
+                                    "price"
+                                ]
+                body["products[page]"] = str(page + 1)
+            except Exception as e:
+                logger.exception(e)
+                body["products[page]"] = str(page + 1)
+                continue
 
 
 def get_gather_data(sample):
-    global error_count
     logger.info("Start collect data")
     print()
     acc_token = get_auth_token()
@@ -211,6 +230,10 @@ def get_gather_data(sample):
                 dict_sample[item][book_data]["stock"] = 0
             sample_after_pars.append(dict_sample[item][book_data])
 
+    for book in sample_after_pars:
+        if book["stock"] == "":
+            book["stock"] = 0
+
     return sample_after_pars
 
 
@@ -218,10 +241,10 @@ def main():
     try:
         # load_dotenv("../.env")
         # ozon sample
-        books_in_sale = get_items_list("chit_gor", ibra="all")
-        sample = give_me_sample(
-            base_dir=BASE_LINUX_DIR, prefix="chit_gor", ozon_in_sale=books_in_sale
-        )
+        # books_in_sale = get_items_list("chit_gor", ibra="all")
+        # sample = give_me_sample(
+        #     base_dir=BASE_LINUX_DIR, prefix="chit_gor", ozon_in_sale=books_in_sale
+        # )
 
         # Создаем архив с книгами МСК для парса в (раскомментировать если будут двойные магазины)
 
@@ -233,7 +256,7 @@ def main():
 
         # wb sample
         wb_sample = prepare_to_daily_parse(prefix="chit_gor")
-
+        sample = []
         sample.extend(wb_sample)
         print(len(sample))
         new_daily_data = get_gather_data(sample)
@@ -249,15 +272,16 @@ def main():
                     ozon_items.append(i)
 
             # Push to OZON with API
-            ozon_separate_records = separate_records_to_client_id(ozon_items)
-            logger.info("Start push to ozon")
-            start_push_to_ozon(ozon_separate_records, prefix="chit_gor")
-            logger.success("Data was pushed to ozon")
+            # ozon_separate_records = separate_records_to_client_id(ozon_items)
+            # logger.info("Start push to ozon")
+            # start_push_to_ozon(ozon_separate_records, prefix="chit_gor")
+            # logger.success("Data was pushed to ozon")
 
             # Push to WB with API
             # for i in wb_items:
             #     if i["stock"] < 2:
             #         i["stock"] = 0
+
             push_stock_to_wb(wb_items)
 
         else:

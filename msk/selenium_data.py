@@ -13,7 +13,6 @@ from loguru import logger
 from selenium.webdriver.chrome.service import Service
 from playwright.async_api import async_playwright
 
-from webdriver_manager.chrome import ChromeDriverManager
 from utils import PROXIES
 
 

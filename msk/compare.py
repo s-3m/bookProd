@@ -4,38 +4,31 @@ import pickle
 import sys
 import os
 from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
 
 import schedule
 from dotenv import load_dotenv
 from loguru import logger
-import aiohttp
 import pandas as pd
 from pandas.io.formats import excel
 from fake_useragent import UserAgent
 from bs4 import BeautifulSoup as bs
-import time
-
-from selenium_data import pw_get_book_data
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from wb.wb_utils import prepare_to_daily_parse, push_stock_to_wb
 from tg_sender import tg_send_files, tg_send_msg
 from utils import (
     give_me_sample,
-    fetch_request,
     quantity_checker,
     article_adapter,
-    sync_fetch_request,
     check_religions_book,
 )
 from ozon.ozon_api import (
     separate_records_to_client_id,
     start_push_to_ozon,
     get_items_list,
-    archive_items_stock_to_zero,
 )
-from ozon.utils import logger_filter
+from ozon.ozon_utils import logger_filter
+from proxy_fetcher import fetch_html
 
 
 DEBUG = True if sys.platform.startswith("win") else False
@@ -69,25 +62,28 @@ def to_check_item(item):
     global error_count
     global unique_article
 
-    universal_article = article_adapter(item["article"])
-
-    if universal_article in unique_article:  # check on parse was
-        item["stock"] = unique_article[universal_article][0]
-        item["price"] = unique_article[universal_article][1]
-        return
-
-    link = f"{BASE_URL}/book/{universal_article[:-2]}"
     try:
-        response = sync_fetch_request(url=link, headers=headers, use_proxy=True)
+        universal_article = article_adapter(item["article"])
+
+        if universal_article in unique_article:  # check on parse was
+            item["stock"] = unique_article[universal_article][0]
+            item["price"] = unique_article[universal_article][1]
+            count += 1
+            return
+
+        link = f"{BASE_URL}/book/{universal_article[:-2]}"
+
+        response = fetch_html(url=link, headers=headers)
+        if response == "404":
+            item["stock"] = "0"
+            item["price"] = None
+            return
+        if not isinstance(response, str):
+            item["stock"] = "error"
+            error_count += 1
+            return
         soup = bs(response, "lxml")
-        age_control = soup.find("input", id="age_verification_form_mode")
         script_index = 1
-        if age_control:
-            closed_page = asyncio.run(pw_get_book_data(link, proxy=True))
-            if not closed_page:
-                return
-            soup = bs(closed_page, "lxml")
-            script_index = 5  # 5 for linux server, for windows - 2
 
         if not soup.find("div", class_="book__buy"):
             item["stock"] = "0"
@@ -133,16 +129,18 @@ def to_check_item(item):
 
         unique_article[universal_article] = (item["stock"], item["price"])
 
-        print(f"\r{count} | Error book - {error_count}", end="")
-        count += 1
     except Exception as e:
         item["stock"] = "error"
         error_count += 1
         logger.exception(f"ERROR with {link}")
+    finally:
+        count += 1
+        print(f"\r{count} | Error book - {error_count}", end="")
 
 
 async def get_compare():
     # ozon sample
+
     books_in_sale = get_items_list("msk", ibra="all")
     sample = give_me_sample(
         base_dir=PATH_TO_FILES,
@@ -160,14 +158,14 @@ async def get_compare():
     wb_sample = prepare_to_daily_parse(prefix="msk")
     sample.extend(wb_sample)
 
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=20) as executor:
         for item in sample:
             executor.submit(to_check_item, item)
 
     print()  # empty print for clear info visualization
     logger.warning("Start reparse error")
 
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=20) as executor:
         for item in sample:
             if item["stock"] == "error":
                 executor.submit(to_check_item, item)
@@ -179,7 +177,7 @@ async def get_compare():
     unique_article.clear()
 
     for item in sample:
-        if item["stock"] == "error":
+        if item["stock"] == "error" or item["stock"] == "" or item["stock"] is None:
             item["stock"] = "0"
             item["price"] = None
 

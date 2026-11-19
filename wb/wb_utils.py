@@ -1,24 +1,26 @@
 import os
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Literal
 import pickle
 import gzip
-
+from dotenv import load_dotenv
+import schedule
 from loguru import logger
 
 from utils import check_religions_book
 from wb.wb_api import Wildberries
 
 
-def create_local_db(data):
-    save_path = Path(__file__).parent.parent / "wb_db.pkl.gz"
+def create_local_db(data, shop: Literal["IBRA", "SRG"]):
+    save_path = Path(__file__).parent.parent / f"{shop}_wb_db.pkl.gz"
     with gzip.open(save_path, "wb") as f:
         pickle.dump(data, f)
 
 
-def load_local_db():
-    load_path = Path(__file__).parent.parent / "wb_db.pkl.gz"
+def load_local_db(shop: Literal["IBRA", "SRG"]):
+    load_path = Path(__file__).parent.parent / f"{shop}_wb_db.pkl.gz"
     with gzip.open(load_path, "rb") as f:
         data = pickle.load(f)
     return data
@@ -26,19 +28,21 @@ def load_local_db():
 
 def get_all_items_from_wb(wb: Wildberries, item_filter="religions"):
     all_items = wb.get_items_list()
+    all_items = list({item["nmID"]: item for item in all_items}.values())
     if item_filter == "religions":
         all_items = [
             item for item in all_items if not check_religions_book(item["title"])
         ]
+    all_items = [item for item in all_items if item["subjectName"] == "Книги"]
     return all_items
 
 
 def separate_items_to_store(
     items_list: list[dict], prefix: Literal["mg", "chit_gor", "msk", "mdk", "b24"]
-) -> list[tuple[str, str]]:
+) -> list[tuple[str, str, str]]:
     result = []
     article_prefix = {
-        "mg": "",
+        "mg": "g",
         "chit_gor": "",
         "msk": "m",
         "mdk": "a",
@@ -49,10 +53,14 @@ def separate_items_to_store(
     for item in items_list:
         if prefix == "chit_gor":
             if item["vendorCode"][0].isdigit():
-                result.append((item["vendorCode"], item["sizes"][0]["chrtID"]))
+                result.append(
+                    (item["vendorCode"], item["sizes"][0]["chrtID"], item["nmID"])
+                )
         else:
             if item["vendorCode"].startswith(start_symbol):
-                result.append((item["vendorCode"], item["sizes"][0]["chrtID"]))
+                result.append(
+                    (item["vendorCode"], item["sizes"][0]["chrtID"], item["nmID"])
+                )
 
     return result
 
@@ -60,42 +68,161 @@ def separate_items_to_store(
 def prepare_to_daily_parse(
     prefix: Literal["mg", "chit_gor", "msk", "mdk", "b24"]
 ) -> list[dict]:
-    if prefix == "chit_gor":
-        wb_api = os.getenv("WB_TOKEN")
-        wb = Wildberries(wb_api)
-        all_items = get_all_items_from_wb(wb, item_filter="religions")
-        create_local_db(all_items)
-    else:
-        all_items = load_local_db()
-
-    separated_items = separate_items_to_store(items_list=all_items, prefix=prefix)
-    ready_data = [
-        {
-            "article": i[0],
-            "stock": "",
-            "price": "",
-            "seller_id": "wb",
-            "marketplace": "wb",
-            "chrtID": i[1],
-            "link": None,
-        }
-        for i in separated_items
+    shop_list = [
+        (k.split("_")[-1], v) for k, v in os.environ.items() if "WB_TOKEN" in k
     ]
+    ready_data = []
+
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        if prefix == "chit_gor":
+            # Запускаем ВСЕ задачи параллельно, не дожидаясь результата в цикле
+            futures = {
+                shop: executor.submit(
+                    get_all_items_from_wb, Wildberries(token), item_filter="religions"
+                )
+                for shop, token in shop_list
+            }
+            # Теперь собираем результаты — задачи уже выполняются одновременно
+            shop_items_map = {}
+            for shop, future in futures.items():
+                items = future.result()
+                create_local_db(items, shop)
+                shop_items_map[shop] = items
+        else:
+            # load_local_db тоже можно выполнять параллельно
+            futures = {
+                shop: executor.submit(load_local_db, shop=shop) for shop, _ in shop_list
+            }
+            shop_items_map = {shop: future.result() for shop, future in futures.items()}
+
+    # Формирование ready_data — без потоков, чистая обработка данных
+    for shop, items in shop_items_map.items():
+        separated_items = separate_items_to_store(items_list=items, prefix=prefix)
+        shop_data = [
+            {
+                "article": article,
+                "stock": "0",
+                "price": "",
+                "seller_id": f"wb_{shop}",
+                "marketplace": "wb",
+                "chrtID": chrt_id,
+                "nmID": nm_id,
+                "link": None,
+                "shop": shop,
+            }
+            for article, chrt_id, nm_id in separated_items
+        ]
+        ready_data.extend(shop_data)
+
     return ready_data
 
 
+def separate_to_wb_cabinet(books_data) -> dict[str, list[dict]]:
+    separated_data = {}
+    for book in books_data:
+        separated_data.setdefault(book["shop"], []).append(book)
+    return separated_data
+
+
 def push_stock_to_wb(items_list: list[dict]):
-    wb_api = os.getenv("WB_TOKEN")
-    wb = Wildberries(wb_api)
-    logger.info(f"Start pushing items to WB")
-    wb.update_stocks(items_list)
-    logger.info(f"End pushing items to WB")
+    separated_data = separate_to_wb_cabinet(items_list)
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futures = {}
+        for shop_name, data in separated_data.items():
+
+            # Выставляем остаток 3 шт если книг в магазине больше чем 3
+            for book in data:
+                try:
+                    if int(book["stock"]) > 3:
+                        book["stock"] = 3
+                except ValueError:
+                    book["stock"] = 0
+
+            wb_api = os.getenv(f"WB_TOKEN_{shop_name.upper()}")
+            if not wb_api:
+                logger.error(f"WB_TOKEN not found for shop {shop_name}")
+                continue
+            wb = Wildberries(wb_api)
+            logger.info(f"Start pushing items to WB --- {shop_name.upper()} ---")
+            futures[shop_name] = executor.submit(wb.update_stocks, data)
+
+        for shop_name, future in futures.items():
+            try:
+                future.result()
+            except Exception:
+                logger.exception(
+                    f"Failed to push stocks to WB --- {shop_name.upper()} ---"
+                )
+
+
+# def calculate_price(price):
+#     price = int(price)
+#     if price < 100:
+#         return 1099
+#     elif price < 250:
+#         return 1299
+#     elif price < 350:
+#         return 1599
+#     else:
+#         return max(1599, price * 4)
+
+def calculate_prices(items_list: list[dict]):
+    """
+    Обновляем цены по какой-либо логике. Логику прописываем прям тут
+    :param items_list: список из словарей, полученных методом wb api - get_items_list_with_prices()
+    :return: список из словарей [{"nmID": "123456789", "price": "123456"}]
+    """
+    result = []
+    for item in items_list:
+        result.append(
+            {"nmID": item["nmID"], "price": round(item["sizes"][0]["price"], 1)}
+        )
+    return result
+
+def push_price_to_wb(items_list: list[dict]):
+    item_with_stock = []
+    for i in items_list:
+        try:
+            if i["price"] not in ("", " ", None):
+                item_with_stock.append(i)
+            else:
+                logger.warning(i)
+        except Exception as e:
+            logger.error(f"{i} --- {e}")
+    logger.info(f"TOTAL ITEMS FOR PRICE UPDATE - {len(item_with_stock)}")
+    separated_data = separate_to_wb_cabinet(item_with_stock)
+
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futures = {}
+        for shop_name, data in separated_data.items():
+            body_for_api = [
+                {"nmID": i["nmID"], "price": round(i["price"] * 1.10, 1)} for i in data
+            ]
+            wb_api = os.getenv(f"WB_TOKEN_{shop_name.upper()}")
+            if not wb_api:
+                logger.error(f"WB_TOKEN not found for shop {shop_name}")
+                continue
+            wb = Wildberries(wb_api)
+            logger.info(f"Start set prices to WB --- {shop_name.upper()} ---")
+            futures[shop_name] = executor.submit(wb.update_price, body_for_api)
+
+        for shop_name, future in futures.items():
+            try:
+                future.result()
+            except Exception:
+                logger.exception(
+                    f"Failed to set prices to WB --- {shop_name.upper()} ---"
+                )
+
+
+
 
 
 def reset_stocks_to_zero(
-    prefix: Literal["mg", "chit_gor", "msk", "mdk"],
+    prefix: Literal["mg", "chit_gor", "msk", "mdk", "b24"],
     all_books=True,
     religions=False,
+    shop: Literal["IBRA", "SRG"] = "ibra",
 ):
     """
     Скинуть остатки конкретного магазина на 0 (вывести из продажи). Можно вывести все книги конкретного магазина,
@@ -103,9 +230,10 @@ def reset_stocks_to_zero(
     :param prefix:
     :param all_books:
     :param religions:
+    :param shop: Ибрагим или Сергей
     :return:
     """
-    all_items_from_db = load_local_db()
+    all_items_from_db = load_local_db(shop=shop)
 
     if all_books:
         shop_items = separate_items_to_store(
@@ -119,7 +247,9 @@ def reset_stocks_to_zero(
                 "seller_id": "",
                 "marketplace": "wb",
                 "chrtID": item[1],
+                "nmID": item[2],
                 "link": None,
+                "shop": shop,
             }
             for item in shop_items
         ]
@@ -144,5 +274,53 @@ def reset_stocks_to_zero(
     return None
 
 
+def add_characteristics(env_name, characteristics_list: list[dict]):
+    """
+    :param env_name: имя переменной окружения
+    :param characteristics_list: список словарей характеристик формата [{id: int, value: [str]}]
+    :return:
+    """
+    api_key = os.getenv(env_name)
+    wb = Wildberries(api_key)
+    items = get_all_items_from_wb(wb, item_filter="none")
+    print(len(items))
+    need_items = []
+    for item in items:
+        try:
+            if not item.get("characteristics"):
+                item["characteristics"] = []
+                item["characteristics"].extend(characteristics_list)
+                need_items.append(item)
+            else:
+                chars_id = []
+                for i in item["characteristics"]:
+                    chars_id.append(i["id"])
+                for i in characteristics_list:
+                    if i["id"] not in chars_id:
+                        item["characteristics"].append(i)
+                        need_items.append(item)
+
+        except Exception as e:
+            logger.warning(f"{e} ---- {item}")
+    print(len(need_items))
+    wb.update_cards(need_items)
+
+
 if __name__ == "__main__":
-    reset_stocks_to_zero(prefix="chit_gor")
+    load_dotenv("../.env")
+    wb = Wildberries(os.getenv("WB_TOKEN_IBRA"))
+    data = wb.get_items_list_with_prices()
+    wb.update_price([{"nmID": i["nmID"], "price": round(i["sizes"][0]["price"] * 1.1, 0)} for i in data])
+
+    # Если остановлен ЧГ, тогда запускаем это в отдельном потоке для обновления БД по магазинам
+    # def main():
+    #     prepare_to_daily_parse(prefix="chit_gor")
+    #
+    # schedule.every().day.at("20:00").do(main)
+    # while True:
+    #     schedule.run_pending()
+
+    # add_characteristics(
+    #     env_name="WB_TOKEN_IBRA2",
+    #     characteristics_list=[{"id": 15000001, "value": ["4901990000"]}],
+    # )
