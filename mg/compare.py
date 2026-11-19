@@ -85,7 +85,9 @@ async def get_id_from_ajax(item):
     #     item["id"] = item_id.split("/")[-1].strip()
     #     print(f"find - {item_id.split("/")[-1].strip()}")
     async with aiohttp.ClientSession() as session:
-        async with session.get(ajax_url, params=params, headers=ajax_headers) as resp:
+        async with session.get(
+            ajax_url, params=params, headers=ajax_headers, ssl=False
+        ) as resp:
             ajax_result = await resp.json(content_type=None)
             item_id = ajax_result[0].get("value")
             if item_id and item_id != "#":
@@ -102,6 +104,11 @@ def get_item_data(item):
     if universal_article in unique_article:  # check on parse was
         item["stock"] = unique_article[universal_article][0]
         item["price"] = unique_article[universal_article][1]
+        count += 1
+        return
+    elif item["article"] in unique_article:
+        item["stock"] = unique_article[item["article"]][0]
+        item["price"] = unique_article[item["article"]][1]
         count += 1
         return
 
@@ -146,7 +153,8 @@ def get_item_data(item):
             item["stock"] = "2"
 
             price = (
-                soup.find_all("div", class_="product_item_price")[1]
+                soup.find("div", class_="basket_prise")
+                .find("div", class_="product_item_price")
                 .text.strip()
                 .split(".")[0]
                 .replace(" ", "")
@@ -155,6 +163,8 @@ def get_item_data(item):
             item["price"] = price
 
         unique_article[universal_article] = (item["stock"], item["price"])
+        if "-" in item["article"]:
+            unique_article[f"g{item["id"]}"] = (item["stock"], item["price"])
         print(f"\rDone - {count} | Error - {error_items_count}", end="")
         count += 1
     except Exception as e:
