@@ -9,12 +9,12 @@ import aiohttp
 import asyncio
 
 from filter import filtering_cover
-from proxy_fetcher import fetch_html
 from loguru import logger
 import pandas.io.formats.excel
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from ozon.ozon_api import Ozon
+from proxy_fetcher import fetch_html
 from utils import (
     check_danger_string,
     fetch_request,
