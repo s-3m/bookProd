@@ -4,19 +4,14 @@ import pickle
 import sys
 import os
 from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
 
 import schedule
 from dotenv import load_dotenv
 from loguru import logger
-import aiohttp
 import pandas as pd
 from pandas.io.formats import excel
 from fake_useragent import UserAgent
 from bs4 import BeautifulSoup as bs
-import time
-
-from selenium_data import pw_get_book_data
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from wb.wb_utils import prepare_to_daily_parse, push_stock_to_wb
@@ -67,21 +62,21 @@ def to_check_item(item):
     global error_count
     global unique_article
 
-    universal_article = article_adapter(item["article"])
-
-    if universal_article in unique_article:  # check on parse was
-        item["stock"] = unique_article[universal_article][0]
-        item["price"] = unique_article[universal_article][1]
-        count += 1
-        return
-
-    link = f"{BASE_URL}/book/{universal_article[:-2]}"
     try:
+        universal_article = article_adapter(item["article"])
+
+        if universal_article in unique_article:  # check on parse was
+            item["stock"] = unique_article[universal_article][0]
+            item["price"] = unique_article[universal_article][1]
+            count += 1
+            return
+
+        link = f"{BASE_URL}/book/{universal_article[:-2]}"
+
         response = fetch_html(url=link, headers=headers)
         if response == "404":
             item["stock"] = "0"
             item["price"] = None
-            count += 1
             return
         if not isinstance(response, str):
             item["stock"] = "error"
@@ -93,7 +88,6 @@ def to_check_item(item):
         if not soup.find("div", class_="book__buy"):
             item["stock"] = "0"
             item["price"] = None
-            count += 1
             return
 
         else:
@@ -101,7 +95,6 @@ def to_check_item(item):
             if check_religions_book(book_title):
                 item["stock"] = "0"
                 item["price"] = None
-                count += 1
                 return
 
             need_element = soup.find_all("script")
@@ -136,12 +129,14 @@ def to_check_item(item):
 
         unique_article[universal_article] = (item["stock"], item["price"])
 
-        print(f"\r{count} | Error book - {error_count}", end="")
-        count += 1
+
     except Exception as e:
         item["stock"] = "error"
         error_count += 1
         logger.exception(f"ERROR with {link}")
+    finally:
+        count += 1
+        print(f"\r{count} | Error book - {error_count}", end="")
 
 
 async def get_compare():
