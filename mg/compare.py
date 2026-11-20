@@ -232,7 +232,7 @@ def main():
                 ozon_items.append(i)
 
         # Push to OZON with API
-        separate_records = separate_records_to_client_id(sample)
+        separate_records = separate_records_to_client_id(ozon_items)
         print()
         logger.info("Start push to ozon")
         start_push_to_ozon(
