@@ -239,12 +239,12 @@ def get_gather_data(sample):
 
 def main():
     try:
-        # load_dotenv("../.env")
+        load_dotenv("../.env")
         # ozon sample
-        # books_in_sale = get_items_list("chit_gor", ibra="all")
-        # sample = give_me_sample(
-        #     base_dir=BASE_LINUX_DIR, prefix="chit_gor", ozon_in_sale=books_in_sale
-        # )
+        books_in_sale = get_items_list("chit_gor", ibra="all")
+        sample = give_me_sample(
+            base_dir=BASE_LINUX_DIR, prefix="chit_gor", ozon_in_sale=books_in_sale
+        )
 
         # Создаем архив с книгами МСК для парса в (раскомментировать если будут двойные магазины)
 
@@ -256,7 +256,6 @@ def main():
 
         # wb sample
         wb_sample = prepare_to_daily_parse(prefix="chit_gor")
-        sample = []
         sample.extend(wb_sample)
         print(len(sample))
         new_daily_data = get_gather_data(sample)
@@ -272,10 +271,10 @@ def main():
                     ozon_items.append(i)
 
             # Push to OZON with API
-            # ozon_separate_records = separate_records_to_client_id(ozon_items)
-            # logger.info("Start push to ozon")
-            # start_push_to_ozon(ozon_separate_records, prefix="chit_gor")
-            # logger.success("Data was pushed to ozon")
+            ozon_separate_records = separate_records_to_client_id(ozon_items)
+            logger.info("Start push to ozon")
+            start_push_to_ozon(ozon_separate_records, prefix="chit_gor")
+            logger.success("Data was pushed to ozon")
 
             # Push to WB with API
             # for i in wb_items:
