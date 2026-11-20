@@ -124,9 +124,11 @@ async def get_item_data(session, link: str):
             item_data["description"] = "Автор рекомендует книгу к прочтению!"
         try:
             price = (
-                soup.find_all("div", class_="product_item_price")[1]
+                soup.find("div", class_="basket_prise")
+                .find("div", class_="product_item_price")
                 .text.strip()
                 .split(".")[0]
+                .replace(" ", "")
             )
             item_data["shop price"] = price
             price = ozon._price_calculate(input_price=price)
