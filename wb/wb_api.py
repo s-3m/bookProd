@@ -12,7 +12,9 @@ class Wildberries:
             "Content-Type": "application/json",
         }
 
-    def _request_with_retry(self, endpoint, body, max_retries=5, method="post"):
+    def _request_with_retry(
+        self, endpoint, body, max_retries=5, method: Literal["GET", "POST"] = "POST"
+    ):
         last_exception = None
 
         for attempt in range(max_retries):
