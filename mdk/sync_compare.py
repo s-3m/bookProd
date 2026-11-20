@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 from dotenv import load_dotenv
@@ -237,6 +238,7 @@ def super_main():
     schedule.every().day.at("18:25").do(main)
     while True:
         schedule.run_pending()
+        time.sleep(1)
 
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@ import gzip
 import pickle
 import sys
 import os
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 import schedule
@@ -243,6 +244,7 @@ def super_main():
 
     while True:
         schedule.run_pending()
+        time.sleep(1)
 
 
 if __name__ == "__main__":
