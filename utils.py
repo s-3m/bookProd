@@ -360,8 +360,13 @@ def write_result_files(
     replace_photo: bool = False,
 ):
     logger.info(f"Total result before writing - {len(all_books_result)}")
+    result_df = pd.DataFrame(all_books_result)
+    result_df.to_excel(
+        f"{base_dir}/result/{prefix}_all_raw.xlsx", index=False, engine="openpyxl"
+    )
     all_result_df = pd.DataFrame(all_books_result).drop_duplicates(subset="Артикул_OZ")
     clear_all_result_df = all_result_df.map(clean_excel_text)
+
     clear_all_result_df.to_excel(
         f"{base_dir}/result/{prefix}_all.xlsx", index=False, engine="openpyxl"
     )
