@@ -68,51 +68,57 @@ def separate_items_to_store(
 def prepare_to_daily_parse(
     prefix: Literal["mg", "chit_gor", "msk", "mdk", "b24"]
 ) -> list[dict]:
+
     shop_list = [
         (k.split("_")[-1], v) for k, v in os.environ.items() if "WB_TOKEN" in k
     ]
+
     ready_data = []
 
     with ThreadPoolExecutor(max_workers=5) as executor:
+
         if prefix == "chit_gor":
-            # Запускаем ВСЕ задачи параллельно, не дожидаясь результата в цикле
+
             futures = {
                 shop: executor.submit(
                     get_all_items_from_wb, Wildberries(token), item_filter="religions"
                 )
                 for shop, token in shop_list
             }
-            # Теперь собираем результаты — задачи уже выполняются одновременно
+
             shop_items_map = {}
+
             for shop, future in futures.items():
                 items = future.result()
                 create_local_db(items, shop)
                 shop_items_map[shop] = items
+
         else:
-            # load_local_db тоже можно выполнять параллельно
             futures = {
                 shop: executor.submit(load_local_db, shop=shop) for shop, _ in shop_list
             }
+
             shop_items_map = {shop: future.result() for shop, future in futures.items()}
 
-    # Формирование ready_data — без потоков, чистая обработка данных
     for shop, items in shop_items_map.items():
-        separated_items = separate_items_to_store(items_list=items, prefix=prefix)
-        shop_data = [
-            {
-                "article": article,
-                "stock": "0",
-                "price": "",
-                "seller_id": f"wb_{shop}",
-                "marketplace": "wb",
-                "chrtID": chrt_id,
-                "nmID": nm_id,
-                "link": None,
-                "shop": shop,
-            }
-            for article, chrt_id, nm_id in separated_items
-        ]
-        ready_data.extend(shop_data)
+
+        for article, chrt_id, nm_id in separate_items_to_store(
+            items_list=items, prefix=prefix
+        ):
+
+            ready_data.append(
+                {
+                    "article": article,
+                    "stock": "0",
+                    "price": "",
+                    "seller_id": f"wb_{shop}",
+                    "marketplace": "wb",
+                    "chrtID": chrt_id,
+                    "nmID": nm_id,
+                    "link": None,
+                    "shop": shop,
+                }
+            )
 
     return ready_data
 
@@ -166,6 +172,7 @@ def push_stock_to_wb(items_list: list[dict]):
 #     else:
 #         return max(1599, price * 4)
 
+
 def calculate_prices(items_list: list[dict]):
     """
     Обновляем цены по какой-либо логике. Логику прописываем прям тут
@@ -178,6 +185,7 @@ def calculate_prices(items_list: list[dict]):
             {"nmID": item["nmID"], "price": round(item["sizes"][0]["price"], 1)}
         )
     return result
+
 
 def push_price_to_wb(items_list: list[dict]):
     item_with_stock = []
@@ -213,9 +221,6 @@ def push_price_to_wb(items_list: list[dict]):
                 logger.exception(
                     f"Failed to set prices to WB --- {shop_name.upper()} ---"
                 )
-
-
-
 
 
 def reset_stocks_to_zero(
@@ -310,7 +315,12 @@ if __name__ == "__main__":
     load_dotenv("../.env")
     wb = Wildberries(os.getenv("WB_TOKEN_IBRA"))
     data = wb.get_items_list_with_prices()
-    wb.update_price([{"nmID": i["nmID"], "price": round(i["sizes"][0]["price"] * 1.1, 0)} for i in data])
+    wb.update_price(
+        [
+            {"nmID": i["nmID"], "price": round(i["sizes"][0]["price"] * 1.1, 0)}
+            for i in data
+        ]
+    )
 
     # Если остановлен ЧГ, тогда запускаем это в отдельном потоке для обновления БД по магазинам
     # def main():
