@@ -27,13 +27,30 @@ def load_local_db(shop: Literal["IBRA", "SRG"]):
 
 
 def get_all_items_from_wb(wb: Wildberries, item_filter="religions"):
-    all_items = wb.get_items_list()
-    all_items = list({item["nmID"]: item for item in all_items}.values())
-    if item_filter == "religions":
-        all_items = [
-            item for item in all_items if not check_religions_book(item["title"])
-        ]
-    all_items = [item for item in all_items if item["subjectName"] == "Книги"]
+    raw_items = load_local_db("IBRA3")
+
+    # Убираем дубли по nmID.
+    # При дублях сохраняем последнюю версию карточки.
+    items_by_id = {}
+
+    for item in raw_items:
+        items_by_id[item["nmID"]] = item
+
+    del raw_items
+
+    # Фильтруем карточки, формируя только один итоговый список.
+    all_items = []
+
+    for item in items_by_id.values():
+
+        if item["subjectName"] != "Книги":
+            continue
+
+        if item_filter == "religions" and check_religions_book(item["title"]):
+            continue
+
+        all_items.append(item)
+
     return all_items
 
 
