@@ -183,6 +183,7 @@ class Wildberries:
             {"chrtId": int(i["chrtID"]), "amount": int(i["stock"] or 0)}
             for i in array_of_items
         ]
+        shop = array_of_items[0].get("shop")
 
         warehouses = self.get_warehouses()
         if len(warehouses) > 1:
@@ -209,7 +210,7 @@ class Wildberries:
                         time.sleep(5)
                         continue
 
-                    logger.warning(f"Ошибка обновления остатков WB - {response.json()}")
+                    logger.warning(f"Ошибка обновления остатков WB - {response.json()} | seller - {shop}")
                     break
 
                 except Exception as e:
