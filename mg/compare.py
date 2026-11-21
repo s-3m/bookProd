@@ -72,24 +72,33 @@ unique_article: dict[str, tuple] = {}  # article: (stock, price)
 
 
 async def get_id_from_ajax(item):
-    ajax_url = "https://www.dkmg.ru/ajax/ajax_search.php"
-    params = {
-        "term": (
-            item["article"][:-2] if item["article"].endswith(".0") else item["article"]
+
+    import requests
+
+    def get_id_from_ajax(item):
+        ajax_url = "https://www.dkmg.ru/ajax/ajax_search.php"
+
+        params = {
+            "term": (
+                item["article"][:-2]
+                if item["article"].endswith(".0")
+                else item["article"]
+            )
+        }
+
+        response = requests.get(
+            ajax_url,
+            params=params,
+            headers=ajax_headers,
+            timeout=(10, 30),
         )
-    }
-    # response = requests.get(url=ajax_url, json=params, headers=ajax_headers, timeout=20)
-    # ajax_result = response.json()
-    # item_id = ajax_result[0].get("value")
-    # if item_id and item_id != "#":
-    #     item["id"] = item_id.split("/")[-1].strip()
-    #     print(f"find - {item_id.split("/")[-1].strip()}")
-    async with aiohttp.ClientSession() as session:
-        async with session.get(
-            ajax_url, params=params, headers=ajax_headers, ssl=False
-        ) as resp:
-            ajax_result = await resp.json(content_type=None)
+
+        response.raise_for_status()
+        ajax_result = response.json()
+
+        if ajax_result:
             item_id = ajax_result[0].get("value")
+
             if item_id and item_id != "#":
                 item["id"] = item_id.split("/")[-1].strip()
 
@@ -116,7 +125,7 @@ def get_item_data(item):
         if "-" not in item["article"]:
             item["id"] = item["article"][1:]
         if not item["id"]:
-            asyncio.run(get_id_from_ajax(item))
+            get_id_from_ajax(item)
 
         if not item["id"]:
             item["stock"] = "0"
@@ -175,7 +184,7 @@ def get_item_data(item):
             file.write(f"{item['article']} --- {e}\n")
 
 
-async def get_gather_data(sample):
+def get_gather_data(sample):
     global error_items_count
 
     with ThreadPoolExecutor(max_workers=7) as executor:
@@ -218,7 +227,7 @@ def main():
     wb_sample = prepare_to_daily_parse("mg")
 
     sample.extend(wb_sample)
-    asyncio.run(get_gather_data(sample))
+    get_gather_data(sample)
 
     checker = quantity_checker(sample)
 
