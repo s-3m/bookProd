@@ -160,8 +160,8 @@ def get_item_data(item: str):
                 price = ozon._price_calculate(input_price=raw_price)
                 price["price"] = price["price"][:-2]
                 price["old_price"] = price["old_price"][:-2]
-                if int(price["price"]) >= 60_000:
-                    return
+                # if int(price["price"]) >= 60_000:
+                #     return
         except Exception:
             raw_price = "Цена не указана"
 
@@ -262,8 +262,8 @@ def get_item_data(item: str):
         item_status = (
             item_status.find("span").text.lower().strip() if item_status else None
         )
-
-        if item_status == "в наличии" and category not in [
+        book_dict["Статус"] = item_status
+        if category not in [
             "Канцелярия и прочее",
             "Канцелярские товары",
             "CD-Rom",

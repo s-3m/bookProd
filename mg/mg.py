@@ -206,8 +206,8 @@ async def get_item_data(session, link: str):
         elif "+" not in age:
             item_data["Возраст от"] = age + "+"
 
-        if quantity == "есть в наличии":
-            result.append(item_data)
+        # if quantity == "есть в наличии":
+        result.append(item_data)
 
         unique_title.add(title)
         global count
