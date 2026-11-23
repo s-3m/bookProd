@@ -474,7 +474,10 @@ def exclude_else_shops_books(items_on_add: list[dict], exclude_shop: str | None 
 def forming_add_files(
     result_df: pd.DataFrame, prefix: str, ibra=False
 ) -> tuple[pd.DataFrame, ...]:
-    polars_df = pl.from_pandas(result_df)
+    ILLEGAL_CHARS_PATTERN = r"[\x00-\x08\x0b\x0c\x0e-\x1f]"
+    polars_df = pl.from_pandas(result_df).with_columns(
+        pl.col(pl.Utf8).str.replace_all(ILLEGAL_CHARS_PATTERN, "")
+    )
 
     items_list_new_shop = get_items_list(
         prefix=prefix, visibility="ALL", shop_category="new"
