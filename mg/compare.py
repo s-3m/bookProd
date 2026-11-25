@@ -2,6 +2,7 @@ import sys, os
 from concurrent.futures import ThreadPoolExecutor
 import time
 
+import requests
 import schedule
 import pandas.io.formats.excel
 from bs4 import BeautifulSoup as bs
@@ -71,36 +72,32 @@ error_items_count = 0
 unique_article: dict[str, tuple] = {}  # article: (stock, price)
 
 
-async def get_id_from_ajax(item):
+def get_id_from_ajax(item):
+    ajax_url = "https://www.dkmg.ru/ajax/ajax_search.php"
 
-    import requests
-
-    def get_id_from_ajax(item):
-        ajax_url = "https://www.dkmg.ru/ajax/ajax_search.php"
-
-        params = {
-            "term": (
-                item["article"][:-2]
-                if item["article"].endswith(".0")
-                else item["article"]
-            )
-        }
-
-        response = requests.get(
-            ajax_url,
-            params=params,
-            headers=ajax_headers,
-            timeout=(10, 30),
+    params = {
+        "term": (
+            item["article"][:-2]
+            if item["article"].endswith(".0")
+            else item["article"]
         )
+    }
 
-        response.raise_for_status()
-        ajax_result = response.json()
+    response = requests.get(
+        ajax_url,
+        params=params,
+        headers=ajax_headers,
+        timeout=(10, 30),
+    )
 
-        if ajax_result:
-            item_id = ajax_result[0].get("value")
+    response.raise_for_status()
+    ajax_result = response.json()
 
-            if item_id and item_id != "#":
-                item["id"] = item_id.split("/")[-1].strip()
+    if ajax_result:
+        item_id = ajax_result[0].get("value")
+
+        if item_id and item_id != "#":
+            item["id"] = item_id.split("/")[-1].strip()
 
 
 def get_item_data(item):
@@ -289,6 +286,7 @@ def super_main():
 
 
 if __name__ == "__main__":
+    get_item_data({"article": "978-5-9951-3842-6", "id": None})
     start_time = time.time()
     # main()
     super_main()
