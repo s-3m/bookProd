@@ -286,7 +286,6 @@ def super_main():
 
 
 if __name__ == "__main__":
-    get_item_data({"article": "978-5-9951-3842-6", "id": None})
     start_time = time.time()
     # main()
     super_main()
