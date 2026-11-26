@@ -77,9 +77,7 @@ def get_id_from_ajax(item):
 
     params = {
         "term": (
-            item["article"][:-2]
-            if item["article"].endswith(".0")
-            else item["article"]
+            item["article"][:-2] if item["article"].endswith(".0") else item["article"]
         )
     }
 
@@ -107,18 +105,18 @@ def get_item_data(item):
 
     universal_article = article_adapter(item["article"])
 
-    if universal_article in unique_article:  # check on parse was
-        item["stock"] = unique_article[universal_article][0]
-        item["price"] = unique_article[universal_article][1]
-        count += 1
-        return
-    elif item["article"] in unique_article:
-        item["stock"] = unique_article[item["article"]][0]
-        item["price"] = unique_article[item["article"]][1]
-        count += 1
-        return
-
     try:
+        if universal_article in unique_article:  # check on parse was
+            item["stock"] = unique_article[universal_article][0]
+            item["price"] = unique_article[universal_article][1]
+            count += 1
+            return
+        elif item["article"] in unique_article:
+            item["stock"] = unique_article[item["article"]][0]
+            item["price"] = unique_article[item["article"]][1]
+            count += 1
+            return
+
         if "-" not in item["article"]:
             item["id"] = item["article"][1:]
         if not item["id"]:
@@ -171,7 +169,6 @@ def get_item_data(item):
         unique_article[universal_article] = (item["stock"], item["price"])
         if "-" in item["article"]:
             unique_article[f"g{item["id"]}"] = (item["stock"], item["price"])
-        print(f"\rDone - {count} | Error - {error_items_count}", end="")
         count += 1
     except Exception as e:
         item["stock"] = "error"
@@ -179,6 +176,8 @@ def get_item_data(item):
         logger.exception(item)
         with open(f"{BASE_LINUX_DIR}/error.txt", "a+") as file:
             file.write(f"{item['article']} --- {e}\n")
+    finally:
+        print(f"\rDone - {count} | Error - {error_items_count}", end="")
 
 
 def get_gather_data(sample):
