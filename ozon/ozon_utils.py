@@ -285,10 +285,11 @@ if __name__ == "__main__":
     # start_monthly_fees_calculate("mg", "01-09-2025", "30-09-2025")
     shop_list = get_shop_list(prefix="mdk", ibra="ibra")
     shop_list.extend(get_shop_list("msk", ibra="ibra"))
-    ozon = [
+    ozon_list = [
         Ozon(client_id=shop_list[0][0], api_key=shop_list[0][1], prefix="mdk")
         for i in shop_list
     ]
-    schedule.every().day.at("22:00").do(unarchive_products, ozon=ozon)
+
+    schedule.every().day.at("22:00").do(unarchive_products, ozon_list=ozon_list)
     while True:
         schedule.run_pending()
