@@ -1,10 +1,11 @@
 import os
 import sys
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Literal
 import pickle
 import gzip
+import gc
 from dotenv import load_dotenv
 import schedule
 from loguru import logger
@@ -14,42 +15,56 @@ from wb.wb_api import Wildberries
 
 
 def create_local_db(data, shop: Literal["IBRA", "SRG"]):
+    """Атомарно сохраняет архив: читатели увидят либо старую, либо новую версию."""
     save_path = Path(__file__).parent.parent / f"{shop}_wb_db.pkl.gz"
-    with gzip.open(save_path, "wb") as f:
-        pickle.dump(data, f)
+    temp_path = save_path.with_name(f"{save_path.name}.{os.getpid()}.tmp")
+
+    try:
+        with gzip.open(temp_path, "wb", compresslevel=1) as f:
+            pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
+        os.replace(temp_path, save_path)
+    finally:
+        if temp_path.exists():
+            temp_path.unlink()
 
 
 def load_local_db(shop: Literal["IBRA", "SRG"]):
+    """Загружает один архив целиком. Вызывать последовательно, не пачкой потоков."""
     load_path = Path(__file__).parent.parent / f"{shop}_wb_db.pkl.gz"
+    if not load_path.exists():
+        raise FileNotFoundError(f"Не найден архив WB: {load_path}")
+
     with gzip.open(load_path, "rb") as f:
-        data = pickle.load(f)
-    return data
+        return pickle.load(f)
 
 
 def get_all_items_from_wb(wb: Wildberries, item_filter="religions"):
+    """Загружает карточки, удаляет дубли nmID и фильтрует каталог."""
     raw_items = wb.get_items_list()
 
-    # Убираем дубли по nmID.
-    # При дублях сохраняем последнюю версию карточки.
+    # Сохраняем прежнее поведение: при дублях nmID остаётся последняя карточка.
     items_by_id = {}
     for item in raw_items:
         items_by_id[item["nmID"]] = item
+
+    # После построения индекса исходный список больше не нужен.
     del raw_items
 
-    # Фильтруем карточки, формируя только один итоговый список.
-    all_items = []
-
-    for item in items_by_id.values():
-
+    # Удаляем неподходящие записи прямо из индекса, не создавая второй
+    # промежуточный список карточек.
+    rejected_ids = []
+    for nm_id, item in items_by_id.items():
         if item["subjectName"] != "Книги":
-            continue
+            rejected_ids.append(nm_id)
+        elif item_filter == "religions" and check_religions_book(item["title"]):
+            rejected_ids.append(nm_id)
 
-        if item_filter == "religions" and check_religions_book(item["title"]):
-            continue
+    for nm_id in rejected_ids:
+        del items_by_id[nm_id]
 
-        all_items.append(item)
-
-    return all_items
+    result = list(items_by_id.values())
+    del items_by_id, rejected_ids
+    return result
 
 
 def separate_items_to_store(
@@ -80,61 +95,113 @@ def separate_items_to_store(
     return result
 
 
+def _append_daily_records(
+    ready_data: list[dict], items: list[dict], prefix: str, shop: str
+):
+    """Добавляет записи нужного магазина сразу в итоговый список, без списка-кортежей."""
+    article_prefix = {
+        "mg": "g",
+        "chit_gor": "",
+        "msk": "m",
+        "mdk": "a",
+        "b24": "k",
+    }
+    start_symbol = article_prefix[prefix]
+    added = 0
+
+    for item in items:
+        vendor_code = item["vendorCode"]
+        if prefix == "chit_gor":
+            matches = vendor_code[0].isdigit()
+        else:
+            matches = vendor_code.startswith(start_symbol)
+
+        if not matches:
+            continue
+
+        ready_data.append(
+            {
+                "article": vendor_code,
+                "stock": "0",
+                "price": "",
+                "seller_id": f"wb_{shop}",
+                "marketplace": "wb",
+                "chrtID": item["sizes"][0]["chrtID"],
+                "nmID": item["nmID"],
+                "link": None,
+                "shop": shop,
+            }
+        )
+        added += 1
+
+    return added
+
+
 def prepare_to_daily_parse(
     prefix: Literal["mg", "chit_gor", "msk", "mdk", "b24"]
 ) -> list[dict]:
-
+    """Локальные архивы читает последовательно, каталоги WB для ЧГ скачивает параллельно."""
     shop_list = [
         (k.split("_")[-1], v) for k, v in os.environ.items() if "WB_TOKEN" in k
     ]
 
     ready_data = []
 
-    with ThreadPoolExecutor(max_workers=5) as executor:
+    if prefix == "chit_gor":
+        # Сетевые запросы к WB выполняем параллельно: они самые медленные.
+        # Но не складываем все каталоги в общий shop_items_map. Каждый worker
+        # скачивает каталог, атомарно сохраняет архив и превращает карточки
+        # в компактные записи. В основной поток возвращаются только эти записи.
+        def download_save_and_prepare(shop_token):
+            shop, token = shop_token
+            logger.info(f"WB: загрузка каталога кабинета {shop}")
+            items = get_all_items_from_wb(Wildberries(token), item_filter="religions")
+            items_count = len(items)
+            create_local_db(items, shop)
 
-        if prefix == "chit_gor":
+            shop_records = []
+            added = _append_daily_records(shop_records, items, prefix, shop)
+            del items
+            gc.collect()
+            return shop, items_count, added, shop_records
 
+        # Ограничиваем число одновременных полных каталогов, чтобы не вернуть
+        # прежний пик RAM. Три параллельных кабинета сохраняют выигрыш по сети.
+        max_workers = min(3, len(shop_list)) or 1
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = {
-                shop: executor.submit(
-                    get_all_items_from_wb, Wildberries(token), item_filter="religions"
-                )
-                for shop, token in shop_list
+                executor.submit(download_save_and_prepare, shop_token): shop_token[0]
+                for shop_token in shop_list
             }
+            for future in as_completed(futures):
+                shop = futures.pop(future)
+                try:
+                    result_shop, items_count, added, shop_records = future.result()
+                    ready_data.extend(shop_records)
+                    logger.info(
+                        f"WB: кабинет {result_shop}: карточек в архиве {items_count}, "
+                        f"позиций для парсинга {added}"
+                    )
+                    del shop_records
+                except Exception:
+                    logger.exception(f"WB: ошибка загрузки кабинета {shop}")
+                    raise
 
-            shop_items_map = {}
-
-            for shop, future in futures.items():
-                items = future.result()
-                create_local_db(items, shop)
-                shop_items_map[shop] = items
-
-        else:
-            futures = {
-                shop: executor.submit(load_local_db, shop=shop) for shop, _ in shop_list
-            }
-
-            shop_items_map = {shop: future.result() for shop, future in futures.items()}
-
-    for shop, items in shop_items_map.items():
-
-        for article, chrt_id, nm_id in separate_items_to_store(
-            items_list=items, prefix=prefix
-        ):
-
-            ready_data.append(
-                {
-                    "article": article,
-                    "stock": "0",
-                    "price": "",
-                    "seller_id": f"wb_{shop}",
-                    "marketplace": "wb",
-                    "chrtID": chrt_id,
-                    "nmID": nm_id,
-                    "link": None,
-                    "shop": shop,
-                }
+    else:
+        # Ключевое изменение: не распаковываем все gzip/pickle архивы параллельно.
+        # Один архив загружается, преобразуется в компактные записи и освобождается.
+        for shop, _ in shop_list:
+            logger.info(f"WB: чтение локального архива кабинета {shop}")
+            items = load_local_db(shop=shop)
+            added = _append_daily_records(ready_data, items, prefix, shop)
+            logger.info(
+                f"WB: кабинет {shop}: карточек в архиве {len(items)}, "
+                f"позиций для парсинга {added}"
             )
+            del items
+            gc.collect()
 
+    logger.info(f"WB: всего подготовлено позиций для {prefix}: {len(ready_data)}")
     return ready_data
 
 
