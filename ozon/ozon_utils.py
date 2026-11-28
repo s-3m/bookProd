@@ -286,7 +286,7 @@ if __name__ == "__main__":
     shop_list = get_shop_list(prefix="mdk", ibra="ibra")
     shop_list.extend(get_shop_list("msk", ibra="ibra"))
     ozon_list = [
-        Ozon(client_id=shop_list[0][0], api_key=shop_list[0][1], prefix="mdk")
+        Ozon(client_id=i[0], api_key=i[0], prefix="mdk")
         for i in shop_list
     ]
 
